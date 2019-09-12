@@ -1,7 +1,7 @@
 CC=gcc-9
-EXTRA_CFLAGS= -DVERBOSE_MODE=1
+EXTRA_CFLAGS= -DVERBOSE_MODE=0
 EXTRA_LDFLAGS=
-CFLAGS = -fopenmp -Wall -Wextra
+CFLAGS = -fopenmp -Wall -Wextra -std=c11
 LDFLAGS = 
 INCLUDE=-I./include
 

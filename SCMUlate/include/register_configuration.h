@@ -47,9 +47,7 @@ typedef struct{
     char data[CACHE_LINE_SIZE*2048];
 } _reg_2048line;
 
-typedef union register_t{
-    char space[REG_FILE_SIZE*1000];
-    struct {
+typedef struct {
 #if NUM_REG_64BITS != 0
         _reg_64bits reg_64[NUM_REG_64BITS];
 #endif
@@ -74,18 +72,24 @@ typedef union register_t{
 #if NUM_REG_2048LINE != 0
         _reg_2048line reg_2048l[NUM_REG_2048LINE];
 #endif
-    }registers;
-} reg_file;
+    } registers_t;
+
+typedef union {
+    char space[REG_FILE_SIZE*1000];
+    registers_t registers;
+} register_file_t;
+
+register_file_t reg_file;
 
 
-#define REG_64B(num) (ref_file.registers.reg_64[num])
-#define REG_1L(num) (ref_file.registers.reg_1l[num])
-#define REG_8L(num) (ref_file.registers.reg_8l[num])
-#define REG_16L(num) (ref_file.registers.reg_16l[num])
-#define REG_256L(num) (ref_file.registers.reg_256l[num])
-#define REG_512L(num) (ref_file.registers.reg_512l[num])
-#define REG_1024L(num) (ref_file.registers.reg_1024l[num])
-#define REG_2048L(num) (ref_file.registers.reg_2048l[num])
+#define REG_64B(num) (reg_file.registers.reg_64[num])
+#define REG_1L(num) (reg_file.registers.reg_1l[num])
+#define REG_8L(num) (reg_file.registers.reg_8l[num])
+#define REG_16L(num) (reg_file.registers.reg_16l[num])
+#define REG_256L(num) (reg_file.registers.reg_256l[num])
+#define REG_512L(num) (reg_file.registers.reg_512l[num])
+#define REG_1024L(num) (reg_file.registers.reg_1024l[num])
+#define REG_2048L(num) (reg_file.registers.reg_2048l[num])
 
 void describeRegisterFile() {
 
@@ -123,24 +127,25 @@ int checkRegisterConfig() {
 }
 
 char * getRegister(char * size, int num) {
-
+    char * result = NULL;
     if (strcmp(size, "64B") == 0){
-        REG_64B(num);
+        result = REG_64B(num).data;
     } else if (strcmp(size,"1L") ==0 ) {
-        REG_1L(num);
+        result = REG_1L(num).data;
     } else if (strcmp(size,"8L") ==0 ) {
-        REG_8L(num);
+        result = REG_8L(num).data;
     } else if (strcmp(size,"16L") ==0 ) {
-        REG_16L(num);
+        result = REG_16L(num).data;
     } else if (strcmp(size,"256L") ==0 ) {
-        REG_256L(num);
+        result = REG_256L(num).data;
     } else if (strcmp(size,"512L") ==0 ) {
-        REG_512L(num);
+        result = REG_512L(num).data;
     } else if (strcmp(size,"1024L") ==0 ) {
-        REG_1024L(num);
+        result = REG_1024L(num).data;
     } else if (strcmp(size,"2048L") ==0 ) {
-        REG_2048L(num);
+        result = REG_2048L(num).data;
     } else {
         SCMULATE_ERROR(0, "DECODED REGISTER DOES NOT EXIST!!!")
     }
+    return result;
 }

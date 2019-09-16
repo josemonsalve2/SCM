@@ -1,4 +1,5 @@
 #include "register_configuration.h"
+#include "SCMUlate_tools.h"
 
 register_file_t reg_file;
 

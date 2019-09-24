@@ -6,9 +6,9 @@
 //===-----------------------------------------------------------===//
 #ifndef __SCMULATE_TOOLS__
 #define __SCMULATE_TOOLS__
-#include <stdio.h>
-#include <stdlib.h>
-#include <string.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #ifndef VERBOSE_MODE

@@ -4,8 +4,8 @@ project (proof_of_concept)
 include_directories(include)
 
 # FLAGS FOR ALL CASES 
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Wall -Wextra")
-set(CMAKE_C_STANDARD 11)
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
+set(CMAKE_CXX_STANDARD 14)
 
 
 ## CHECK FOR DEBUG MODE
@@ -17,31 +17,31 @@ endif (DEBUG)
 
 ## CHECK FOR VERBOSE EXECUTION MODE
 if (VERBOSE_MODE)
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -DVERBOSE_MODE=${VERBOSE_MODE}")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVERBOSE_MODE=${VERBOSE_MODE}")
 endif (VERBOSE_MODE)
 
 ## COMPILER SPECIFIC
-if ("${CMAKE_C_COMPILER_ID}" STREQUAL "Clang")
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # using Clang
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
-elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "GNU")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # using GCC
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -fopenmp")
-elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "Intel")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
   # using Intel C++
-  set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -qopenmp")
-elseif ("${CMAKE_C_COMPILER_ID}" STREQUAL "MSVC")
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopenmp")
+elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "MSVC")
   # using Visual Studio C++
-  message( FATAL_ERROR "No support for ${CMAKE_C_COMPILER_ID} yet" )
+  message( FATAL_ERROR "No support for ${CMAKE_CXX_COMPILER_ID} yet" )
 else()
-  message( FATAL_ERROR "No support for ${CMAKE_C_COMPILER_ID} yet" )
+  message( FATAL_ERROR "No support for ${CMAKE_CXX_COMPILER_ID} yet" )
 endif()
 
-set(CMAKE_C_FLAGS_DEBUG "${CMAKE_C_FLAGS_DEBUG} -g -O0")
-set(CMAKE_C_FLAGS_RELEASE "${CMAKE_C_FLAGS_RELEASE} -O3")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
 
 add_subdirectory (src) 
 
-add_executable(proof_of_concept proof_of_concept.c)
+add_executable(SCMUlate main_SCMUlate.cpp)
 
-target_link_libraries (proof_of_concept registers)
+target_link_libraries (SCMUlate SCMUlate_components)

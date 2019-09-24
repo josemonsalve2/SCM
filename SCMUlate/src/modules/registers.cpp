@@ -1,10 +1,15 @@
-#include "register_configuration.h"
-#include "SCMUlate_tools.h"
+#include "register.hpp"
 
-register_file_t reg_file;
+scm::reg_file_module::reg_file_module() {
+  // Initialize the memory that represents the register
+  // file to zero
+  for (int i = 0; i < REG_FILE_SIZE_KB*1000 ; ++ i) {
+    reg_file.space[i] = 0;
+  }
+}
 
-
-void describeRegisterFile() {
+void 
+scm::reg_file_module::describeRegisterFile() {
 
     SCMULATE_INFOMSG(0, "REGISTER FILE DEFINITION");
     SCMULATE_INFOMSG(0, " SIZE = %ld", CALCULATE_REG_SIZE);
@@ -20,42 +25,44 @@ void describeRegisterFile() {
 }
 
 
-int checkRegisterConfig() {
-    if (CALCULATE_REG_SIZE > REG_FILE_SIZE*1000) {
+int 
+scm::reg_file_module::checkRegisterConfig() {
+    if (CALCULATE_REG_SIZE > REG_FILE_SIZE_KB*1000) {
         // This is an error, because it could cause seg fault
-        SCMULATE_ERROR(0, "DEFINED REGISTER IS LARGER THAN DEFINED REG_FILE_SIZE");
-        SCMULATE_ERROR(0, "REG_FILE_SIZE = %ld", REG_FILE_SIZE*1000l);
+        SCMULATE_ERROR(0, "DEFINED REGISTER IS LARGER THAN DEFINED REG_FILE_SIZE_KB");
+        SCMULATE_ERROR(0, "REG_FILE_SIZE_KB = %ld", REG_FILE_SIZE_KB*1000l);
         SCMULATE_ERROR(0, "CALCULATE_REG_SIZE = %ld", CALCULATE_REG_SIZE);
-        SCMULATE_ERROR(0, "EXCESS = %ld", CALCULATE_REG_SIZE - REG_FILE_SIZE*1000l);
+        SCMULATE_ERROR(0, "EXCESS = %ld", CALCULATE_REG_SIZE - REG_FILE_SIZE_KB*1000l);
         return 0;
-    } else if (CALCULATE_REG_SIZE < REG_FILE_SIZE*1000) {
+    } else if (CALCULATE_REG_SIZE < REG_FILE_SIZE_KB*1000) {
         // This is just a warning, you are not using the whole register file
-        SCMULATE_WARNING(0, "DEFINED REGISTER IS SMALLER THAN DEFINED REG_FILE_SIZE");
-        SCMULATE_WARNING(0, "REG_FILE_SIZE = %ld", REG_FILE_SIZE*1000l);
+        SCMULATE_WARNING(0, "DEFINED REGISTER IS SMALLER THAN DEFINED REG_FILE_SIZE_KB");
+        SCMULATE_WARNING(0, "REG_FILE_SIZE_KB = %ld", REG_FILE_SIZE_KB*1000l);
         SCMULATE_WARNING(0, "CALCULATE_REG_SIZE = %ld", CALCULATE_REG_SIZE);
-        SCMULATE_WARNING(0, "REMAINING = %ld", (REG_FILE_SIZE*1000l) - CALCULATE_REG_SIZE);
+        SCMULATE_WARNING(0, "REMAINING = %ld", (REG_FILE_SIZE_KB*1000l) - CALCULATE_REG_SIZE);
     }
 
     return 1;
 }
 
-char * getRegister(char * size, int num) {
+char * 
+scp::reg_file_module::getRegisterByName(char * size, int num) {
     char * result = NULL;
     if (strcmp(size, "64B") == 0){
         result = REG_64B(num).data;
-    } else if (strcmp(size,"1L") ==0 ) {
+    } else if (strcmp(size,"1L") == 0 ) {
         result = REG_1L(num).data;
-    } else if (strcmp(size,"8L") ==0 ) {
+    } else if (strcmp(size,"8L") == 0 ) {
         result = REG_8L(num).data;
-    } else if (strcmp(size,"16L") ==0 ) {
+    } else if (strcmp(size,"16L") == 0 ) {
         result = REG_16L(num).data;
-    } else if (strcmp(size,"256L") ==0 ) {
+    } else if (strcmp(size,"256L") == 0 ) {
         result = REG_256L(num).data;
-    } else if (strcmp(size,"512L") ==0 ) {
+    } else if (strcmp(size,"512L") == 0 ) {
         result = REG_512L(num).data;
-    } else if (strcmp(size,"1024L") ==0 ) {
+    } else if (strcmp(size,"1024L") == 0 ) {
         result = REG_1024L(num).data;
-    } else if (strcmp(size,"2048L") ==0 ) {
+    } else if (strcmp(size,"2048L") == 0 ) {
         result = REG_2048L(num).data;
     } else {
         SCMULATE_ERROR(0, "DECODED REGISTER DOES NOT EXIST!!!")

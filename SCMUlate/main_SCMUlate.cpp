@@ -1,21 +1,13 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include <omp.h>
-#include "SCMUlate_tools.h"
-#include "machine_configuration.h"
 
 // FUNCTION DEFINITIONS
-int SCMUlate ();
-int SCMUlate_SU_Behavior();
+int SCMUlate();
 int SCMUlate_MEM_Behavior();
 int SCMUlate_CU_Behavior();
 
-int main () {
-    // === INITIALIZATION ====
-    // We check the register configuration is valid
-    if(!checkRegisterConfig()) {
-        return 1;
-    }
+
+int main (int argc, char ** argv) {
     describeRegisterFile();
 
     // === EMULATION STARTING ===
@@ -50,10 +42,6 @@ int SCMUlate () {
     return 0;
 }
 
-int SCMUlate_SU_Behavior() {
-    SCMULATE_INFOMSG(1, "I am an SU")
-    return 0;
-}
 int SCMUlate_MEM_Behavior() {
     SCMULATE_INFOMSG(1, "I am MEM")
     return 0;

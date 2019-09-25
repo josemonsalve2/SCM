@@ -2,6 +2,8 @@
 
 scm::scm_machine::scm_machine(std::string in_filename): alive(false), init_correct(true), filename(in_filename), reg_file_m(), inst_mem_m(filename) {
 
+  SCMULATE_INFOMSG(0, "Initializing SCM machine")
+
   // We check the register configuration is valid
   if(!reg_file_m.checkRegisterConfig()) {
     SCMULATE_ERROR(0, "Error when checking the register");

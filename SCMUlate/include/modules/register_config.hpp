@@ -79,13 +79,13 @@ namespace scm {
   #endif
       } registers_t;
 }
-#define REG_64B(num) (reg_file.registers.reg_64[num])
-#define REG_1L(num) (reg_file.registers.reg_1l[num])
-#define REG_8L(num) (reg_file.registers.reg_8l[num])
-#define REG_16L(num) (reg_file.registers.reg_16l[num])
-#define REG_256L(num) (reg_file.registers.reg_256l[num])
-#define REG_512L(num) (reg_file.registers.reg_512l[num])
-#define REG_1024L(num) (reg_file.registers.reg_1024l[num])
-#define REG_2048L(num) (reg_file.registers.reg_2048l[num])
+#define REG_64B(num) (reg_file->registers.reg_64[num])
+#define REG_1L(num) (reg_file->registers.reg_1l[num])
+#define REG_8L(num) (reg_file->registers.reg_8l[num])
+#define REG_16L(num) (reg_file->registers.reg_16l[num])
+#define REG_256L(num) (reg_file->registers.reg_256l[num])
+#define REG_512L(num) (reg_file->registers.reg_512l[num])
+#define REG_1024L(num) (reg_file->registers.reg_1024l[num])
+#define REG_2048L(num) (reg_file->registers.reg_2048l[num])
 
 #endif

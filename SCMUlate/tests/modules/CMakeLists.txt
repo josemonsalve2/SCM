@@ -1,3 +1,14 @@
+# Test for REGISTER FILE
+set (test_reg_file_src test_register_file.cpp)
+set (test_reg_file_inc 
+      ${CMAKE_SOURCE_DIR}/include/modules/register.hpp)
+
+add_executable(test_reg_file ${test_reg_file_src} ${test_reg_file_inc})
+target_link_libraries(test_reg_file registers)
+
+add_test(NAME test_reg_file COMMAND test_reg_file WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR})
+
+# Test for INSTRUCTION MEMORY
 set (test_inst_mem_src test_instruction_mem.cpp)
 set (test_inst_mem_inc 
       ${CMAKE_SOURCE_DIR}/include/modules/instruction_mem.hpp)

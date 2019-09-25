@@ -12,14 +12,15 @@ namespace scm {
   } register_file_t;
 
   class reg_file_module {
-    register_file_t reg_file;
+    private: 
+      register_file_t reg_file;
     
-    reg_file_module();
-
-    void describeRegisterFile();
-    bool checkRegisterConfig();
-    char * getRegisterByName(char * size, int num);
-  }
+    public: 
+     reg_file_module();
+     void describeRegisterFile();
+     bool checkRegisterConfig();
+     char * getRegisterByName(char * size, int num);
+  };
 }
 
 #endif

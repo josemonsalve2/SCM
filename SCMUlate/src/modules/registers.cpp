@@ -25,7 +25,7 @@ scm::reg_file_module::describeRegisterFile() {
 }
 
 
-int 
+bool
 scm::reg_file_module::checkRegisterConfig() {
     if (CALCULATE_REG_SIZE > REG_FILE_SIZE_KB*1000) {
         // This is an error, because it could cause seg fault
@@ -46,7 +46,7 @@ scm::reg_file_module::checkRegisterConfig() {
 }
 
 char * 
-scp::reg_file_module::getRegisterByName(char * size, int num) {
+scm::reg_file_module::getRegisterByName(char * size, int num) {
     char * result = NULL;
     if (strcmp(size, "64B") == 0){
         result = REG_64B(num).data;

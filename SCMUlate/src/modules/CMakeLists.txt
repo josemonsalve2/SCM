@@ -23,3 +23,18 @@ set( fetch_decode_inc
 
 add_library(fetch_decode ${fetch_decode_src} ${fetch_decode_inc})
 
+# EXECUTORS
+set( executor_src executor.cpp )
+set( executor_inc
+    ${CMAKE_SOURCE_DIR}/include/modules/executor.hpp)
+    
+
+add_library(executor ${executor_src} ${executor_inc})
+
+# CONTROL_STORE
+set( control_store_src control_store.cpp)
+set( control_store_inc
+    ${CMAKE_SOURCE_DIR}/include/modules/control_store.hpp)
+    
+
+add_library(control_store ${control_store_src} ${control_store_inc})

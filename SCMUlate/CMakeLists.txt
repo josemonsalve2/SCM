@@ -47,6 +47,8 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
   add_subdirectory (tests) 
 endif()
 
+add_subdirectory(apps)
+
 add_executable(SCMUlate main_SCMUlate.cpp)
 
 target_link_libraries (SCMUlate scm_machine)

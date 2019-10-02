@@ -3,6 +3,7 @@ project (proof_of_concept)
 
 include_directories(include/common)
 include_directories(include/modules)
+include_directories(include/machines)
 
 # FLAGS FOR ALL CASES 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")

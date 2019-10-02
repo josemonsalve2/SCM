@@ -61,14 +61,14 @@ scm::fetch_decode_module::findInstType(std::string const instruction) {
 
 bool 
 scm::fetch_decode_module::isControlInst(std::string const inst) {
-  for (int i = 0; i < NUM_OF_INST(controlInsts); i++)
+  for (size_t i = 0; i < NUM_OF_INST(controlInsts); i++)
     if (inst.substr(0, controlInsts[i].length()) == controlInsts[i])
       return true;
   return false;
 }
 bool 
 scm::fetch_decode_module::isBasicArith(std::string const inst) {
-  for (int i = 0; i < NUM_OF_INST(basicArithInsts); i++)
+  for (size_t i = 0; i < NUM_OF_INST(basicArithInsts); i++)
     if (inst.substr(0, basicArithInsts[i].length()) == basicArithInsts[i])
       return true;
   return false;
@@ -81,7 +81,7 @@ scm::fetch_decode_module::isExecution(std::string const inst) {
 }
 bool 
 scm::fetch_decode_module::isMemory(std::string const inst) {
-  for (int i = 0; i < NUM_OF_INST(memInsts); i++)
+  for (size_t i = 0; i < NUM_OF_INST(memInsts); i++)
     if (inst.substr(0, memInsts[i].length()) == memInsts[i])
       return true;
   return false;

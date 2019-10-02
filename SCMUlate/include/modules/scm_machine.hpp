@@ -5,6 +5,7 @@
 #include "threads_configuration.hpp"
 #include "register.hpp"
 #include "instruction_mem.hpp"
+#include "fetch_decode.hpp"
 #include <omp.h>
 #include <string>
 
@@ -22,7 +23,8 @@ namespace scm{
       // Modules
       reg_file_module reg_file_m;
       inst_mem_module inst_mem_m;
-    
+      fetch_decode_module fetch_decode_m;
+
     public: 
       scm_machine() = delete;
       scm_machine(std::string in_filename); 

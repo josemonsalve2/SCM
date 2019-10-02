@@ -1,22 +1,28 @@
 #include "scm_machine.hpp"
 
-scm::scm_machine::scm_machine(std::string in_filename): alive(false), init_correct(true), filename(in_filename), reg_file_m(), inst_mem_m(filename) {
-
-  SCMULATE_INFOMSG(0, "Initializing SCM machine")
-
-  // We check the register configuration is valid
-  if(!reg_file_m.checkRegisterConfig()) {
-    SCMULATE_ERROR(0, "Error when checking the register");
-    init_correct = false;
-    return;
-  }
-
-  init_correct = true;
+scm::scm_machine::scm_machine(std::string in_filename):
+  alive(false), 
+  init_correct(true), 
+  filename(in_filename),
+  reg_file_m(),
+  inst_mem_m(filename), 
+  fetch_decode_m(&inst_mem_m) {
+    SCMULATE_INFOMSG(0, "Initializing SCM machine")
+  
+    // We check the register configuration is valid
+    if(!reg_file_m.checkRegisterConfig()) {
+      SCMULATE_ERROR(0, "Error when checking the register");
+      init_correct = false;
+      return;
+    }
+  
+    init_correct = true;
 }
 
 scm::run_status
 scm::scm_machine::run() {
   if (!this->init_correct) return SCM_RUN_FAILURE;
+  this-> alive = true;
   int run_result = 0;
 #pragma omp parallel reduction(+: run_result)
   {
@@ -26,7 +32,7 @@ scm::scm_machine::run() {
     }
     switch (omp_get_thread_num()) {
       case SU_THREAD:
-//        run_result = SCMUlate_SU_Behavior();
+        fetch_decode_m.behavior();
         break;
       case MEM_THREAD:
 //        run_result = SSCMUlate_MEM_Behavior();
@@ -37,6 +43,7 @@ scm::scm_machine::run() {
       default:
         SCMULATE_WARNING(0, "Thread created with no purpose. What's my purpose? You pass the butter");
     }
+    #pragma omp barrier 
 
   }
 

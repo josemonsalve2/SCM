@@ -33,12 +33,13 @@ scm::scm_machine::run() {
     switch (omp_get_thread_num()) {
       case SU_THREAD:
         fetch_decode_m.behavior();
+        this->alive = false;
         break;
       case MEM_THREAD:
 //        run_result = SSCMUlate_MEM_Behavior();
         break;
       case CU_THREADS:
-//        run_result = SSCMUlate_CU_Behavior();
+//        run_result = ;
         break;
       default:
         SCMULATE_WARNING(0, "Thread created with no purpose. What's my purpose? You pass the butter");

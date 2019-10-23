@@ -5,21 +5,50 @@
 #include "threads_configuration.hpp"
 #include "codelet.hpp"
 
+
+
 namespace scm {
 
+  /* An execution slot connects the scheduling of an instruction to its 
+   * corresponding executor. The executor will be reading the execution
+   * slot waiting for something to be available, once there's something
+   * it will remove start its execution, and when it is finished it will
+   * cleare it for the scheduler to assign more work. At this stage it's 
+   * assumed the result has been commited either to the memory unit or
+   * or the register directly. On the other hand the scheduler will have
+   * a list of all the execution slots and chose one according to some 
+   * scheduling policy. 
+   */
   class execution_slot {
+    bool empty;
     codelet executionCodelet();
   
     void assing(codelet);
-    
-  }
+    void empty_slot();
 
+    static inline bool isEmpty() { return this->emtpy; }
+
+
+    execution_slot(): empty(true) {}
+  };
+
+
+  /* Control store corresponds to the glue logic between the different 
+   * modules and the execution of an instruction. The control logic
+   * should contain the different execution slots and any additional logic 
+   * that allows the connection between the modules that schedule the 
+   * instructions and those that compute. Execution slots are created and
+   * deleted here
+   */
   class control_store_module{
     private:
+      std::vector <execution_slot*> excution_slots;
 
     public: 
      control_store_module() = delete;
-//     control_store_module();
+     control_store_module(const int numExecUnits);
+
+     ~control_store_module();
 
   };
   

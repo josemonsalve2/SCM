@@ -3,6 +3,7 @@
 
 #include "SCMUlate_tools.hpp"
 #include "instruction_mem.hpp"
+#include "control_store.hpp"
 
 #define NUM_OF_INST(a) sizeof(a)/sizeof(std::string)
 
@@ -17,6 +18,8 @@ namespace scm {
   class fetch_decode_module {
     private:
       inst_mem_module * inst_mem_m;
+      // This module contains the execution slots 
+      control_store_module * ctrl_st_m;
       bool done;
       int PC; 
 
@@ -28,7 +31,7 @@ namespace scm {
   
     public: 
       fetch_decode_module() = delete;
-      fetch_decode_module(inst_mem_module * const inst_mem);
+      fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const control_store_m);
 
       int behavior();
   

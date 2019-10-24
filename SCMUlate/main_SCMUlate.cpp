@@ -2,6 +2,7 @@
 #include <stdio.h>
 #include "scm_machine.hpp"
 #include <cstring>
+#include <iostream>
 
 static struct {
   bool fileInput = false;

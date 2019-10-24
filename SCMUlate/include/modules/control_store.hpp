@@ -4,6 +4,7 @@
 #include "SCMUlate_tools.hpp"
 #include "threads_configuration.hpp"
 #include "codelet.hpp"
+#include <vector>
 
 
 
@@ -20,16 +21,17 @@ namespace scm {
    * scheduling policy. 
    */
   class execution_slot {
-    bool empty;
-    codelet executionCodelet();
-  
-    void assing(codelet);
-    void empty_slot();
+    private:
+      bool empty;
+      codelet *executionCodelet;
 
-    static inline bool isEmpty() { return this->emtpy; }
+    public:
+      // Constructor 
+      execution_slot(): empty(true), executionCodelet(NULL) {}; 
 
-
-    execution_slot(): empty(true) {}
+      void assign(codelet *);
+      void empty_slot();
+      inline bool is_empty() { return this->empty; }
   };
 
 
@@ -40,13 +42,15 @@ namespace scm {
    * instructions and those that compute. Execution slots are created and
    * deleted here
    */
-  class control_store_module{
+  class control_store_module {
     private:
-      std::vector <execution_slot*> excution_slots;
+      std::vector <execution_slot*> execution_slots;
 
     public: 
      control_store_module() = delete;
      control_store_module(const int numExecUnits);
+
+     inline execution_slot* get_executor(const int exec) { return this->execution_slots[exec]; }
 
      ~control_store_module();
 

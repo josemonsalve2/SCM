@@ -2,8 +2,9 @@
 #include <string> 
 #include <vector> 
 
-scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem):
+scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const control_store_m):
   inst_mem_m(inst_mem),
+  ctrl_st_m(control_store_m),
   done(false),
   PC(0) { }
 

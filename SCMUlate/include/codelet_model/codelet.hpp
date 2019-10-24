@@ -2,6 +2,7 @@
 #define __CODELET__
 
 namespace scm {
+
   typedef void (*execution_fnc)();
 
   class codelet {
@@ -11,7 +12,7 @@ namespace scm {
     public:
       codelet() = delete;
       codelet(execution_fnc fnc) : myFnc(fnc) {}
-  }
+  };
   
 }
 

@@ -4,6 +4,8 @@
 #include "SCMUlate_tools.hpp"
 #include "threads_configuration.hpp"
 #include "register.hpp"
+#include "control_store.hpp"
+#include "executor.hpp"
 #include "instruction_mem.hpp"
 #include "fetch_decode.hpp"
 #include <omp.h>
@@ -19,18 +21,20 @@ namespace scm{
       bool alive;
       bool init_correct;
       std::string filename;
-    
+      
       // Modules
       reg_file_module reg_file_m;
       inst_mem_module inst_mem_m;
+      control_store_module control_store_m;
       fetch_decode_module fetch_decode_m;
+      std::vector<cu_executor_module*> executors_m;
 
     public: 
       scm_machine() = delete;
       scm_machine(std::string in_filename); 
       run_status run();
     
-      ~scm_machine() {};
+      ~scm_machine();
   
   };
 }

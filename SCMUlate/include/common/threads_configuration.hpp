@@ -31,5 +31,6 @@
 #define SU_THREAD 0
 #define MEM_THREAD 1
 #define CUS 2, 3, 4, 5, 6, 7, 8, 9, 10, 11
-#define NUM_CUS COUNT_ARGUMENTS(CUS)
+#define COUNT_CUS(...) COUNT_ARGUMENTS(__VA_ARGS__)
+#define NUM_CUS COUNT_CUS(CUS)
 #define CU_THREADS CU_THREADS_VAR(CUS)

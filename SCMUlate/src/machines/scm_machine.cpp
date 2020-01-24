@@ -7,7 +7,7 @@ scm::scm_machine::scm_machine(std::string in_filename):
   reg_file_m(),
   inst_mem_m(filename), 
   control_store_m(NUM_CUS),
-  fetch_decode_m(&inst_mem_m, &control_store_m) {
+  fetch_decode_m(&inst_mem_m, &control_store_m, &reg_file_m) {
     SCMULATE_INFOMSG(0, "Initializing SCM machine")
   
     // We check the register configuration is valid

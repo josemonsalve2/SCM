@@ -2,8 +2,9 @@
 #include <string> 
 #include <vector> 
 
-scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const control_store_m):
+scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const control_store_m, reg_file_module * const reg_file_m):
   inst_mem_m(inst_mem),
+  reg_file_m(reg_file_m),
   ctrl_st_m(control_store_m),
   done(false),
   PC(0) { }
@@ -14,7 +15,7 @@ scm::fetch_decode_module::behavior() {
     while (!done) {
       std::string current_instruction = this->inst_mem_m->fetch(this->PC);
       SCMULATE_INFOMSG(3, "I received instruction: %s", current_instruction.c_str());
-      instType cur_type = findInstType(current_instruction);
+      instType cur_type = scm::instructions::findInstType(current_instruction);
       switch(cur_type) {
         case COMMIT:
           SCMULATE_INFOMSG(4, "I've identified a COMMIT");
@@ -42,48 +43,8 @@ scm::fetch_decode_module::behavior() {
 }
 
 
-scm::instType
-scm::fetch_decode_module::findInstType(std::string const instruction) {
-
-  if (instruction == "COMMIT") 
-    return COMMIT;
-  if (isControlInst(instruction))
-    return CONTROL_INST;
-  if (isBasicArith(instruction))
-    return BASIC_ARITH_INST;
-  if (isExecution(instruction))
-    return EXECUTE_INST;
-  if (isMemory(instruction))
-    return MEMORY_INST;
-
-  return UNKNOWN;
+char*
+scm::fetch_decode_module::decodeRegisterName(std::string const reg) {
+  return NULL;
 }
 
-
-bool 
-scm::fetch_decode_module::isControlInst(std::string const inst) {
-  for (size_t i = 0; i < NUM_OF_INST(controlInsts); i++)
-    if (inst.substr(0, controlInsts[i].length()) == controlInsts[i])
-      return true;
-  return false;
-}
-bool 
-scm::fetch_decode_module::isBasicArith(std::string const inst) {
-  for (size_t i = 0; i < NUM_OF_INST(basicArithInsts); i++)
-    if (inst.substr(0, basicArithInsts[i].length()) == basicArithInsts[i])
-      return true;
-  return false;
-}
-bool 
-scm::fetch_decode_module::isExecution(std::string const inst) {
-  if (inst.substr(0, 3) == "COD")
-    return true;
-  return false;
-}
-bool 
-scm::fetch_decode_module::isMemory(std::string const inst) {
-  for (size_t i = 0; i < NUM_OF_INST(memInsts); i++)
-    if (inst.substr(0, memInsts[i].length()) == memInsts[i])
-      return true;
-  return false;
-}

@@ -11,7 +11,7 @@
 #include <omp.h>
 #include <string>
 
-namespace scm{
+namespace scm {
 
   enum run_status_t {SCM_RUN_SUCCESS, SCM_RUN_FAILURE};
   typedef enum run_status_t run_status;

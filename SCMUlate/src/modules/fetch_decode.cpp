@@ -2,24 +2,26 @@
 #include <string> 
 #include <vector> 
 
-scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const control_store_m, reg_file_module * const reg_file_m):
+scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const control_store_m, reg_file_module * const reg_file_m, bool * const aliveSig):
   inst_mem_m(inst_mem),
   reg_file_m(reg_file_m),
   ctrl_st_m(control_store_m),
-  done(false),
+  aliveSignal(aliveSig),
   PC(0) { }
 
 int
 scm::fetch_decode_module::behavior() {
   SCMULATE_INFOMSG(1, "I am an SU");
-    while (!done) {
+    while (*(this->aliveSignal)) {
       std::string current_instruction = this->inst_mem_m->fetch(this->PC);
       SCMULATE_INFOMSG(3, "I received instruction: %s", current_instruction.c_str());
       instType cur_type = scm::instructions::findInstType(current_instruction);
       switch(cur_type) {
         case COMMIT:
           SCMULATE_INFOMSG(4, "I've identified a COMMIT");
-          this->done = true;
+          SCMULATE_INFOMSG(1, "Turning off machine alive = false");
+          #pragma omp atomic write
+          *(this->aliveSignal) = false;
           break;
         case CONTROL_INST:
           SCMULATE_INFOMSG(4, "I've identified a CONTROL_INST");
@@ -39,6 +41,7 @@ scm::fetch_decode_module::behavior() {
       }
       this->PC++;
     } 
+    SCMULATE_INFOMSG(1, "Shutting down fetch decode unit");
     return 0;
 }
 

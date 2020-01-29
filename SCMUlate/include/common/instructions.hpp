@@ -30,13 +30,13 @@ namespace scm {
    * or to obtain the parameters
    */
   static std::string const controlInsts[] = {
-    "JMPLBL[ ]+([a-zA-Z0-9]+);", /* JMPLBL destination;*/
-    "JMPPC[ ]+([-]*[0-9]+);",  /* JMPPC -100;*/
-    "BREQ[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);",   /* BREQ R1, R2, -100; */
-    "BGT[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);",   /* BGT R1, R2, -100; */
-    "BGET[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);",   /* BGET R1, R2, -100; */
-    "BLT[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);",   /* BLT R1, R2, -100; */
-    "BLET[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);"};  /* BLET R1, R2, -100; */
+    "JMPLBL[ ]+([a-zA-Z0-9]+);.*", /* JMPLBL destination;*/
+    "JMPPC[ ]+([-]*[0-9]+);.*",  /* JMPPC -100;*/
+    "BREQ[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);.*",   /* BREQ R1, R2, -100; */
+    "BGT[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);.*",   /* BGT R1, R2, -100; */
+    "BGET[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);.*",   /* BGET R1, R2, -100; */
+    "BLT[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);.*",   /* BLT R1, R2, -100; */
+    "BLET[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);.*"};  /* BLET R1, R2, -100; */
   /** \brief All the basic arithmetic instructions
    *
    * All the different regular expressions used for basic arithmetic instructions.  
@@ -44,10 +44,10 @@ namespace scm {
    * or to obtain the parameters
    */
   static std::string const basicArithInsts[] = {
-    "ADD", 
-    "SUB", 
-    "SHFL", 
-    "SHFR"};
+    "ADD[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*", /* ADD R1, R2, R3; R2 and R3 can be literals*/
+    "SUB[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*",  /* SUB R1, R2, R3; R2 and R3 can be literals*/
+    "SHFL[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*",  /* SHFL R1, R2; R2 can be a literal representing how many positions to shift*/
+    "SHFR[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*"};  /* SHFR R1, R2; R2 can be a literal representing how many positions to shift*/
   /** \brief All the memory related instructions
    *
    * All the different regular expressions used for Control flow instructions.  
@@ -55,10 +55,10 @@ namespace scm {
    * or to obtain the parameters
    */
   static std::string const memInsts[] = {
-    "LDADR", 
-    "LDOFF", 
-    "STADR", 
-    "STOFF"};
+    "LDADR[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*", /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
+    "LDOFF[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*", /* LDOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
+    "STADR[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*", /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
+    "STOFF[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*"}; /* LDOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
 
   /** \brief Definition of the instruction types 
    *
@@ -135,9 +135,11 @@ namespace scm {
     }
   bool 
     instructions::isBasicArith(std::string const inst) {
-      for (size_t i = 0; i < NUM_OF_INST(basicArithInsts); i++)
-        if (inst.substr(0, basicArithInsts[i].length()) == basicArithInsts[i])
+      for (size_t i = 0; i < NUM_OF_INST(basicArithInsts); i++) {
+        std::regex search_exp(basicArithInsts[i]);
+        if (std::regex_match(inst, search_exp))
           return true;
+      }
       return false;
     }
   bool 
@@ -148,9 +150,11 @@ namespace scm {
     }
   bool 
     instructions::isMemory(std::string const inst) {
-      for (size_t i = 0; i < NUM_OF_INST(memInsts); i++)
-        if (inst.substr(0, memInsts[i].length()) == memInsts[i])
+      for (size_t i = 0; i < NUM_OF_INST(memInsts); i++) {
+        std::regex search_exp(memInsts[i]);
+        if (std::regex_match(inst, search_exp))
           return true;
+      }
       return false;
     }
 

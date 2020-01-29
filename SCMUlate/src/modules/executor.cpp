@@ -15,6 +15,7 @@ scm::cu_executor_module::behavior() {
       // execute the codelet here
     }
   }
+  SCMULATE_INFOMSG(1, "Shutting down executor CU %d", cu_executor_id);
   return 0;
 }
  

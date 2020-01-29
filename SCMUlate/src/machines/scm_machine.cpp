@@ -7,7 +7,7 @@ scm::scm_machine::scm_machine(std::string in_filename):
   reg_file_m(),
   inst_mem_m(filename), 
   control_store_m(NUM_CUS),
-  fetch_decode_m(&inst_mem_m, &control_store_m, &reg_file_m) {
+  fetch_decode_m(&inst_mem_m, &control_store_m, &reg_file_m, &alive) {
     SCMULATE_INFOMSG(0, "Initializing SCM machine")
   
     // We check the register configuration is valid
@@ -31,7 +31,7 @@ scm::scm_machine::scm_machine(std::string in_filename):
 scm::run_status
 scm::scm_machine::run() {
   if (!this->init_correct) return SCM_RUN_FAILURE;
-  this-> alive = true;
+  this->alive = true;
   int run_result = 0;
 #pragma omp parallel reduction(+: run_result) shared(alive)
   {
@@ -42,9 +42,6 @@ scm::scm_machine::run() {
     switch (omp_get_thread_num()) {
       case SU_THREAD:
         fetch_decode_m.behavior();
-        SCMULATE_INFOMSG(1, "Turning off machine alive = false");
-        #pragma omp atomic write
-        this->alive = false;
         break;
       case MEM_THREAD:
 //        run_result = SSCMUlate_MEM_Behavior();

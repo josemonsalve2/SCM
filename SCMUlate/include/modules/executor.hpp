@@ -13,7 +13,7 @@ namespace scm {
     private:
       int cu_executor_id;
       execution_slot * myExecutor;
-      bool* aliveSignal;
+      volatile bool* aliveSignal;
 
     public: 
       cu_executor_module() = delete;

@@ -33,7 +33,7 @@ namespace scm {
       inst_mem_module * inst_mem_m; /**< From where the instructions are read*/
       reg_file_module * reg_file_m; /**< Used to identify and read the registers to be used by the instructions */
       control_store_module * ctrl_st_m; /**< Used to assing operations to the executors */
-      bool done; /**< When the machine is done, this flag is set to true finishing all the other units */
+      bool * aliveSignal; /**< When the machine is done, this flag is set to true finishing all the other units */
       int PC; /**< Program counter, this corresponds to the current instruction being executed */
 
       /** \brief Decode a register name and return the actual memory location 
@@ -46,7 +46,7 @@ namespace scm {
   
     public: 
       fetch_decode_module() = delete;
-      fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const, reg_file_module * const);
+      fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const, reg_file_module * const, bool * const aliveSig);
 
       /** Actual logic of this unit
        * 

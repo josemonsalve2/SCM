@@ -52,7 +52,7 @@ namespace scm {
        * 
        *  Function to execute control instructions that affect the program counter
        */
-      static inline void executeControlInstruction(decoded_instruction_t * inst);
+      inline void executeControlInstruction(decoded_instruction_t * inst);
 
       /** Actual logic of this unit
        * 

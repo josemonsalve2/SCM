@@ -46,6 +46,18 @@ namespace scm {
        */
       inline std::string fetch(int address) { return memory[address]; };
 
+      /** \brief translate label to memory
+       *
+       *
+       */
+      inline int getMemoryLabel(std::string label) { 
+        auto it = labels.find(label); 
+        if (it != labels.end())
+          return it->second;
+        else
+          return -1;
+      }
+
       bool isValid() { return this->is_valid; }
 
       /* This method allows to dump the content of the instruction 

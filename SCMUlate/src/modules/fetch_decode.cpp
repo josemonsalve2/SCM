@@ -61,5 +61,13 @@ scm::fetch_decode_module::decodeRegisterName(std::string const reg) {
 void
 scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t * inst) {
 
+  if (inst->getInstruction() == "JMPLBL") {
+    int newPC = this->inst_mem_m->getMemoryLabel(inst->getOp1());
+    if (newPC == -1) {
+      SCMULATE_ERROR(0, "Incorrect label translation");
+    } else {
+      PC = newPC;
+    }
+  }
 
 }

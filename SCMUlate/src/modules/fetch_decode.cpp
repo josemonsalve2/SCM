@@ -27,7 +27,7 @@ scm::fetch_decode_module::behavior() {
           break;
         case CONTROL_INST:
           SCMULATE_INFOMSG(4, "I've identified a CONTROL_INST");
-          executeControlInstruction(current_instruction);
+          executeControlInstruction(cur_inst);
           break;
         case BASIC_ARITH_INST:
           SCMULATE_INFOMSG(4, "I've identified a BASIC_ARITH_INST");
@@ -52,13 +52,14 @@ scm::fetch_decode_module::behavior() {
     return 0;
 }
 
-
 char*
 scm::fetch_decode_module::decodeRegisterName(std::string const reg) {
+  
   return NULL;
 }
 
 void
-scm::fetch_decode_module::executeControlInstruction(std::string inst) {
+scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t * inst) {
+
 
 }

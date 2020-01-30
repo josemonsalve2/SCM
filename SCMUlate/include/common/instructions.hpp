@@ -21,6 +21,9 @@
 #include <regex>
 #include <iostream>
 
+#define REGISTER_REGEX "[a-zA-Z0-9]+"
+#define INMIDIATE_REGEX "[-]?[0-9]+"
+
 #define DEF_INST(name, regExp, numOp) {#name, regExp, numOp}
 #define NUM_OF_INST(a) sizeof(a)/sizeof(inst_def_t)
 
@@ -53,13 +56,13 @@ namespace scm {
    * or to obtain the parameters
    */
   static inst_def_t const controlInsts[] = {
-    DEF_INST( JMPLBL,  "[ ]*(JMPLBL)[ ]+([a-zA-Z0-9]+);.*", 1),                                                   /* JMPLBL destination;*/
-    DEF_INST( JMPPC,   "[ ]*(JMPPC)[ ]+([-]*[0-9]+);.*", 1),                                                      /* JMPPC -100;*/
-    DEF_INST( BREQ,    "[ ]*(BREQ)[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);.*", 3),            /* BREQ R1, R2, -100; */
-    DEF_INST( BGT,     "[ ]*(BGT)[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);.*", 3),             /* BGT R1, R2, -100; */
-    DEF_INST( BGET,    "[ ]*(BGET)[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);.*", 3),            /* BGET R1, R2, -100; */
-    DEF_INST( BLT,     "[ ]*(BLT)[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);.*", 3),             /* BLT R1, R2, -100; */
-    DEF_INST( BLET,    "[ ]*(BLET)[ ]+([a-zA-Z0-9]+)[ ]*,[ ]*([a-zA-Z0-9]+)[ ]*,([ -]*[0-9]+);.*", 3)};            /* BLET R1, R2, -100; */
+    DEF_INST( JMPLBL,  "[ ]*(JMPLBL)[ ]+(" REGISTER_REGEX ");.*", 1),                                                   /* JMPLBL destination;*/
+    DEF_INST( JMPPC,   "[ ]*(JMPPC)[ ]+(" INMIDIATE_REGEX ");.*", 1),                                                      /* JMPPC -100;*/
+    DEF_INST( BREQ,    "[ ]*(BREQ)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3),            /* BREQ R1, R2, -100; */
+    DEF_INST( BGT,     "[ ]*(BGT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3),             /* BGT R1, R2, -100; */
+    DEF_INST( BGET,    "[ ]*(BGET)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3),            /* BGET R1, R2, -100; */
+    DEF_INST( BLT,     "[ ]*(BLT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3),             /* BLT R1, R2, -100; */
+    DEF_INST( BLET,    "[ ]*(BLET)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3)};            /* BLET R1, R2, -100; */
 
   //BASIC ARITHMETIC INSTRUCTIONS
   /** \brief All the basic arithmetic instructions
@@ -69,10 +72,10 @@ namespace scm {
    * or to obtain the parameters
    */
   static inst_def_t const basicArithInsts[] = {
-  DEF_INST( ADD,  "[ ]*(ADD)[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*", 3),     /* ADD R1, R2, R3; R2 and R3 can be literals*/
-  DEF_INST( SUB,  "[ ]*(SUB)[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*", 3),     /* SUB R1, R2, R3; R2 and R3 can be literals*/
-  DEF_INST( SHFL, "[ ]*(SHFL)[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*", 2),                            /* SHFL R1, R2; R2 can be a literal representing how many positions to shift*/
-  DEF_INST( SHFR, "[ ]*(SHFR)[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*", 2)};                            /* SHFR R1, R2; R2 can be a literal representing how many positions to shift*/
+  DEF_INST( ADD,  "[ ]*(ADD)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3),     /* ADD R1, R2, R3; R2 and R3 can be literals*/
+  DEF_INST( SUB,  "[ ]*(SUB)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3),     /* SUB R1, R2, R3; R2 and R3 can be literals*/
+  DEF_INST( SHFL, "[ ]*(SHFL)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2),                            /* SHFL R1, R2; R2 can be a literal representing how many positions to shift*/
+  DEF_INST( SHFR, "[ ]*(SHFR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2)};                            /* SHFR R1, R2; R2 can be a literal representing how many positions to shift*/
 
   //MEMORY INSTRUNCTIONS
   /** \brief All the memory related instructions
@@ -82,10 +85,10 @@ namespace scm {
    * or to obtain the parameters
    */
   static inst_def_t const memInsts[] = {
-  DEF_INST( LDADR, "[ ]*(LDADR)[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*", 2),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
-  DEF_INST( LDOFF, "[ ]*(LDOFF)[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*", 3),  /* LDOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
-  DEF_INST( STADR, "[ ]*(STADR)[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*", 2),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
-  DEF_INST( STOFF, "[ ]*(STOFF)[ ]+([a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*,([ -]*[a-zA-Z0-9]+)[ ]*;.*", 3)};  /* LDOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
+  DEF_INST( LDADR, "[ ]*(LDADR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
+  DEF_INST( LDOFF, "[ ]*(LDOFF)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3),  /* LDOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
+  DEF_INST( STADR, "[ ]*(STADR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
+  DEF_INST( STOFF, "[ ]*(STOFF)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3)};  /* LDOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
 
   /** \brief Definition of the instruction types 
    *

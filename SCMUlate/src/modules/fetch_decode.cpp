@@ -15,8 +15,10 @@ scm::fetch_decode_module::behavior() {
     while (*(this->aliveSignal)) {
       std::string current_instruction = this->inst_mem_m->fetch(this->PC);
       SCMULATE_INFOMSG(3, "I received instruction: %s", current_instruction.c_str());
-      instType cur_type = scm::instructions::findInstType(current_instruction);
-      switch(cur_type) {
+      scm::decoded_instruction_t* cur_inst = scm::instructions::findInstType(current_instruction);
+      SCMULATE_ERROR_IF(0, !cur_inst, "Returned instruction is NULL. This should not happen");
+      // Depending on the instruction do something 
+      switch(cur_inst->getType()) {
         case COMMIT:
           SCMULATE_INFOMSG(4, "I've identified a COMMIT");
           SCMULATE_INFOMSG(1, "Turning off machine alive = false");
@@ -24,8 +26,8 @@ scm::fetch_decode_module::behavior() {
           *(this->aliveSignal) = false;
           break;
         case CONTROL_INST:
-          //execute_control_instruction(current_instruction);
           SCMULATE_INFOMSG(4, "I've identified a CONTROL_INST");
+          executeControlInstruction(current_instruction);
           break;
         case BASIC_ARITH_INST:
           SCMULATE_INFOMSG(4, "I've identified a BASIC_ARITH_INST");
@@ -43,6 +45,8 @@ scm::fetch_decode_module::behavior() {
           break;
       }
       this->PC++;
+
+      delete cur_inst;
     } 
     SCMULATE_INFOMSG(1, "Shutting down fetch decode unit");
     return 0;
@@ -54,3 +58,7 @@ scm::fetch_decode_module::decodeRegisterName(std::string const reg) {
   return NULL;
 }
 
+void
+scm::fetch_decode_module::executeControlInstruction(std::string inst) {
+
+}

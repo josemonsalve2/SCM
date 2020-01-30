@@ -42,12 +42,17 @@ namespace scm {
        * \return a pointer to the corresponding register, if it exists. Otherwise returns NULL
        */
       static inline char* decodeRegisterName(std::string const reg);
-      static inline char* executeControlInstruction(std::string const curInstruction);
 
   
     public: 
       fetch_decode_module() = delete;
       fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const, reg_file_module * const, bool * const aliveSig);
+
+      /** \brief logic to execute an instruction
+       * 
+       *  Function to execute control instructions that affect the program counter
+       */
+      static inline void executeControlInstruction(std::string instruction);
 
       /** Actual logic of this unit
        * 

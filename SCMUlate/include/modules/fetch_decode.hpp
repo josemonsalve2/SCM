@@ -42,6 +42,7 @@ namespace scm {
        * \return a pointer to the corresponding register, if it exists. Otherwise returns NULL
        */
       static inline char* decodeRegisterName(std::string const reg);
+      static inline char* executeControlInstruction(std::string const curInstruction);
 
   
     public: 

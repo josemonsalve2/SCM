@@ -16,6 +16,12 @@ scm::scm_machine::scm_machine(std::string in_filename):
       init_correct = false;
       return;
     }
+    
+    if(!inst_mem_m.isValid()) {
+      SCMULATE_ERROR(0, "Error when loading file");
+      init_correct = false;
+      return;
+    }
 
     // Creating execution Units
     int exec_units_threads[] = {CUS};

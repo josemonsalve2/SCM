@@ -6,9 +6,11 @@
 
 namespace scm {
 
-  /* The cu_executor performs the execution of instructions, usually in
-   * the form of codelets. It requiers an execution slot which contains
-   * the codelet that is to be executed.*/
+  /** brief: Executors 
+   *
+   *  The cu_executor performs the execution of instructions, usually in
+   *  the form of codelets. It requiers an execution slot which contains
+   *  the codelet that is to be executed.*/
   class cu_executor_module{
     private:
       int cu_executor_id;

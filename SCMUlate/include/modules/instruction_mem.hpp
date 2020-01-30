@@ -46,6 +46,8 @@ namespace scm {
        */
       inline std::string fetch(int address) { return memory[address]; };
 
+      bool isValid() { return this->is_valid; }
+
       /* This method allows to dump the content of the instruction 
        * memory for debugging
        */

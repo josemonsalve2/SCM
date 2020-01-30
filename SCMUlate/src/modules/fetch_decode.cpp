@@ -24,6 +24,7 @@ scm::fetch_decode_module::behavior() {
           *(this->aliveSignal) = false;
           break;
         case CONTROL_INST:
+          //execute_control_instruction(current_instruction);
           SCMULATE_INFOMSG(4, "I've identified a CONTROL_INST");
           break;
         case BASIC_ARITH_INST:
@@ -37,6 +38,8 @@ scm::fetch_decode_module::behavior() {
           break;
         default:
           SCMULATE_ERROR(0, "Instruction not recognized [%s]", current_instruction.c_str());
+          #pragma omp atomic write
+          *(this->aliveSignal) = false;
           break;
       }
       this->PC++;

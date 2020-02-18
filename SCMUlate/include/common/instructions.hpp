@@ -21,14 +21,24 @@
 #include <regex>
 #include <iostream>
 
-#define REGISTER_REGEX "[a-zA-Z0-9]+"
+#define REGISTER_REGEX "R[BbLl0-9_]+"
+#define REGISTER_SPLIT_REGEX "R([BbLl0-9]+)_([0-9]+)"
 #define INMIDIATE_REGEX "[-]?[0-9]+"
+#define LABEL_REGEX "([a-zA-Z0-9_]+)"
 
 #define DEF_INST(name, regExp, numOp) {#name, regExp, numOp}
 #define NUM_OF_INST(a) sizeof(a)/sizeof(inst_def_t)
 
 namespace scm {
-
+  /** \brief Decoded register structure
+   *  
+   *  Contains the register name a register size that is taken out of a encoded register
+   *
+   */
+  typedef struct decoded_reg {
+    std::string reg_size;
+    uint32_t reg_number;
+  } decoded_reg_t;
   /** \brief Instruction definition
    *
    *  This struct contains all the information needed for the definition of a instruction 
@@ -56,7 +66,7 @@ namespace scm {
    * or to obtain the parameters
    */
   static inst_def_t const controlInsts[] = {
-    DEF_INST( JMPLBL,  "[ ]*(JMPLBL)[ ]+(" REGISTER_REGEX ");.*", 1),                                                   /* JMPLBL destination;*/
+    DEF_INST( JMPLBL,  "[ ]*(JMPLBL)[ ]+(" LABEL_REGEX ");.*", 1),                                                   /* JMPLBL destination;*/
     DEF_INST( JMPPC,   "[ ]*(JMPPC)[ ]+(" INMIDIATE_REGEX ");.*", 1),                                                      /* JMPPC -100;*/
     DEF_INST( BREQ,    "[ ]*(BREQ)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3),            /* BREQ R1, R2, -100; */
     DEF_INST( BGT,     "[ ]*(BGT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3),             /* BGT R1, R2, -100; */
@@ -157,12 +167,23 @@ namespace scm {
        *  \param inst the corresponding instruction text to identify
        *  \returns true or false if the instruction is LABEL type
        */
-      static inline bool isCommit(std::string const inst, decoded_instruction_t ** decInst);
+      static inline bool isLabel(std::string const inst);
       /** \brief Is the instruction type COMMIT
        *  \param inst the corresponding instruction text to identify
        *  \returns true or false if the instruction is COMMIT type
        */
-      static inline bool isLabel(std::string const inst);
+      static inline bool isCommit(std::string const inst, decoded_instruction_t ** decInst);
+      /** \brief Obtain name and size of register
+       *  \param op the operand that contains the enconded register
+       *  \returns a decoded_reg_t that contains name and value separately
+       *  \sa decoded_reg_t
+       */
+      static inline decoded_reg_t decodeRegister(std::string const op);
+      /** \brief Is the operand a register type or inmediate value
+       *  \param op the operand that we want to check
+       *  \returns true if the operand encodes a register, false otherwise 
+       */
+      static inline bool isRegister(std::string const op);
       /** \brief Is the instruction type CONTROL_INST
        *  \param inst the corresponding instruction text to identify
        *  \returns true or false if the instruction is CONTROL type
@@ -206,6 +227,9 @@ namespace scm {
       if (!dec) isMemory(instruction, &dec);
       if (!dec) dec = new decoded_instruction_t(UNKNOWN);
 
+      SCMULATE_INFOMSG(4, "decoded: {type = %d, opcode = %s, op1 = %s, op2 = %s, op3 = %s}, ", dec->getType(), dec->getInstruction().c_str(), dec->getOp1().c_str(), dec->getOp2().c_str(), dec->getOp3().c_str());
+      
+
       return dec;
     }
 
@@ -221,11 +245,29 @@ namespace scm {
       return false;
     }
   bool 
+    instructions::isRegister(std::string const op) {
+      std::regex search_exp(REGISTER_REGEX, std::regex_constants::ECMAScript);
+      if (std::regex_match(op, search_exp))
+        return true;
+      return false;
+    }
+  bool 
     instructions::isLabel(std::string const inst) {
       std::regex search_exp(LABEL_INST.inst_regex, std::regex_constants::ECMAScript);
       if (std::regex_match(inst, search_exp))
         return true;
       return false;
+    }
+  decoded_reg_t
+    instructions::decodeRegister(std::string const op) {
+      std::regex search_exp(REGISTER_SPLIT_REGEX, std::regex_constants::ECMAScript);
+      std::smatch matches;
+      decoded_reg_t res = {"", 0};
+      if (std::regex_search(op.begin(), op.end(), matches, search_exp)) {
+         res.reg_size = matches[1];
+         res.reg_number = std::stoi(matches[2]);
+      }
+      return res;
     }
   std::string
     instructions::getLabel(std::string const inst) {

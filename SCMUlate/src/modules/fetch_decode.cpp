@@ -52,22 +52,43 @@ scm::fetch_decode_module::behavior() {
     return 0;
 }
 
-char*
-scm::fetch_decode_module::decodeRegisterName(std::string const reg) {
-  
-  return NULL;
-}
-
 void
 scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t * inst) {
 
   if (inst->getInstruction() == "JMPLBL") {
-    int newPC = this->inst_mem_m->getMemoryLabel(inst->getOp1());
-    if (newPC == -1) {
-      SCMULATE_ERROR(0, "Incorrect label translation");
-    } else {
-      PC = newPC;
+    int newPC = this->inst_mem_m->getMemoryLabel(inst->getOp1()) - 1;
+    SCMULATE_ERROR_IF(0, newPC == -2,   "Incorrect label translation");
+    PC = newPC;
+    return;
+  }
+  if (inst->getInstruction() == "JMPPC") {
+    int offset = std::stoi(inst->getOp1());
+    int target = offset + PC - 1;
+    SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0),  "Incorrect destination offset");
+    PC = target;
+    return;
+  }
+  if (inst->getInstruction() == "BREQ" ) {
+    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
+    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
+    char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
+    char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
+    bool bitComparison = true;
+    SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
+    for (uint32_t i = 0; i < this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size); ++i) {
+      if (reg1_ptr[i] ^ reg2_ptr[i]) {
+        bitComparison = false;
+        break;
+      }
     }
+    if (bitComparison) {
+      int offset = std::stoi(inst->getOp3());
+      int target = offset + PC - 1;
+      SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0),  "Incorrect destination offset");
+      PC = target;
+    }
+    return;
   }
 
 }

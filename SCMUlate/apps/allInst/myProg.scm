@@ -1,28 +1,32 @@
   Label1:
-    JMPLBL test;
-    JMPPC -100;
-    JMPPC 100;
-    BREQ R1, R2, 100;
-    BGT R1, R2, -100;
-    BGET R1, R2, 100;
-    BLT R1, R2, -100;
-    BLET R1, R2, 100;
-    ADD R1, R2, R3; 
-    ADD R1, R2, 100; 
-    SUB R1, R2, R3; 
-    SUB R1, R2, 100; 
-    SHFL R1, R2;
-    SHFL R1, -100;
-    SHFR R1, R2;
-    SHFR R1, -100;
-    LDADR R1, R2;
-    LDADR R1, 02020;
-    LDOFF R1, R2, R3; 
-    LDOFF R1, R2, 02020; 
-    LDOFF R1, 1010, 02020; 
-    STADR R1, R2;
-    STADR R1, 02020;
-    STOFF R1, R2, R3; 
-    STOFF R1, R2, 02020; 
-    STOFF R1, 1010, 02020; 
+    JMPLBL Label2;
+    JMPLBL Label2; // IGNORED
+    JMPLBL Label2;
+  Label2:
+    JMPPC 2;
+    JMPPC 100; // Ignored
+    BREQ R64B_1, R64B_2, 2;
+    BREQ R64B_1, R64B_2, 100; // Ignored
+    BGT R64B_1, R64B_2, -100;
+    BGET R64B_1, R64B_2, 100;
+    BLT R64B_1, R64B_2, -100;
+    BLET R64B_1, R64B_2, 100;
+    ADD R64B_1, R64B_2, R64B_3; 
+    ADD R64B_1, R64B_2, 100; 
+    SUB R64B_1, R64B_2, R64B_3; 
+    SUB R64B_1, R64B_2, 100; 
+    SHFL R64B_1, R64B_2;
+    SHFL R64B_1, -100;
+    SHFR R64B_1, R64B_2;
+    SHFR R64B_1, -100;
+    LDADR R64B_1, R64B_2;
+    LDADR R64B_1, 02020;
+    LDOFF R64B_1, R64B_2, R64B_3; 
+    LDOFF R64B_1, R64B_2, 02020; 
+    LDOFF R64B_1, 1010, 02020; 
+    STADR R64B_1, R64B_2;
+    STADR R64B_1, 02020;
+    STOFF R64B_1, R64B_2, R64B_3; 
+    STOFF R64B_1, R64B_2, 02020; 
+    STOFF R64B_1, 1010, 02020; 
     COMMIT;

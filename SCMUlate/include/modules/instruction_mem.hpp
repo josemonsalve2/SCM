@@ -60,6 +60,8 @@ namespace scm {
 
       bool isValid() { return this->is_valid; }
 
+      inline uint32_t getMemSize() { return this->memory.size(); }
+
       /* This method allows to dump the content of the instruction 
        * memory for debugging
        */

@@ -36,14 +36,6 @@ namespace scm {
       bool * aliveSignal; /**< When the machine is done, this flag is set to true finishing all the other units */
       int PC; /**< Program counter, this corresponds to the current instruction being executed */
 
-      /** \brief Decode a register name and return the actual memory location 
-       * This is also used to send the registers to the executors, as well as for executing simple operations
-       * \param reg is a text containing the register to decode
-       * \return a pointer to the corresponding register, if it exists. Otherwise returns NULL
-       */
-      static inline char* decodeRegisterName(std::string const reg);
-
-  
     public: 
       fetch_decode_module() = delete;
       fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const, reg_file_module * const, bool * const aliveSig);

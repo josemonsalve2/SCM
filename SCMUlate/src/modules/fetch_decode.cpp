@@ -12,6 +12,8 @@ scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem, 
 int
 scm::fetch_decode_module::behavior() {
   SCMULATE_INFOMSG(1, "I am an SU");
+  // Initialization barrier
+  #pragma omp barrier
     while (*(this->aliveSignal)) {
       std::string current_instruction = this->inst_mem_m->fetch(this->PC);
       SCMULATE_INFOMSG(3, "I received instruction: %s", current_instruction.c_str());
@@ -55,12 +57,18 @@ scm::fetch_decode_module::behavior() {
 void
 scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t * inst) {
 
+  /////////////////////////////////////////////////////
+  ///// CONTROL LOGIC FOR THE JMPLBL INSTRUCTION
+  /////////////////////////////////////////////////////
   if (inst->getInstruction() == "JMPLBL") {
     int newPC = this->inst_mem_m->getMemoryLabel(inst->getOp1()) - 1;
     SCMULATE_ERROR_IF(0, newPC == -2,   "Incorrect label translation");
     PC = newPC;
     return;
   }
+  /////////////////////////////////////////////////////
+  ///// CONTROL LOGIC FOR THE JMPPC INSTRUCTION
+  /////////////////////////////////////////////////////
   if (inst->getInstruction() == "JMPPC") {
     int offset = std::stoi(inst->getOp1());
     int target = offset + PC - 1;
@@ -68,6 +76,9 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
     PC = target;
     return;
   }
+  /////////////////////////////////////////////////////
+  ///// CONTROL LOGIC FOR THE BREQ INSTRUCTION
+  /////////////////////////////////////////////////////
   if (inst->getInstruction() == "BREQ" ) {
     decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
     decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
@@ -83,6 +94,118 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
       }
     }
     if (bitComparison) {
+      int offset = std::stoi(inst->getOp3());
+      int target = offset + PC - 1;
+      SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0),  "Incorrect destination offset");
+      PC = target;
+    }
+    return;
+  }
+  /////////////////////////////////////////////////////
+  ///// CONTROL LOGIC FOR THE BGT INSTRUCTION
+  /////////////////////////////////////////////////////
+  if (inst->getInstruction() == "BGT" ) {
+    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
+    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
+    char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
+    char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
+    bool reg1_gt_reg2 = false;
+    SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
+    for (uint32_t i = 0; i < this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size); ++i) {
+      // Find the first byte from MSB to LSB that is different in reg1 and reg2. If reg1 > reg2 in that byte, then reg1 > reg2 in general
+      if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] > reg2_ptr[i]) {
+        reg1_gt_reg2 = true;
+        break;
+      }
+    }
+    if (reg1_gt_reg2) {
+      int offset = std::stoi(inst->getOp3());
+      int target = offset + PC - 1;
+      SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0),  "Incorrect destination offset");
+      PC = target;
+    }
+    return;
+  }
+  /////////////////////////////////////////////////////
+  ///// CONTROL LOGIC FOR THE BGET INSTRUCTION
+  /////////////////////////////////////////////////////
+  if (inst->getInstruction() == "BGET" ) {
+    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
+    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
+    char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
+    char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
+    bool reg1_get_reg2 = false;
+    SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
+    uint32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+    for (uint32_t i = 0; i < size_reg_bytes; ++i) {
+      // Find the first byte from MSB to LSB that is different in reg1 and reg2. If reg1 > reg2 in that byte, then reg1 > reg2 in general
+      if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] > reg2_ptr[i]) {
+        reg1_get_reg2 = true;
+        break;
+      }
+      // If we have not found any byte that is different in both registers from MSB to LSB, and the LSB byte is the same, the the registers are the same
+      if (i == size_reg_bytes-1  && reg1_ptr[i] == reg2_ptr[i])
+        reg1_get_reg2 = true;
+    }
+    if (reg1_get_reg2) {
+      int offset = std::stoi(inst->getOp3());
+      int target = offset + PC - 1;
+      SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0),  "Incorrect destination offset");
+      PC = target;
+    }
+    return;
+  }
+  /////////////////////////////////////////////////////
+  ///// CONTROL LOGIC FOR THE BLT INSTRUCTION
+  /////////////////////////////////////////////////////
+  if (inst->getInstruction() == "BLT" ) {
+    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
+    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
+    char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
+    char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
+    bool reg1_lt_reg2 = false;
+    SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
+    for (uint32_t i = 0; i < this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size); ++i) {
+      // Find the first byte from MSB to LSB that is different in reg1 and reg2. If reg1 < reg2 in that byte, then reg1 < reg2 in general
+      if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] < reg2_ptr[i]) {
+        reg1_lt_reg2 = true;
+        break;
+      }
+    }
+    if (reg1_lt_reg2) {
+      int offset = std::stoi(inst->getOp3());
+      int target = offset + PC - 1;
+      SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0),  "Incorrect destination offset");
+      PC = target;
+    }
+    return;
+  }
+  /////////////////////////////////////////////////////
+  ///// CONTROL LOGIC FOR THE BLET INSTRUCTION
+  /////////////////////////////////////////////////////
+  if (inst->getInstruction() == "BLET" ) {
+    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
+    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
+    char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
+    char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
+    bool reg1_let_reg2 = false;
+    SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
+    uint32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+    for (uint32_t i = 0; i < size_reg_bytes; ++i) {
+      // Find the first byte from MSB to LSB that is different in reg1 and reg2. If reg1 < reg2 in that byte, then reg1 < reg2 in general
+      if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] < reg2_ptr[i]) {
+        reg1_let_reg2 = true;
+        break;
+      }
+      // If we have not found any byte that is different in both registers from MSB to LSB, and the LSB byte is the same, the the registers are the same
+      if (i == size_reg_bytes-1 && reg1_ptr[i] == reg2_ptr[i])
+        reg1_let_reg2 = true;
+    }
+    if (reg1_let_reg2) {
       int offset = std::stoi(inst->getOp3());
       int target = offset + PC - 1;
       SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0),  "Incorrect destination offset");

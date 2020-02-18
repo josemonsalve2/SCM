@@ -50,7 +50,12 @@ scm::scm_machine::run() {
         fetch_decode_m.behavior();
         break;
       case MEM_THREAD:
-//        run_result = SSCMUlate_MEM_Behavior();
+        {
+//          run_result = SSCMUlate_MEM_Behavior();
+          // TODO: MOVE THIS BARRIER TO THE MEMORY MODULE BEHAVIOR
+          // Initialization barrier 
+          #pragma omp barrier 
+        }
         break;
       case CU_THREADS:
         // Find my executor
@@ -62,7 +67,11 @@ scm::scm_machine::run() {
         }
         break;
       default:
-        SCMULATE_WARNING(0, "Thread created with no purpose. What's my purpose? You pass the butter");
+        {
+          // Initialization barrier
+          #pragma omp barrier 
+          SCMULATE_WARNING(0, "Thread created with no purpose. What's my purpose? You pass the butter");
+        }
     }
     #pragma omp barrier 
 

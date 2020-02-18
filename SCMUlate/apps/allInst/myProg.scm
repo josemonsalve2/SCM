@@ -7,10 +7,14 @@
     JMPPC 100; // Ignored
     BREQ R64B_1, R64B_2, 2;
     BREQ R64B_1, R64B_2, 100; // Ignored
-    BGT R64B_1, R64B_2, -100;
-    BGET R64B_1, R64B_2, 100;
-    BLT R64B_1, R64B_2, -100;
-    BLET R64B_1, R64B_2, 100;
+    BGT R64B_1, R64B_2, 2; 
+    BGT R64B_1, R64B_2, 1; 
+    BGET R64B_1, R64B_2, 2;
+    BGET R64B_1, R64B_2, 1;
+    BLT R64B_1, R64B_2, 2;
+    BLT R64B_1, R64B_2, 1;
+    BLET R64B_1, R64B_2, 2;
+    BLET R64B_1, R64B_2, 1;
     ADD R64B_1, R64B_2, R64B_3; 
     ADD R64B_1, R64B_2, 100; 
     SUB R64B_1, R64B_2, R64B_3; 

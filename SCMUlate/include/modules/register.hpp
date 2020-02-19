@@ -24,7 +24,7 @@ namespace scm {
      static inline uint32_t getRegisterSizeInBytes(std::string size) {
        uint32_t result = 0;
        if (size == "64B")
-         result = 64;
+         result = 8;
        else if (size == "1L")
          result = CACHE_LINE_SIZE;
        else if (size == "8L")

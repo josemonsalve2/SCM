@@ -46,6 +46,13 @@ namespace scm {
        */
       inline void executeControlInstruction(decoded_instruction_t * inst);
 
+      /** \brief logic to execute an arithmetic instruction
+       *
+       *  We will execute arithmetic instructions in the SU when they are simple enough. Other arithmetic
+       *  instructions must be implemented as codelets 
+       */
+      inline void executeArithmeticInstructions(decoded_instruction_t * inst);
+
       /** Actual logic of this unit
        * 
        * Implements the actual behavior logic of the fetch decode unit

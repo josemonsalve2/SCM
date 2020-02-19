@@ -33,6 +33,7 @@ scm::fetch_decode_module::behavior() {
           break;
         case BASIC_ARITH_INST:
           SCMULATE_INFOMSG(4, "I've identified a BASIC_ARITH_INST");
+          executeArithmeticInstructions(cur_inst);
           break;
         case EXECUTE_INST:
           SCMULATE_INFOMSG(4, "I've identified a EXECUTE_INST");
@@ -214,4 +215,60 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
     return;
   }
 
+}
+void
+scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instruction_t * inst) {
+  /////////////////////////////////////////////////////
+  ///// CONTROL LOGIC FOR THE ADD INSTRUCTION
+  /////////////////////////////////////////////////////
+  if (inst->getInstruction() == "ADD") {
+    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
+    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
+    // Second operand may be register or immediate. We assumme immediate are no longer than a long long
+    if (!instructions::isRegister(inst->getOp3())) {
+      // IMMEDIATE ADDITION CASE
+      // TODO: Think about the signed option of these operands
+      unsigned long long immediate_val = std::stoull(inst->getOp3());
+
+      char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
+
+      // Where to store the result
+      char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
+      int32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+
+      // Addition
+      uint32_t temp = 0;
+      for (int32_t i = size_reg_bytes-1; i >= 0; --i) {
+        temp += (immediate_val & 255) + (reg2_ptr[i] & 255); 
+        reg1_ptr[i] = temp & 255;
+        immediate_val >>= 8;
+        // Carry on
+        temp = temp > 255 ? 1: 0;
+      }
+      this->reg_file_m->dumpRegister(reg1.reg_size, reg1.reg_number);
+      this->reg_file_m->dumpRegister(reg2.reg_size, reg2.reg_number);
+    } else {
+      // REGISTER REGISTER ADD CASE
+      decoded_reg_t reg3 = instructions::decodeRegister(inst->getOp3());
+      char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
+      char * reg3_ptr = this->reg_file_m->getRegisterByName(reg3.reg_size, reg3.reg_number); 
+
+      // Where to store the result
+      char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
+      int32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+
+      // Addition
+      int temp = 0;
+      for (int32_t i = size_reg_bytes-1; i >= 0; --i) {
+        temp +=  (reg3_ptr[i] & 255) + (reg2_ptr[i] & 255); 
+        reg1_ptr[i] = temp & 255;
+        // Carry on
+        temp = temp > 255? 1: 0;
+      }
+      this->reg_file_m->dumpRegister(reg1.reg_size, reg1.reg_number);
+      this->reg_file_m->dumpRegister(reg2.reg_size, reg2.reg_number);
+      this->reg_file_m->dumpRegister(reg3.reg_size, reg3.reg_number);
+    }
+    return;
+  }
 }

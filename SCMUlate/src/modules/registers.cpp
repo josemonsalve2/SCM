@@ -52,28 +52,10 @@ scm::reg_file_module::checkRegisterConfig() {
 
 void 
 scm::reg_file_module::dumpRegister(std::string size, int num) {
-  int len_in_bytes = 0;
-  if (size == "64B")
-    len_in_bytes = 64;
-  else if (size == "1L")
-    len_in_bytes = 1*CACHE_LINE_SIZE;
-  else if (size == "8L")
-    len_in_bytes = 8*CACHE_LINE_SIZE;
-  else if (size == "16L")
-    len_in_bytes = 16*CACHE_LINE_SIZE;
-  else if (size == "256L")
-    len_in_bytes = 256*CACHE_LINE_SIZE;
-  else if (size == "512L")
-    len_in_bytes = 512*CACHE_LINE_SIZE;
-  else if (size == "1024L")
-    len_in_bytes = 1024*CACHE_LINE_SIZE;
-  else if (size == "2048L")
-    len_in_bytes = 2048*CACHE_LINE_SIZE;
-  else
-    SCMULATE_ERROR(0, "DECODED REGISTER DOES NOT EXIST!!!")
-  std::cout << "reg_" << size << " = 0x" ;
+  int len_in_bytes = getRegisterSizeInBytes(size);
+  std::cout << "reg_" << size <<"_"<< num <<" = 0x" ;
   for (int i = 0; i < len_in_bytes; i++)
-    std::cout<< std::setfill('0')<<std::setw(2) << std::hex << static_cast<int>(getRegisterByName(size, num)[i]) << (i%2 != 0? "  ":"");
+    std::cout<< std::setfill('0')<<std::setw(2) << std::hex << static_cast<unsigned short>(getRegisterByName(size, num)[i] & 255) << (i%2 != 0? " ":"");
   std::cout << std::endl;
 
 }

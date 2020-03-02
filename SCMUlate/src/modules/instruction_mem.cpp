@@ -22,7 +22,7 @@ scm::inst_mem_module::loader(string const filename) {
             std::string label = instructions::getLabel(line);
             SCMULATE_INFOMSG(4, "Found label: '%s'", label.c_str());
             labels[label] = curInst; 
-          } else {
+          } else if (!instructions::isComment(line)) {
             // Any other instruction we store it in memory
             this->memory.push_back(line);
             curInst++;

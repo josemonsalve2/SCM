@@ -25,6 +25,7 @@
 #define REGISTER_SPLIT_REGEX "R([BbLl0-9]+)_([0-9]+)"
 #define INMIDIATE_REGEX "[-]?[0-9]+"
 #define LABEL_REGEX "([a-zA-Z0-9_]+)"
+#define COMMENT_REGEX "([ ]*//.*)"
 
 #define DEF_INST(name, regExp, numOp) {#name, regExp, numOp}
 #define NUM_OF_INST(a) sizeof(a)/sizeof(inst_def_t)
@@ -163,45 +164,59 @@ namespace scm {
        *  \sa instType
        */
       static inline decoded_instruction_t* findInstType(std::string const inst);
+
+      /** \brief Is the instruction type COMMENT
+       *  \param inst the corresponding instruction text to identify
+       *  \returns true or false if the instruction is COMMENT type
+       */
+      static inline bool isComment(std::string const inst);
+
       /** \brief Is the instruction type LABEL
        *  \param inst the corresponding instruction text to identify
        *  \returns true or false if the instruction is LABEL type
        */
       static inline bool isLabel(std::string const inst);
+
       /** \brief Is the instruction type COMMIT
        *  \param inst the corresponding instruction text to identify
        *  \returns true or false if the instruction is COMMIT type
        */
       static inline bool isCommit(std::string const inst, decoded_instruction_t ** decInst);
+
       /** \brief Obtain name and size of register
        *  \param op the operand that contains the enconded register
        *  \returns a decoded_reg_t that contains name and value separately
        *  \sa decoded_reg_t
        */
       static inline decoded_reg_t decodeRegister(std::string const op);
+
       /** \brief Is the operand a register type or inmediate value
        *  \param op the operand that we want to check
        *  \returns true if the operand encodes a register, false otherwise 
        */
       static inline bool isRegister(std::string const op);
+
       /** \brief Is the instruction type CONTROL_INST
        *  \param inst the corresponding instruction text to identify
        *  \returns true or false if the instruction is CONTROL type
        *  \sa instType
        */
       static inline bool isControlInst(std::string const inst, decoded_instruction_t ** decInst);
+
       /** \brief Is the instruction type BASIC_ARITH_INST
        *  \param inst the corresponding instruction text to identify
        *  \returns true or false if the instruction is CONTROL type
        *  \sa instType
        */
       static inline bool isBasicArith(std::string const inst, decoded_instruction_t ** decInst);
+
       /** \brief Is the instruction type EXECUTE_INST
        *  \param inst the corresponding instruction text to identify
        *  \returns true or false if the instruction is CONTROL type
        *  \sa instType
        */
       static inline bool isExecution(std::string const inst, decoded_instruction_t ** decInst);
+      
       /** \brief Is the instruction type MEMORY_INST
        *  \param inst the corresponding instruction text to identify
        *  \returns true or false if the instruction is CONTROL type
@@ -244,6 +259,7 @@ namespace scm {
       decInst = NULL;
       return false;
     }
+
   bool 
     instructions::isRegister(std::string const op) {
       std::regex search_exp(REGISTER_REGEX, std::regex_constants::ECMAScript);
@@ -251,6 +267,15 @@ namespace scm {
         return true;
       return false;
     }
+
+  bool 
+    instructions::isComment(std::string const inst) {
+      std::regex search_exp(COMMENT_REGEX, std::regex_constants::ECMAScript);
+      if (std::regex_match(inst, search_exp))
+        return true;
+      return false;
+    }
+
   bool 
     instructions::isLabel(std::string const inst) {
       std::regex search_exp(LABEL_INST.inst_regex, std::regex_constants::ECMAScript);
@@ -258,6 +283,7 @@ namespace scm {
         return true;
       return false;
     }
+
   decoded_reg_t
     instructions::decodeRegister(std::string const op) {
       std::regex search_exp(REGISTER_SPLIT_REGEX, std::regex_constants::ECMAScript);
@@ -269,6 +295,7 @@ namespace scm {
       }
       return res;
     }
+
   std::string
     instructions::getLabel(std::string const inst) {
       std::regex search_exp(LABEL_INST.inst_regex, std::regex_constants::ECMAScript);
@@ -278,6 +305,7 @@ namespace scm {
       }
       return "";
     }
+
   bool 
     instructions::isControlInst(std::string const inst, decoded_instruction_t ** decInst) {
       for (size_t i = 0; i < NUM_OF_INST(controlInsts); i++) {
@@ -301,6 +329,7 @@ namespace scm {
       decInst = NULL;
       return false;
     }
+
   bool 
     instructions::isBasicArith(std::string const inst, decoded_instruction_t ** decInst) {
       for (size_t i = 0; i < NUM_OF_INST(basicArithInsts); i++) {
@@ -324,6 +353,7 @@ namespace scm {
       decInst = NULL;
       return false;
     }
+
   bool 
     instructions::isExecution(std::string const inst, decoded_instruction_t ** decInst) {
       std::regex search_exp(CODELET_INST.inst_regex, std::regex_constants::ECMAScript);
@@ -335,6 +365,7 @@ namespace scm {
       decInst = NULL;
       return false;
     }
+    
   bool 
     instructions::isMemory(std::string const inst, decoded_instruction_t ** decInst) {
       for (size_t i = 0; i < NUM_OF_INST(memInsts); i++) {

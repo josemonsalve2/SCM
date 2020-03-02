@@ -273,8 +273,6 @@ scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instruction
   if (inst->getInstruction() == "SUB") {
     decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
     decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
-    this->reg_file_m->dumpRegister(reg1.reg_size,reg1.reg_number);
-    this->reg_file_m->dumpRegister(reg2.reg_size,reg2.reg_number);
 
     // Second operand may be register or immediate. We assumme immediate are no longer than a long long
     if (!instructions::isRegister(inst->getOp3())) {
@@ -325,7 +323,24 @@ scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instruction
       }
       SCMULATE_ERROR_IF(0, temp == 1, "Registers must be possitive numbers, addition of numbers resulted in negative number. Carry was 1 at the end of the operation");
     }
-    this->reg_file_m->dumpRegister(reg1.reg_size,reg1.reg_number);
     return;
+  }
+
+  /////////////////////////////////////////////////////
+  ///// ARITHMETIC LOGIC FOR THE SHFL INSTRUCTION
+  /////////////////////////////////////////////////////
+  if (inst->getInstruction() == "SHFL") {
+    SCMULATE_ERROR(0, "THE SHFL OPERATION HAS NOT BEEN IMPLEMENTED. KILLING THIS")
+    #pragma omp atomic write
+    *(this->aliveSignal) = false;
+  }
+
+  /////////////////////////////////////////////////////
+  ///// ARITHMETIC LOGIC FOR THE SHFR INSTRUCTION
+  /////////////////////////////////////////////////////
+  if (inst->getInstruction() == "SHFR") {
+    SCMULATE_ERROR(0, "THE SHFR OPERATION HAS NOT BEEN IMPLEMENTED. KILLING THIS")
+    #pragma omp atomic write
+    *(this->aliveSignal) = false;
   }
 }

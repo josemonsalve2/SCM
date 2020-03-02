@@ -28,28 +28,28 @@
 namespace scm {
 
   typedef struct{
-      char data[8];
+      unsigned char data[8];
   } _reg_64bits;
   typedef struct{
-      char data[CACHE_LINE_SIZE];
+      unsigned char data[CACHE_LINE_SIZE];
   } _reg_1line;
   typedef struct{
-      char data[CACHE_LINE_SIZE*8];
+      unsigned char data[CACHE_LINE_SIZE*8];
   } _reg_8line;
   typedef struct{
-      char data[CACHE_LINE_SIZE*16];
+      unsigned char data[CACHE_LINE_SIZE*16];
   } _reg_16line;
   typedef struct{
-      char data[CACHE_LINE_SIZE*256];
+      unsigned char data[CACHE_LINE_SIZE*256];
   } _reg_256line;
   typedef struct{
-      char data[CACHE_LINE_SIZE*512];
+      unsigned char data[CACHE_LINE_SIZE*512];
   } _reg_512line;
   typedef struct{
-      char data[CACHE_LINE_SIZE*1024];
+      unsigned char data[CACHE_LINE_SIZE*1024];
   } _reg_1024line;
   typedef struct{
-      char data[CACHE_LINE_SIZE*2048];
+      unsigned char data[CACHE_LINE_SIZE*2048];
   } _reg_2048line;
   
   typedef struct {

@@ -83,8 +83,8 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
   if (inst->getInstruction() == "BREQ" ) {
     decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
     decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
-    char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
+    unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
     SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
     bool bitComparison = true;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
@@ -108,8 +108,8 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
   if (inst->getInstruction() == "BGT" ) {
     decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
     decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
-    char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
+    unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
     SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
     bool reg1_gt_reg2 = false;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
@@ -134,8 +134,8 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
   if (inst->getInstruction() == "BGET" ) {
     decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
     decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
-    char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
+    unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
     SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
     bool reg1_get_reg2 = false;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
@@ -164,8 +164,8 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
   if (inst->getInstruction() == "BLT" ) {
     decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
     decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
-    char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
+    unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
     SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
     bool reg1_lt_reg2 = false;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
@@ -190,8 +190,8 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
   if (inst->getInstruction() == "BLET" ) {
     decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
     decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
-    char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
+    unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
     SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
     bool reg1_let_reg2 = false;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
@@ -219,7 +219,7 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
 void
 scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instruction_t * inst) {
   /////////////////////////////////////////////////////
-  ///// CONTROL LOGIC FOR THE ADD INSTRUCTION
+  ///// ARITHMETIC LOGIC FOR THE ADD INSTRUCTION
   /////////////////////////////////////////////////////
   if (inst->getInstruction() == "ADD") {
     decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
@@ -230,45 +230,102 @@ scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instruction
       // TODO: Think about the signed option of these operands
       unsigned long long immediate_val = std::stoull(inst->getOp3());
 
-      char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
+      unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
 
       // Where to store the result
-      char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
+      unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
       int32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
 
       // Addition
       uint32_t temp = 0;
       for (int32_t i = size_reg_bytes-1; i >= 0; --i) {
-        temp += (immediate_val & 255) + (reg2_ptr[i] & 255); 
+        temp += (immediate_val & 255) + (reg2_ptr[i]); 
         reg1_ptr[i] = temp & 255;
         immediate_val >>= 8;
         // Carry on
         temp = temp > 255 ? 1: 0;
       }
-      this->reg_file_m->dumpRegister(reg1.reg_size, reg1.reg_number);
-      this->reg_file_m->dumpRegister(reg2.reg_size, reg2.reg_number);
     } else {
       // REGISTER REGISTER ADD CASE
       decoded_reg_t reg3 = instructions::decodeRegister(inst->getOp3());
-      char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
-      char * reg3_ptr = this->reg_file_m->getRegisterByName(reg3.reg_size, reg3.reg_number); 
+      unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
+      unsigned char * reg3_ptr = this->reg_file_m->getRegisterByName(reg3.reg_size, reg3.reg_number); 
 
       // Where to store the result
-      char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
+      unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
       int32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
 
       // Addition
       int temp = 0;
       for (int32_t i = size_reg_bytes-1; i >= 0; --i) {
-        temp +=  (reg3_ptr[i] & 255) + (reg2_ptr[i] & 255); 
+        temp +=  (reg3_ptr[i]) + (reg2_ptr[i]); 
         reg1_ptr[i] = temp & 255;
         // Carry on
         temp = temp > 255? 1: 0;
       }
-      this->reg_file_m->dumpRegister(reg1.reg_size, reg1.reg_number);
-      this->reg_file_m->dumpRegister(reg2.reg_size, reg2.reg_number);
-      this->reg_file_m->dumpRegister(reg3.reg_size, reg3.reg_number);
     }
+    return;
+  }
+
+  /////////////////////////////////////////////////////
+  ///// ARITHMETIC LOGIC FOR THE SUB INSTRUCTION
+  /////////////////////////////////////////////////////
+  if (inst->getInstruction() == "SUB") {
+    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
+    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
+    this->reg_file_m->dumpRegister(reg1.reg_size,reg1.reg_number);
+    this->reg_file_m->dumpRegister(reg2.reg_size,reg2.reg_number);
+
+    // Second operand may be register or immediate. We assumme immediate are no longer than a long long
+    if (!instructions::isRegister(inst->getOp3())) {
+      // IMMEDIATE ADDITION CASE
+      // TODO: Think about the signed option of these operands
+      unsigned long long immediate_val = std::stoull(inst->getOp3());
+
+      unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
+
+      // Where to store the result
+      unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
+      int32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+
+      // Subtraction
+      uint32_t temp = 0;
+      for (int32_t i = size_reg_bytes-1; i >= 0; --i) {
+        uint32_t cur_byte = immediate_val & 255;
+        if (reg2_ptr[i] < cur_byte + temp) {
+          reg1_ptr[i] = reg2_ptr[i] + 256 - temp - cur_byte;
+          temp = 1; // Increase carry
+        } else {
+          reg1_ptr[i] = reg2_ptr[i] - temp - cur_byte;
+          temp = 0; // Carry has been used
+        }
+        immediate_val >>= 8;
+      }
+      SCMULATE_ERROR_IF(0, temp == 1, "Registers must be possitive numbers, addition of numbers resulted in negative number. Carry was 1 at the end of the operation");
+    } else {
+      // REGISTER REGISTER ADD CASE
+      decoded_reg_t reg3 = instructions::decodeRegister(inst->getOp3());
+      unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
+      unsigned char * reg3_ptr = this->reg_file_m->getRegisterByName(reg3.reg_size, reg3.reg_number); 
+
+      // Where to store the result
+      unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
+      int32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+
+      // Subtraction
+      uint32_t temp = 0;
+      for (int32_t i = size_reg_bytes-1; i >= 0; --i) {
+        if (reg2_ptr[i] < reg3_ptr[i] + temp) {
+          reg1_ptr[i] = reg2_ptr[i] + 256 - temp - reg3_ptr[i];
+          temp = 1; // Increase carry
+        } else {
+          reg1_ptr[i] = reg2_ptr[i] - temp - reg3_ptr[i];
+          temp = 0; // Carry has been used
+        }
+      }
+      SCMULATE_ERROR_IF(0, temp == 1, "Registers must be possitive numbers, addition of numbers resulted in negative number. Carry was 1 at the end of the operation");
+    }
+    this->reg_file_m->dumpRegister(reg1.reg_size,reg1.reg_number);
     return;
   }
 }

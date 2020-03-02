@@ -9,7 +9,7 @@
 namespace scm {
   typedef union {
     // the 1000 is because the register file size is in KB
-    char space[REG_FILE_SIZE_KB*1000];
+    unsigned char space[REG_FILE_SIZE_KB*1000];
     registers_t registers;
   } register_file_t;
 
@@ -43,8 +43,8 @@ namespace scm {
          SCMULATE_ERROR(0, "DECODED REGISTER DOES NOT EXIST!!!")
        return result;
      };
-     inline char * getRegisterByName(std::string size, int num) {
-       char * result = NULL;
+     inline unsigned char * getRegisterByName(std::string size, int num) {
+       unsigned char * result = NULL;
        if (size == "64B")
          result = REG_64B(num).data;
        else if (size == "1L")

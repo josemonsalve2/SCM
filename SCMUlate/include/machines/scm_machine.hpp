@@ -8,6 +8,7 @@
 #include "executor.hpp"
 #include "instruction_mem.hpp"
 #include "fetch_decode.hpp"
+#include "memory_interface.hpp"
 #include <omp.h>
 #include <string>
 
@@ -27,11 +28,12 @@ namespace scm {
       inst_mem_module inst_mem_m;
       control_store_module control_store_m;
       fetch_decode_module fetch_decode_m;
+      mem_interface_module mem_interface_m;
       std::vector<cu_executor_module*> executors_m;
 
     public: 
       scm_machine() = delete;
-      scm_machine(std::string in_filename); 
+      scm_machine(std::string in_filename, unsigned char * const external_memory); 
       run_status run();
     
       ~scm_machine();

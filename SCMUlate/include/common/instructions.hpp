@@ -96,6 +96,7 @@ namespace scm {
    * or to obtain the parameters
    */
   static inst_def_t const memInsts[] = {
+  DEF_INST( LDIMM, "[ ]*(LDIMM)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ")[ ]*;.*", 2),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
   DEF_INST( LDADR, "[ ]*(LDADR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
   DEF_INST( LDOFF, "[ ]*(LDOFF)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3),  /* LDOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
   DEF_INST( STADR, "[ ]*(STADR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/

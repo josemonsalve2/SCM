@@ -2,10 +2,11 @@
 #include <string> 
 #include <vector> 
 
-scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const control_store_m, reg_file_module * const reg_file_m, bool * const aliveSig):
+scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem, reg_file_module * const reg_file_m, control_store_module * const control_store_m, mem_interface_module * const mem_int, bool * const aliveSig):
   inst_mem_m(inst_mem),
   reg_file_m(reg_file_m),
   ctrl_st_m(control_store_m),
+  mem_interface_m(mem_int),
   aliveSignal(aliveSig),
   PC(0) { }
 
@@ -26,30 +27,37 @@ scm::fetch_decode_module::behavior() {
           SCMULATE_INFOMSG(1, "Turning off machine alive = false");
           #pragma omp atomic write
           *(this->aliveSignal) = false;
+          delete cur_inst;
           break;
         case CONTROL_INST:
           SCMULATE_INFOMSG(4, "I've identified a CONTROL_INST");
           executeControlInstruction(cur_inst);
+          delete cur_inst;
           break;
         case BASIC_ARITH_INST:
           SCMULATE_INFOMSG(4, "I've identified a BASIC_ARITH_INST");
           executeArithmeticInstructions(cur_inst);
+          delete cur_inst;
           break;
         case EXECUTE_INST:
           SCMULATE_INFOMSG(4, "I've identified a EXECUTE_INST");
+          delete cur_inst; // TODO JOSE: MOVE THIS TO THE EXECUTOR
           break;
         case MEMORY_INST:
           SCMULATE_INFOMSG(4, "I've identified a MEMORY_INST");
+          mem_interface_m->assignInstSlot(cur_inst);
+          // Waiting for the instruction to finish execution
+          while (!mem_interface_m->isInstSlotEmpty());
           break;
         default:
           SCMULATE_ERROR(0, "Instruction not recognized [%s]", current_instruction.c_str());
           #pragma omp atomic write
           *(this->aliveSignal) = false;
+          delete cur_inst;
           break;
       }
       this->PC++;
 
-      delete cur_inst;
     } 
     SCMULATE_INFOMSG(1, "Shutting down fetch decode unit");
     return 0;

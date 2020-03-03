@@ -1,13 +1,14 @@
 #include "scm_machine.hpp"
 
-scm::scm_machine::scm_machine(std::string in_filename):
+scm::scm_machine::scm_machine(std::string in_filename, unsigned char * const memory):
   alive(false), 
   init_correct(true), 
   filename(in_filename),
   reg_file_m(),
   inst_mem_m(filename), 
   control_store_m(NUM_CUS),
-  fetch_decode_m(&inst_mem_m, &control_store_m, &reg_file_m, &alive) {
+  fetch_decode_m(&inst_mem_m, &reg_file_m, &control_store_m, &mem_interface_m, &alive),
+  mem_interface_m(memory, &reg_file_m, &alive) {
     SCMULATE_INFOMSG(0, "Initializing SCM machine")
   
     // We check the register configuration is valid
@@ -50,12 +51,7 @@ scm::scm_machine::run() {
         fetch_decode_m.behavior();
         break;
       case MEM_THREAD:
-        {
-//          run_result = SSCMUlate_MEM_Behavior();
-          // TODO: MOVE THIS BARRIER TO THE MEMORY MODULE BEHAVIOR
-          // Initialization barrier 
-          #pragma omp barrier 
-        }
+        mem_interface_m.behavior();
         break;
       case CU_THREADS:
         // Find my executor

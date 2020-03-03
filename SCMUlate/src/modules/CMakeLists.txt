@@ -31,6 +31,14 @@ set( executor_inc
 
 add_library(executor ${executor_src} ${executor_inc})
 
+# MEMORY INTERFACE
+set( memory_interface_src memory_interface.cpp )
+set( memory_interface_inc
+    ${CMAKE_SOURCE_DIR}/include/modules/memory_interface.hpp)
+    
+
+add_library(memory_interface ${memory_interface_src} ${memory_interface_inc})
+
 # CONTROL_STORE
 set( control_store_src control_store.cpp)
 set( control_store_inc

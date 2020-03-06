@@ -20,6 +20,8 @@
 #include <string>
 #include <regex>
 #include <iostream>
+#include "codelet.hpp"
+#include "SCMUlate_tools.hpp"
 
 #define REGISTER_REGEX "R[BbLl0-9_]+"
 #define REGISTER_SPLIT_REGEX "R([BbLl0-9]+)_([0-9]+)"
@@ -122,6 +124,7 @@ namespace scm {
       std::string op1;
       std::string op2;
       std::string op3;
+
    public:
       // Constructors
       decoded_instruction_t (instType type) :
@@ -151,6 +154,15 @@ namespace scm {
   };
 
   class instructions {
+    private:
+      /** \brief Container for all the codelets that are defined.
+       * 
+       *  When a codelet is defined, it is registered in this container so when we are
+       *  interpreting the source code it is possible for us to get the actual class and 
+       *  create an object of its type to send it to the executor
+       */
+      static std::map<std::string, codelet> registeredCodelets;
+
     public:
       /** \brief Helper instructions class for the identification of the instructions
        *
@@ -231,6 +243,16 @@ namespace scm {
        *  \se isLabel
        */
       static inline std::string getLabel(std::string const inst);
+
+      /** \brief extract the label from the instruction name
+       *  \param inst the corresponding instruction text to extract the label from
+       *  \returns the label in a string
+       *  \se isLabel
+       */
+      static inline std::string getLabel(std::string const inst);
+
+
+
   };
 
   decoded_instruction_t *

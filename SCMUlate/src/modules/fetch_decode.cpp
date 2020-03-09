@@ -41,7 +41,8 @@ scm::fetch_decode_module::behavior() {
           break;
         case EXECUTE_INST:
           SCMULATE_INFOMSG(4, "I've identified a EXECUTE_INST");
-          delete cur_inst; // TODO JOSE: MOVE THIS TO THE EXECUTOR
+          assignExecuteInstruction(cur_inst);
+          delete cur_inst;
           break;
         case MEMORY_INST:
           SCMULATE_INFOMSG(4, "I've identified a MEMORY_INST");
@@ -351,4 +352,35 @@ scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instruction
     #pragma omp atomic write
     *(this->aliveSignal) = false;
   }
+}
+
+void
+scm::fetch_decode_module::assignExecuteInstruction(scm::decoded_instruction_t * inst) {
+  // Counting the number of arguments 
+  // TODO: THERE IS A BETTER WAY TO DO THIS, BUT THIS DO FOR NOW
+  // We currently only support 3 arguments. Change this 
+  unsigned char ** newArgs = new unsigned char*[3];
+  if (inst->getOp1() != "") {
+    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
+    newArgs[0] = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
+  } else {
+    newArgs[0] = nullptr;
+  }
+  if (inst->getOp2() != "") {
+    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
+    newArgs[1] = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
+  } else {
+    newArgs[1] = nullptr;
+  }
+  if (inst->getOp3() != "") {
+    decoded_reg_t reg3 = instructions::decodeRegister(inst->getOp3());
+    newArgs[2] = this->reg_file_m->getRegisterByName(reg3.reg_size, reg3.reg_number); 
+  } else {
+    newArgs[2] = nullptr;
+  }
+  
+  // TODO Support for immediate values? 
+  scm::codelet * newCodelet = scm::codeletFactory::createCodelet(inst->getInstruction(), newArgs);
+  this->ctrl_st_m->get_executor(0)->assign(newCodelet);
+  while (!this->ctrl_st_m->get_executor(0)->is_empty());
 }

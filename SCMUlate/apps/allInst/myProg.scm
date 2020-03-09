@@ -16,6 +16,7 @@
     BLET R64B_1, R64B_2, 2;
     BLET R64B_1, R64B_2, 1;
     ADD R64B_1, R64B_2, 100; 
+    COD print R64B_1;
     ADD R64B_1, R64B_1, 100; 
     ADD R64B_1, R64B_1, 100; 
     ADD R64B_2, R64B_1, R64B_1; 

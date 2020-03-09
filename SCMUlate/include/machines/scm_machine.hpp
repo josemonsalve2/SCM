@@ -9,6 +9,7 @@
 #include "instruction_mem.hpp"
 #include "fetch_decode.hpp"
 #include "memory_interface.hpp"
+#include "system_codelets.hpp"
 #include <omp.h>
 #include <string>
 

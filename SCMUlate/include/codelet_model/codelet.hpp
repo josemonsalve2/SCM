@@ -15,19 +15,19 @@ namespace scm {
       // support for different parameters packing according to immediate vs register values. 
       // For now, we start with a registers only implementation
       void * params;
-      ~codelet() { }
     public:
       codelet () {};
       codelet (uint32_t nparms, void * params): numParams(nparms), params(params) {};
       virtual void implementation() = 0;
+      void * getParams() { return this->params; };
+      virtual ~codelet() { }
   };
 
   typedef codelet* (*creatorFnc)(void *);
 
   class codeletFactory {
-    private:
-      static std::map <std::string, creatorFnc> registeredCodelets;
     public:
+      static std::map <std::string, creatorFnc> *registeredCodelets;
       static void registerCreator(std::string name, creatorFnc fnc);
       static codelet* createCodelet(std::string name, void * usedParams);
   };
@@ -35,26 +35,26 @@ namespace scm {
 
 // HELPER MACROS TO CREATE NEW CODELETS 
 
+#define COD_CLASS_NAME(name) _cod_ ## name
+#define COD_INSTANCE_NAME(name,post) _cod_ ## name ## post
+
 #define DEFINE_CODELET(name, nparms) \
   namespace scm { \
-   class _cod_##name : public codelet { \
+   class COD_CLASS_NAME(name) : public codelet { \
     public: \
       static bool hasBeenRegistered; \
       /* Constructors */ \
-      _cod_##name () { \
-        params = nullptr; \
-        std::cout << "fdsafdsafdas"; \
+      static void codeletRegistrer() __attribute__((constructor)) { \
         if(!hasBeenRegistered) { \
           registerCodelet(); \
           hasBeenRegistered = true; \
-          SCMULATE_INFOMSG(2, "Registering codelet %s", #name ); \
         } \
       } \
-      _cod_##name (void* parms) : codelet(nparms, parms) {} \
+      COD_CLASS_NAME(name) (void* parms) : codelet(nparms, parms) {} \
       \
       /* Helper functions */ \
       static codelet* codeletCreator(void * usedParams) ; \
-      void registerCodelet() { \
+      static void registerCodelet() { \
         creatorFnc thisFunc = codeletCreator; \
         codeletFactory::registerCreator( #name, thisFunc); \
       }\
@@ -63,21 +63,19 @@ namespace scm {
       virtual void implementation(); \
       \
       /* destructor */ \
-      ~_cod_##name() { \
-        std::cout << "fdsafdasfdas" << std::end; \
-        /* TODO: This needs to be fixed */  \
-        unsigned char * args = static_cast<unsigned char *>(this->params); \
-        delete args; \
-      } \
-   }; \
-   _cod_##name _cod_##name_register; \
+      ~COD_CLASS_NAME(name)() {} \
+    }; \
+    \
   }
 
 #define IMPLEMENT_CODELET(name,code) \
-  bool scm::_cod_##name::hasBeenRegistered = false; \
-  scm::codelet* scm::_cod_##name::codeletCreator(void * usedParams) { \
-    scm::codelet* res = new _cod_##name(usedParams); \
-    return res; \
-  } \
-  void scm::_cod_##name::implementation() { code; } 
+  namespace scm {\
+    bool COD_CLASS_NAME(name)::hasBeenRegistered = false; \
+    codelet* COD_CLASS_NAME(name)::codeletCreator(void * usedParams) { \
+      codelet* res = new COD_CLASS_NAME(name)(usedParams); \
+      return res; \
+    } \
+    void COD_CLASS_NAME(name)::implementation() { code; } \
+    \
+  }
 #endif

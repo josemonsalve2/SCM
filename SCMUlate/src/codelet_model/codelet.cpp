@@ -1,12 +1,17 @@
 #include "codelet.hpp"
 #include "instructions.hpp"
 
-scm::codelet* 
-  scm::codeletFactory::createCodelet(std::string name, void * usedParams) {
+namespace scm {
+
+std::map<std::string, creatorFnc> *codeletFactory::registeredCodelets;
+static int codeletFactoryInit;
+
+codelet* 
+  codeletFactory::createCodelet(std::string name, void * usedParams) {
     codelet * result;
     // Look for the codelet in the map
-    auto found = registeredCodelets.find(name);
-    if ( found == registeredCodelets.end()) {
+    auto found = registeredCodelets->find(name);
+    if ( found == registeredCodelets->end()) {
       // If not found, we display error, and then return null.
       SCMULATE_ERROR(0,"Trying to create a codelet that has not been implemented");
       return nullptr;
@@ -20,9 +25,9 @@ scm::codelet*
 };
 
 void 
-  scm::codeletFactory::registerCreator(std::string name, scm::creatorFnc creator ){
+  codeletFactory::registerCreator(std::string name, creatorFnc creator ) {
+    if (codeletFactoryInit++ == 0) registeredCodelets = new std::map<std::string, creatorFnc>();
     SCMULATE_INFOMSG(3, "Registering codelet %s", name.c_str());
-    registeredCodelets[name] = creator;
+    (*registeredCodelets)[name] = creator;
   }
-
-
+}

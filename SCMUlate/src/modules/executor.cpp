@@ -14,7 +14,13 @@ scm::cu_executor_module::behavior() {
   while (*(this->aliveSignal)) {
     if (!myExecutor->is_empty()) {
       SCMULATE_INFOMSG(4, "  CU[%d]: Executing codelet ", cu_executor_id);
-      // execute the codelet here
+      scm::codelet * curCodelet = myExecutor->getHead();
+      curCodelet->implementation();
+      // TODO Delete args? 
+      unsigned char ** curArgs = static_cast<unsigned char **>(curCodelet->getParams());
+      delete curArgs;
+      delete curCodelet;
+      myExecutor->empty_slot();
     }
   }
   SCMULATE_INFOMSG(1, "Shutting down executor CU %d", cu_executor_id);

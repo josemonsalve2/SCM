@@ -55,6 +55,13 @@ namespace scm {
        */
       inline void executeArithmeticInstructions(decoded_instruction_t * inst);
 
+
+      /** \brief logic to execute an arithmetic instruction
+       *
+       *  We select a CU and we assign a new codelet to it. When it is done, we delete the codelet
+       */
+      inline void assignExecuteInstruction(decoded_instruction_t * inst);
+
       /** Actual logic of this unit
        * 
        * Implements the actual behavior logic of the fetch decode unit

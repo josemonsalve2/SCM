@@ -31,7 +31,6 @@ int main (int argc, char * argv[]) {
   }
 
   myMachine->run();
-
   return 0;
 }
 

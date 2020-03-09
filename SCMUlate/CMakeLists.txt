@@ -41,8 +41,8 @@ else()
   message( FATAL_ERROR "No support for ${CMAKE_CXX_COMPILER_ID} yet" )
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0")
-set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -std=c++17")
+set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -std=c++17")
 
 add_subdirectory (src) 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
@@ -54,4 +54,4 @@ add_subdirectory(apps)
 
 add_executable(SCMUlate main_SCMUlate.cpp)
 
-target_link_libraries (SCMUlate scm_machine)
+target_link_libraries (SCMUlate scm_machine scm_system_codelets)

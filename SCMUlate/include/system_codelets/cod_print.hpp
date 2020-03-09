@@ -1,9 +1,8 @@
-#ifndef __SYS_CODELETS__
-#define __SYS_CODELETS__
+#ifndef __COD_PRINT__
+#define __COD_PRINT__
 
-#include "cod_print.hpp"
 #include "codelet.hpp"
 
-DEFINE_CODELET(fdsa, 2);
+DEFINE_CODELET(print, 2);
 
 #endif

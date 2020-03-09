@@ -59,7 +59,7 @@ namespace scm {
   // SCM specific insctructions
   const inst_def_t COMMIT_INST = DEF_INST(COMMIT, "[ ]*(COMMIT;).*", 0);                                          /* COMMIT; */
   const inst_def_t LABEL_INST = DEF_INST(LABEL,   "[ ]*([a-zA-Z0-9_]+)[ ]*:.*", 0);                                 /* myLabel: */
-  const inst_def_t CODELET_INST = DEF_INST(LABEL, "[ ]*COD[ ]+([a-zA-Z0-9_]+)[ ]+ ([a-zA-Z0-9_, ]*);.*", 0);      /* COD codelet_name arg1, arg2, arg3; */
+  const inst_def_t CODELET_INST = DEF_INST(LABEL, "[ ]*COD[ ]+([a-zA-Z0-9_]+)[ ]+([a-zA-Z0-9_, ]*);.*", 0);      /* COD codelet_name arg1, arg2, arg3; */
   
   // CONTROL FLOW INSTRUCTIONS
   /** \brief All the control instructions
@@ -140,7 +140,19 @@ namespace scm {
       /** \brief get the instruction name
        */
       inline std::string getInstruction() { return instruction; }
-      /** \brief get the op1 
+      /** \brief set the instruction name
+       */
+      inline void setInstruction(std::string newInstName) { instruction = newInstName; }
+      /** \brief set the op1 
+       */
+      inline void setOp1(std::string newOpVal) { op1 = newOpVal; }
+      /** \brief set the op2
+       */
+      inline void setOp2(std::string newOpVal) { op2 = newOpVal; }
+      /** \brief set the op3
+       */
+      inline void setOp3(std::string newOpVal) { op3 = newOpVal; }
+      /** \brief set the op1 
        */
       inline std::string getOp1() { return op1; }
       /** \brief get the op2
@@ -366,8 +378,18 @@ namespace scm {
       std::regex search_exp(CODELET_INST.inst_regex, std::regex_constants::ECMAScript);
       std::smatch matches;
       if (std::regex_search(inst.begin(), inst.end(), matches, search_exp)) {
-        *decInst = new decoded_instruction_t(COMMIT);
-        return true;
+        if (matches.size() == 1) {
+          *decInst = new decoded_instruction_t(EXECUTE_INST, matches[1], "" , "", "");
+        } else if (matches.size() == 2) {
+          *decInst = new decoded_instruction_t(EXECUTE_INST, matches[1], matches[2] , "", "");
+        } else if (matches.size() == 3) {
+          *decInst = new decoded_instruction_t(EXECUTE_INST, matches[1], matches[2] , matches[3], "");
+        } else if (matches.size() == 4) {
+          *decInst = new decoded_instruction_t(EXECUTE_INST, matches[1], matches[2] , matches[3], matches[4]);
+        } else {
+          SCMULATE_ERROR(0, "Unsupported number of operands for EXECUTE_INST instruction %ld", matches.size() );
+        }
+        return true; 
       }
       decInst = NULL;
       return false;

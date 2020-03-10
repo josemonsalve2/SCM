@@ -22,6 +22,7 @@
 #include <iostream>
 #include "codelet.hpp"
 #include "SCMUlate_tools.hpp"
+#include "stringHelper.hpp"
 
 #define REGISTER_REGEX "R[BbLl0-9_]+"
 #define REGISTER_SPLIT_REGEX "R([BbLl0-9]+)_([0-9]+)"
@@ -59,7 +60,7 @@ namespace scm {
   // SCM specific insctructions
   const inst_def_t COMMIT_INST = DEF_INST(COMMIT, "[ ]*(COMMIT;).*", 0);                                          /* COMMIT; */
   const inst_def_t LABEL_INST = DEF_INST(LABEL,   "[ ]*([a-zA-Z0-9_]+)[ ]*:.*", 0);                                 /* myLabel: */
-  const inst_def_t CODELET_INST = DEF_INST(LABEL, "[ ]*COD[ ]+([a-zA-Z0-9_]+)[ ]+([a-zA-Z0-9_, ]*);.*", 0);      /* COD codelet_name arg1, arg2, arg3; */
+  const inst_def_t CODELET_INST = DEF_INST(CODELET, "[ ]*COD[ ]+([a-zA-Z0-9_]+)[ ]+([a-zA-Z0-9_, ]*);.*", 0);      /* COD codelet_name arg1, arg2, arg3; */
   
   // CONTROL FLOW INSTRUCTIONS
   /** \brief All the control instructions
@@ -389,6 +390,7 @@ namespace scm {
           pos = operands.find(delimiter);
           if (pos == std::string::npos) pos = operands.length();
           token = operands.substr(0, pos);
+          token = trim(token);
           if (opNum == 0) {
             (*decInst)->setOp1(token);
           } else if (opNum == 1) {

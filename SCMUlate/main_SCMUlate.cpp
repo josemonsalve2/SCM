@@ -9,7 +9,8 @@ static struct {
   char * fileName;
 } program_options;
 
-#define SIZEOFMEM 4*10^9  // 4 GB
+ // 4 GB
+#define SIZEOFMEM 4e10 
 
 void parseProgramOptions(int argc, char* argv[]);
 

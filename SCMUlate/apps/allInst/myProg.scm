@@ -1,3 +1,4 @@
+// Registers: R<size>_<number> where size = 64B, 1L, 8L, 16L, 256L, 512L, 1024L, 2048L
   Label1:
     JMPLBL Label2;
     JMPLBL Label2; // IGNORED

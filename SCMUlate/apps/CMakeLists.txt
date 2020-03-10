@@ -1,1 +1,2 @@
 add_subdirectory(allInst)
+add_subdirectory(vectorAddition)

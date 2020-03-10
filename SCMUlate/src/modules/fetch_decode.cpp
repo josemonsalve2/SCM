@@ -361,20 +361,35 @@ scm::fetch_decode_module::assignExecuteInstruction(scm::decoded_instruction_t * 
   // We currently only support 3 arguments. Change this 
   unsigned char ** newArgs = new unsigned char*[3];
   if (inst->getOp1() != "") {
-    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
-    newArgs[0] = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
+    if (!instructions::isRegister(inst->getOp1())) {
+      uint64_t immediate_val = std::stoull(inst->getOp1());
+      newArgs[0] = reinterpret_cast<unsigned char *>(immediate_val);
+    } else {
+      decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
+      newArgs[0] = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
+    }
   } else {
     newArgs[0] = nullptr;
   }
   if (inst->getOp2() != "") {
-    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
-    newArgs[1] = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
+    if (!instructions::isRegister(inst->getOp2())) {
+      uint64_t immediate_val = std::stoull(inst->getOp2());
+      newArgs[1] = reinterpret_cast<unsigned char *>(immediate_val);
+    } else {
+      decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp2());
+      newArgs[1] = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
+    } 
   } else {
     newArgs[1] = nullptr;
   }
   if (inst->getOp3() != "") {
-    decoded_reg_t reg3 = instructions::decodeRegister(inst->getOp3());
-    newArgs[2] = this->reg_file_m->getRegisterByName(reg3.reg_size, reg3.reg_number); 
+    if (!instructions::isRegister(inst->getOp3())) {
+      uint64_t immediate_val = std::stoull(inst->getOp3());
+      newArgs[2] = reinterpret_cast<unsigned char *>(immediate_val);
+    } else {
+      decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp3());
+      newArgs[2] = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
+    } 
   } else {
     newArgs[2] = nullptr;
   }

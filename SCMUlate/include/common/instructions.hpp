@@ -378,16 +378,29 @@ namespace scm {
       std::regex search_exp(CODELET_INST.inst_regex, std::regex_constants::ECMAScript);
       std::smatch matches;
       if (std::regex_search(inst.begin(), inst.end(), matches, search_exp)) {
-        if (matches.size() == 1) {
-          *decInst = new decoded_instruction_t(EXECUTE_INST, matches[1], "" , "", "");
-        } else if (matches.size() == 2) {
-          *decInst = new decoded_instruction_t(EXECUTE_INST, matches[1], matches[2] , "", "");
-        } else if (matches.size() == 3) {
-          *decInst = new decoded_instruction_t(EXECUTE_INST, matches[1], matches[2] , matches[3], "");
-        } else if (matches.size() == 4) {
-          *decInst = new decoded_instruction_t(EXECUTE_INST, matches[1], matches[2] , matches[3], matches[4]);
-        } else {
-          SCMULATE_ERROR(0, "Unsupported number of operands for EXECUTE_INST instruction %ld", matches.size() );
+        std::string operands = matches[2];
+        std::string delimiter = ",";
+        size_t pos = 0;
+        size_t opNum = 0;
+        std::string token;
+        *decInst = new decoded_instruction_t(EXECUTE_INST);
+        (*decInst)->setInstruction(matches[1]);
+        while (operands.length() != 0) {
+          pos = operands.find(delimiter);
+          if (pos == std::string::npos) pos = operands.length();
+          token = operands.substr(0, pos);
+          if (opNum == 0) {
+            (*decInst)->setOp1(token);
+          } else if (opNum == 1) {
+            (*decInst)->setOp2(token);
+          } else if (opNum == 2) {
+            (*decInst)->setOp3(token);
+          } else {
+            SCMULATE_ERROR(0, "Unsupported number of operands for EXECUTE_INST instruction");
+            break;
+          }
+          operands.erase(0, pos + delimiter.length());
+          opNum++;
         }
         return true; 
       }

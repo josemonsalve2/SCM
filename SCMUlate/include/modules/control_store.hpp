@@ -36,8 +36,6 @@ namespace scm {
   };
 
 
-
-
   /* Control store corresponds to the glue logic between the different 
    * modules and the execution of an instruction. The control logic
    * should contain the different execution slots and any additional logic 

@@ -10,7 +10,7 @@ static struct {
 } program_options;
 
  // 4 GB
-#define SIZEOFMEM 4e10 
+#define SIZEOFMEM (int)4e10 
 
 void parseProgramOptions(int argc, char* argv[]);
 

@@ -1,7 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
-#include "scm_machine.hpp"
 #include "vecAdd.hpp"
+#include "scm_machine.hpp"
 #include <cstring>
 #include <iostream>
 
@@ -17,7 +17,7 @@ static struct {
 } program_options;
 
  // 4 GB
-#define SIZEOFMEM (int)4e10 
+#define SIZEOFMEM (int)4e9 
 
 void parseProgramOptions(int argc, char* argv[]);
 
@@ -30,19 +30,18 @@ int main (int argc, char * argv[]) {
   try
   {
     memory = new unsigned char[SIZEOFMEM];
-    std::cout << "Size of " << SIZEOFMEM << std::endl;
   }
   catch (int e)
   {
     std::cout << "An exception occurred. Exception Nr. " << e << '\n';
+    return 1;
   }
   
-  std::cout << "size of " << sizeof(unsigned char) << std::endl;
   int *A = reinterpret_cast<int*> (memory); 
   int *B = reinterpret_cast<int*> (&memory[B_offset]); 
   int *C = reinterpret_cast<int*> (&memory[C_offset]); 
 
-  for (auto i = 0; i < NumElements; ++i) {
+  for (unsigned long i = 0; i < NumElements; ++i) {
       A[i] = 1;
       B[i] = 1;
   }
@@ -59,9 +58,9 @@ int main (int argc, char * argv[]) {
   myMachine->run();
 
   // Checking result
-  for (auto i = 0; i < NumElements; ++i) {
+  for (long unsigned i = 0; i < NumElements; ++i) {
     if (C[i] != 2) {
-      SCMULATE_ERROR(0, "RESULT ERROR in i = %d, value C[i] = %d", i, C[i]);
+      SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %d", i, C[i]);
       break;  
     }
   }

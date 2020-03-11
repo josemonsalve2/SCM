@@ -1,6 +1,6 @@
 ADD R64B_1, R64B_1, 0; // Loading base address A
-ADD R64B_2, R64B_3, 524288; // Loading base address B
-ADD R64B_2, R64B_3, 1048576; // Loading base address C
+ADD R64B_2, R64B_2, 524288; // Loading base address B
+ADD R64B_3, R64B_3, 1048576; // Loading base address C
 
 // First segment
 LDOFF R2048L_1, R64B_1, 0; // Offset 0

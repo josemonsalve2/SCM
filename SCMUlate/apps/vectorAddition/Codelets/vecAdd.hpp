@@ -1,5 +1,5 @@
-#ifndef __COD_PRINT__
-#define __COD_PRINT__
+#ifndef __COD_VECTOR_ADD__
+#define __COD_VECTOR_ADD__
 
 #include "codelet.hpp"
 

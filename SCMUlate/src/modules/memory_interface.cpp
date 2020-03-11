@@ -40,11 +40,11 @@ scm::mem_interface_module::executeMemoryInstructions() {
     unsigned long immediate_value = std::stoul(myInstructionSlot->getOp2());
     
     // Perform actual memory copy
-    for (i = size_reg1_bytes, j = 0; i >= 0; --i, ++j) {
+    for (i = size_reg1_bytes-1, j = 0; i >= 0; --i, ++j) {
       if (j < 8) {
         unsigned char temp = immediate_value & 255;
         reg1_ptr[i] = temp;
-        temp>>=8;
+        immediate_value>>=8;
       } else {
         // Zero out the rest of the register
         reg1_ptr[i] = 0;
@@ -68,16 +68,16 @@ scm::mem_interface_module::executeMemoryInstructions() {
     // Obtain base address and perform copy
     unsigned long base_addr = 0;
     if (!instructions::isRegister(myInstructionSlot->getOp2())) {
-      // Load address inmediate value
+      // Load address immediate value
       base_addr = std::stoul(myInstructionSlot->getOp2());
     } else {
       // Load address register value
       decoded_reg_t reg2 = instructions::decodeRegister(myInstructionSlot->getOp2());
       unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
       int32_t size_reg2_bytes = this->reg_file_m->getRegisterSizeInBytes(reg2.reg_size);
-      for (i = size_reg2_bytes, j = 0; j < 8 || i >= 0; --i, ++j ) {
+      for (i = size_reg2_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg2_ptr[i];
-        temp <<= j;
+        temp <<= j*8;
         base_addr += temp;
       }
       
@@ -113,9 +113,9 @@ scm::mem_interface_module::executeMemoryInstructions() {
       decoded_reg_t reg2 = instructions::decodeRegister(myInstructionSlot->getOp2());
       unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
       int32_t size_reg2_bytes = this->reg_file_m->getRegisterSizeInBytes(reg2.reg_size);
-      for (i = size_reg2_bytes, j = 0; j < 8 || i >= 0; --i, ++j ) {
+      for (i = size_reg2_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg2_ptr[i];
-        temp <<= j;
+        temp <<= j*8;
         base_addr += temp;
       }
     }
@@ -129,9 +129,9 @@ scm::mem_interface_module::executeMemoryInstructions() {
       decoded_reg_t reg3 = instructions::decodeRegister(myInstructionSlot->getOp3());
       unsigned char * reg3_ptr = this->reg_file_m->getRegisterByName(reg3.reg_size, reg3.reg_number);
       int32_t size_reg3_bytes = this->reg_file_m->getRegisterSizeInBytes(reg3.reg_size);
-      for (i = size_reg3_bytes, j = 0; j < 8 || i >= 0; --i, ++j ) {
+      for (i = size_reg3_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg3_ptr[i];
-        temp <<= j;
+        temp <<= j*8;
         base_addr += temp;
       }
     }
@@ -162,9 +162,9 @@ scm::mem_interface_module::executeMemoryInstructions() {
       decoded_reg_t reg2 = instructions::decodeRegister(myInstructionSlot->getOp2());
       unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
       int32_t size_reg2_bytes = this->reg_file_m->getRegisterSizeInBytes(reg2.reg_size);
-      for (i = size_reg2_bytes, j = 0; j < 8 || i >= 0; --i, ++j ) {
+      for (i = size_reg2_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg2_ptr[i];
-        temp <<= j;
+        temp <<= j*8;
         base_addr += temp;
       }
       
@@ -197,9 +197,9 @@ scm::mem_interface_module::executeMemoryInstructions() {
       decoded_reg_t reg2 = instructions::decodeRegister(myInstructionSlot->getOp2());
       unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
       int32_t size_reg2_bytes = this->reg_file_m->getRegisterSizeInBytes(reg2.reg_size);
-      for (i = size_reg2_bytes, j = 0; j < 8 || i >= 0; --i, ++j ) {
+      for (i = size_reg2_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg2_ptr[i];
-        temp <<= j;
+        temp <<= j*8;
         base_addr += temp;
       }
     }
@@ -213,9 +213,9 @@ scm::mem_interface_module::executeMemoryInstructions() {
       decoded_reg_t reg3 = instructions::decodeRegister(myInstructionSlot->getOp3());
       unsigned char * reg3_ptr = this->reg_file_m->getRegisterByName(reg3.reg_size, reg3.reg_number);
       int32_t size_reg3_bytes = this->reg_file_m->getRegisterSizeInBytes(reg3.reg_size);
-      for (i = size_reg3_bytes, j = 0; j < 8 || i >= 0; --i, ++j ) {
+      for (i = size_reg3_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg3_ptr[i];
-        temp <<= j;
+        temp <<= j*8;
         base_addr += temp;
       }
     }

@@ -9,6 +9,12 @@ scm::scm_machine::scm_machine(std::string in_filename, unsigned char * const mem
   control_store_m(NUM_CUS),
   fetch_decode_m(&inst_mem_m, &reg_file_m, &control_store_m, &mem_interface_m, &alive),
   mem_interface_m(memory, &reg_file_m, &alive) {
+    TIMERS_COUNTERS_GUARD(
+      this->time_cnt_m.resetTimer();
+      this->fetch_decode_m.setTimerCounter(&this->time_cnt_m);
+      this->time_cnt_m.addTimer("SCM_MACHINE",scm::SYS_TIMER);
+      this->mem_interface_m.setTimerCnt(&this->time_cnt_m);
+    )
     SCMULATE_INFOMSG(0, "Initializing SCM machine")
   
     // We check the register configuration is valid
@@ -29,7 +35,11 @@ scm::scm_machine::scm_machine(std::string in_filename, unsigned char * const mem
     int * cur_exec = exec_units_threads;
     for (int i = 0; i < NUM_CUS; i++, cur_exec++) {
       SCMULATE_INFOMSG(4, "Creating executor %d out of %d for thread %d", i, NUM_CUS, *cur_exec);
-      executors_m.push_back( new cu_executor_module(*cur_exec, &control_store_m, i, &alive) );
+      cu_executor_module* newExec = new cu_executor_module(*cur_exec, &control_store_m, i, &alive);
+      TIMERS_COUNTERS_GUARD(
+        newExec->setTimerCnt(&this->time_cnt_m);
+      )
+      executors_m.push_back(newExec);
     }
       
     init_correct = true;
@@ -37,6 +47,9 @@ scm::scm_machine::scm_machine(std::string in_filename, unsigned char * const mem
 
 scm::run_status
 scm::scm_machine::run() {
+  TIMERS_COUNTERS_GUARD(
+    this->time_cnt_m.addEvent("SCM_MACHINE",SYS_START);
+  );
   if (!this->init_correct) return SCM_RUN_FAILURE;
   this->alive = true;
   int run_result = 0;
@@ -73,6 +86,10 @@ scm::scm_machine::run() {
 
   }
 
+  TIMERS_COUNTERS_GUARD(
+    this->time_cnt_m.addEvent("SCM_MACHINE",SYS_END);
+  );
+
   if (run_result != 0 ) return SCM_RUN_FAILURE;
   return SCM_RUN_SUCCESS;
 
@@ -81,4 +98,7 @@ scm::scm_machine::run() {
 scm::scm_machine::~scm_machine() {
   for (auto it = executors_m.begin(); it < executors_m.end(); ++it) 
     delete (*it);
+  TIMERS_COUNTERS_GUARD(
+    this->time_cnt_m.dumpTimers();
+  );
 }

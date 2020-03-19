@@ -1,6 +1,10 @@
 #ifndef __MACHINE_CONFIGURATION__
 #define __MACHINE_CONFIGURATION__
 
+#include <omp.h>
+#include <string>
+
+// SCM Related Includes
 #include "SCMUlate_tools.hpp"
 #include "threads_configuration.hpp"
 #include "register.hpp"
@@ -10,8 +14,8 @@
 #include "fetch_decode.hpp"
 #include "memory_interface.hpp"
 #include "system_codelets.hpp"
-#include <omp.h>
-#include <string>
+#include "timers_counters.hpp"
+
 
 namespace scm {
 
@@ -23,6 +27,7 @@ namespace scm {
       bool alive;
       bool init_correct;
       std::string filename;
+      TIMERS_COUNTERS_GUARD(timers_counters time_cnt_m;)
       
       // Modules
       reg_file_module reg_file_m;
@@ -35,6 +40,11 @@ namespace scm {
     public: 
       scm_machine() = delete;
       scm_machine(std::string in_filename, unsigned char * const external_memory); 
+
+      TIMERS_COUNTERS_GUARD( 
+        void inline setTimersOutput(std::string outputName) { this->time_cnt_m.setFilename(outputName); }
+      )
+
       run_status run();
     
       ~scm_machine();

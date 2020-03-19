@@ -23,8 +23,8 @@ scm::inst_mem_module::loader(string const filename) {
             SCMULATE_INFOMSG(4, "Found label: '%s'", label.c_str());
             labels[label] = curInst; 
           } else if (!instructions::isComment(line)) {
+            this->memory.push_back(scm::instructions::findInstType(line));
             // Any other instruction we store it in memory
-            this->memory.push_back(line);
             curInst++;
           }
         }
@@ -45,7 +45,7 @@ scm::inst_mem_module::inst_mem_module(string const filename ) {
     this->is_valid = this->loader(filename);
   } else {
     while ((cin >> line) && line != "-")
-      this->memory.push_back(line);
+      this->memory.push_back(scm::instructions::findInstType(line));
   }
 }
 
@@ -55,4 +55,10 @@ scm::inst_mem_module::dumpMemory() {
   auto it = this->memory.rbegin();
   for (; it != this->memory.rend(); it++) 
     cout << "-" << static_cast<int>(it - memory.rbegin()) << " " << *it << endl;
+}
+
+scm::inst_mem_module::~inst_mem_module() {
+  for (auto it : this->memory) {
+    delete it;
+  }
 }

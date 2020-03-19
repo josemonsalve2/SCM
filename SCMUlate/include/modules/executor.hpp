@@ -3,6 +3,7 @@
 
 #include "SCMUlate_tools.hpp"
 #include "control_store.hpp"
+#include "timers_counters.hpp"
 
 namespace scm {
 
@@ -16,10 +17,23 @@ namespace scm {
       int cu_executor_id;
       execution_slot * myExecutor;
       volatile bool* aliveSignal;
+      TIMERS_COUNTERS_GUARD(
+        std::string cu_timer_name;
+        timers_counters* timer_cnt_m;
+      )
+      
 
     public: 
       cu_executor_module() = delete;
       cu_executor_module(int, control_store_module * const, unsigned int, bool *);
+
+      TIMERS_COUNTERS_GUARD(
+        inline void setTimerCnt(timers_counters * tmc) { 
+          this->timer_cnt_m = tmc;
+          this->cu_timer_name = "CU_" + std::to_string(this->cu_executor_id);
+          this->timer_cnt_m->addTimer(this->cu_timer_name, CU_TIMER);
+        }
+      )
 
       int behavior();
 

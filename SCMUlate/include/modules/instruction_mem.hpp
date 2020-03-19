@@ -21,7 +21,7 @@ namespace scm {
    */
   class inst_mem_module {
     private: 
-      std::vector<std::string> memory;
+      std::vector<decoded_instruction_t*> memory;
       std::map<std::string, int> labels;
 
 
@@ -44,7 +44,7 @@ namespace scm {
       /* This method allows to fetch an instruction from the instruction 
        * memory by passing the address (PC)
        */
-      inline std::string fetch(int address) { return memory[address]; };
+      inline decoded_instruction_t* fetch(int address) { return memory[address]; };
 
       /** \brief translate label to memory
        *
@@ -66,6 +66,7 @@ namespace scm {
        * memory for debugging
        */
       void dumpMemory();
+      ~inst_mem_module();
   };
 }
 

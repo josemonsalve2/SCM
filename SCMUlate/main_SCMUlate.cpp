@@ -32,6 +32,9 @@ int main (int argc, char * argv[]) {
   }
 
   myMachine->run();
+  
+  myMachine->setTimersOutput("trace.json");
+  delete myMachine;
   return 0;
 }
 

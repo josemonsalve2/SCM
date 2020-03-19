@@ -22,7 +22,7 @@ namespace scm {
    */
   class execution_slot {
     private:
-      bool empty;
+      volatile bool empty;
       codelet *executionCodelet;
 
     public:
@@ -32,7 +32,7 @@ namespace scm {
       void assign(codelet *);
       void empty_slot();
       inline bool is_empty() { return this->empty; }
-      inline codelet * getHead() {return this->executionCodelet; }
+      inline codelet * getHead() { return this->executionCodelet; }
   };
 
 

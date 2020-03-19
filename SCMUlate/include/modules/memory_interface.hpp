@@ -5,6 +5,8 @@
 #include "control_store.hpp"
 #include "instructions.hpp"
 #include "register.hpp"
+#include "timers_counters.hpp"
+
 
 namespace scm {
 
@@ -20,10 +22,15 @@ namespace scm {
       reg_file_module* reg_file_m;
       volatile bool* aliveSignal;
       unsigned char * memorySpace;
+      uint32_t memId;
+
+      TIMERS_COUNTERS_GUARD(
+        std::string mem_timer_name;
+        timers_counters* timer_cnt_m;
+      )
 
       // This should only be called by this unit
       inline void emptyInstSlot() {
-          delete myInstructionSlot;
           // Needs atomic read since it is used for sync purposes 
           // with the SU unit
           #pragma omp atomic write
@@ -51,6 +58,13 @@ namespace scm {
           myInstructionSlot = newInst;
       }
       
+      TIMERS_COUNTERS_GUARD(
+        inline void setTimerCnt(timers_counters * tmc) { 
+          this->timer_cnt_m = tmc;
+          this->mem_timer_name = "MEM_" + std::to_string(this->memId);
+          this->timer_cnt_m->addTimer(this->mem_timer_name, MEM_TIMER);
+        }
+      )
 
       int behavior();
 

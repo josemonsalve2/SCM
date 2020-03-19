@@ -46,3 +46,11 @@ set( control_store_inc
     
 
 add_library(control_store ${control_store_src} ${control_store_inc})
+
+# TIMERS_COUNTERS
+set( timers_counters_src timers_counters.cpp)
+set( timers_counters_inc
+    ${CMAKE_SOURCE_DIR}/include/modules/timers_counters.hpp)
+    
+
+add_library(scm_timers_counters ${timers_counters_src} ${timers_counters_inc})

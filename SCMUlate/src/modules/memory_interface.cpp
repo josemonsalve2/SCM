@@ -3,21 +3,34 @@
 scm::mem_interface_module::mem_interface_module(unsigned char * const memory, reg_file_module* regFile, bool * aliveSig):
   reg_file_m(regFile),
   aliveSignal(aliveSig),
-  memorySpace(memory) {
+  memorySpace(memory), 
+  memId(0) {
 }
 
 int
 scm::mem_interface_module::behavior() {
+  TIMERS_COUNTERS_GUARD(
+    this->timer_cnt_m->addEvent(this->mem_timer_name, MEM_START);
+  );
   SCMULATE_INFOMSG(1, "Starting MEM MODULE behavior");
   // Initialization barrier
   #pragma omp barrier
   while (*(this->aliveSignal)) {
-      if (!this->isInstSlotEmpty()) {
-        executeMemoryInstructions();
-        emptyInstSlot();
-      }
+    TIMERS_COUNTERS_GUARD(
+      this->timer_cnt_m->addEvent(this->mem_timer_name, MEM_EXECUTION);
+    );
+    if (!this->isInstSlotEmpty()) {
+      executeMemoryInstructions();
+      emptyInstSlot();
+    }
+    TIMERS_COUNTERS_GUARD(
+        this->timer_cnt_m->addEvent(this->mem_timer_name, MEM_IDLE);
+      );
   }
   SCMULATE_INFOMSG(1, "Shutting down MEMORY MODULE");
+  TIMERS_COUNTERS_GUARD(
+    this->timer_cnt_m->addEvent(this->mem_timer_name, MEM_END);
+  );
   return 0;
 }
  

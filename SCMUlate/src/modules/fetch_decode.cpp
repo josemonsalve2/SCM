@@ -8,59 +8,78 @@ scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem, 
   ctrl_st_m(control_store_m),
   mem_interface_m(mem_int),
   aliveSignal(aliveSig),
-  PC(0) { }
+  PC(0), 
+  su_number(0) { }
 
 int
 scm::fetch_decode_module::behavior() {
+  TIMERS_COUNTERS_GUARD(
+    this->time_cnt_m->addEvent(this->su_timer_name, SU_START);
+  );
   SCMULATE_INFOMSG(1, "I am an SU");
   // Initialization barrier
   #pragma omp barrier
     while (*(this->aliveSignal)) {
-      std::string current_instruction = this->inst_mem_m->fetch(this->PC);
-      SCMULATE_INFOMSG(3, "I received instruction: %s", current_instruction.c_str());
-      scm::decoded_instruction_t* cur_inst = scm::instructions::findInstType(current_instruction);
+      TIMERS_COUNTERS_GUARD(
+        this->time_cnt_m->addEvent(this->su_timer_name, FETCH_DECODE_INSTRUCTION);
+      );
+      scm::decoded_instruction_t* cur_inst = this->inst_mem_m->fetch(this->PC);
       SCMULATE_ERROR_IF(0, !cur_inst, "Returned instruction is NULL. This should not happen");
+      if (!cur_inst) { 
+        *(this->aliveSignal) = false; 
+        continue;
+      }
       // Depending on the instruction do something 
+      TIMERS_COUNTERS_GUARD(
+        this->time_cnt_m->addEvent(this->su_timer_name, DISPATCH_INSTRUCTION);
+      );
       switch(cur_inst->getType()) {
         case COMMIT:
           SCMULATE_INFOMSG(4, "I've identified a COMMIT");
           SCMULATE_INFOMSG(1, "Turning off machine alive = false");
           #pragma omp atomic write
           *(this->aliveSignal) = false;
-          delete cur_inst;
           break;
         case CONTROL_INST:
           SCMULATE_INFOMSG(4, "I've identified a CONTROL_INST");
+          TIMERS_COUNTERS_GUARD(
+            this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_CONTROL_INSTRUCTION);
+          );
           executeControlInstruction(cur_inst);
-          delete cur_inst;
           break;
         case BASIC_ARITH_INST:
           SCMULATE_INFOMSG(4, "I've identified a BASIC_ARITH_INST");
+          TIMERS_COUNTERS_GUARD(
+            this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_ARITH_INSTRUCTION);
+          );
           executeArithmeticInstructions(cur_inst);
-          delete cur_inst;
           break;
         case EXECUTE_INST:
           SCMULATE_INFOMSG(4, "I've identified a EXECUTE_INST");
           assignExecuteInstruction(cur_inst);
-          delete cur_inst;
           break;
         case MEMORY_INST:
           SCMULATE_INFOMSG(4, "I've identified a MEMORY_INST");
+          TIMERS_COUNTERS_GUARD(
+            this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE);
+          );
           mem_interface_m->assignInstSlot(cur_inst);
           // Waiting for the instruction to finish execution
           while (!mem_interface_m->isInstSlotEmpty());
           break;
         default:
-          SCMULATE_ERROR(0, "Instruction not recognized [%s]", current_instruction.c_str());
+          SCMULATE_ERROR(0, "Instruction not recognized");
           #pragma omp atomic write
           *(this->aliveSignal) = false;
-          delete cur_inst;
           break;
       }
       this->PC++;
 
     } 
     SCMULATE_INFOMSG(1, "Shutting down fetch decode unit");
+    TIMERS_COUNTERS_GUARD(
+      this->time_cnt_m->addEvent(this->su_timer_name, SU_END);
+    );
     return 0;
 }
 
@@ -394,8 +413,10 @@ scm::fetch_decode_module::assignExecuteInstruction(scm::decoded_instruction_t * 
     newArgs[2] = nullptr;
   }
   
-  // TODO Support for immediate values? 
   scm::codelet * newCodelet = scm::codeletFactory::createCodelet(inst->getInstruction(), newArgs);
+  TIMERS_COUNTERS_GUARD(
+    this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE);
+  );
   this->ctrl_st_m->get_executor(0)->assign(newCodelet);
   while (!this->ctrl_st_m->get_executor(0)->is_empty());
 }

@@ -55,7 +55,12 @@ int main (int argc, char * argv[]) {
     return 1;
   }
 
+
   myMachine->run();
+
+  TIMERS_COUNTERS_GUARD(
+    myMachine->setTimersOutput("trace.json");
+  );
 
   // Checking result
   for (long unsigned i = 0; i < NumElements; ++i) {
@@ -64,6 +69,7 @@ int main (int argc, char * argv[]) {
       break;  
     }
   }
+  delete myMachine;
   return 0;
 }
 

@@ -16,6 +16,7 @@
 #include "register.hpp"
 #include "instructions.hpp"
 #include "memory_interface.hpp"
+#include "timers_counters.hpp"
 #include <string>
 
 
@@ -37,6 +38,12 @@ namespace scm {
       mem_interface_module * mem_interface_m; /**< Used to assing memory instructions for execution */
       bool * aliveSignal; /**< When the machine is done, this flag is set to true finishing all the other units */
       int PC; /**< Program counter, this corresponds to the current instruction being executed */
+      uint32_t su_number; /**< This corresponds to the current SU number */
+
+      TIMERS_COUNTERS_GUARD(
+        std::string su_timer_name;
+        timers_counters *time_cnt_m;
+      );
 
     public: 
       fetch_decode_module() = delete;
@@ -67,6 +74,14 @@ namespace scm {
        * Implements the actual behavior logic of the fetch decode unit
        */
       int behavior();
+
+      TIMERS_COUNTERS_GUARD(
+        void setTimerCounter(timers_counters * newTC) { 
+          this->time_cnt_m = newTC; 
+          this->su_timer_name = "SU_" + std::to_string(this->su_number);
+          this->time_cnt_m->addTimer(this->su_timer_name, SU_TIMER);
+        }
+      );
   
   };
   

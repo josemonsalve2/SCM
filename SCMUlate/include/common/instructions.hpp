@@ -148,7 +148,7 @@ namespace scm {
     union value_t {
       uint64_t immediate;
       decoded_reg_t reg;
-      value_t (): immediate(0) {}
+      value_t (): reg(){}
       ~value_t() {};
     };
     value_t value;
@@ -203,9 +203,9 @@ namespace scm {
    public:
       // Constructors
       decoded_instruction_t (instType type) :
-        type(type), instruction("")  {}
+        type(type), instruction(""), op1_s(""), op2_s(""), op3_s(""), cod_exec(nullptr), op1(), op2(), op3() {}
       decoded_instruction_t (instType type, std::string inst, std::string op1s, std::string op2s, std::string op3s) :
-        type(type), instruction(inst), op1_s(op1s), op2_s(op2s), op3_s(op3s)  {}
+        type(type), instruction(inst), op1_s(op1s), op2_s(op2s), op3_s(op3s), cod_exec(nullptr), op1(), op2(), op3()  {}
 
       // Getters and setters
       /** \brief get the instruction type
@@ -259,6 +259,15 @@ namespace scm {
       inline void setOp3Str(std::string str) { op3_s = str; }
 
       void decodeOperands(reg_file_module * const reg_file_m);
+
+      ~decoded_instruction_t() {
+        if (type == EXECUTE_INST) {
+          // TODO depending on the type this to change the casting
+          unsigned char ** params = reinterpret_cast<unsigned char **> (cod_exec->getParams());
+          delete[] params;
+          delete cod_exec;
+        }
+      }
   };
 
   class instructions {

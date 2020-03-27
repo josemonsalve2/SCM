@@ -37,6 +37,7 @@ int main (int argc, char * argv[]) {
     myMachine->setTimersOutput("trace.json");
   );
   delete myMachine;
+  delete[] memory;
   return 0;
 }
 

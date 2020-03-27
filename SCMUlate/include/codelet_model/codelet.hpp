@@ -16,7 +16,7 @@ namespace scm {
       // For now, we start with a registers only implementation
       void * params;
     public:
-      codelet () {};
+      codelet () : params(nullptr) {};
       codelet (uint32_t nparms, void * params): numParams(nparms), params(params) {};
       virtual void implementation() = 0;
       inline void * getParams() { return this->params; };

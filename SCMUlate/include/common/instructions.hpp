@@ -23,6 +23,7 @@
 #include "codelet.hpp"
 #include "SCMUlate_tools.hpp"
 #include "stringHelper.hpp"
+#include "register.hpp"
 
 #define REGISTER_REGEX "R[BbLl0-9_]+"
 #define REGISTER_SPLIT_REGEX "R([BbLl0-9]+)_([0-9]+)"
@@ -34,15 +35,6 @@
 #define NUM_OF_INST(a) sizeof(a)/sizeof(inst_def_t)
 
 namespace scm {
-  /** \brief Decoded register structure
-   *  
-   *  Contains the register name a register size that is taken out of a encoded register
-   *
-   */
-  typedef struct decoded_reg {
-    std::string reg_size;
-    uint32_t reg_number;
-  } decoded_reg_t;
   /** \brief Instruction definition
    *
    *  This struct contains all the information needed for the definition of a instruction 
@@ -51,11 +43,11 @@ namespace scm {
    *  To add an instruction you must create it with DEF_INST() and then add it to the vector for 
    *  the corresponding group
    */
-  typedef struct inst_def {
+  struct inst_def_t {
     std::string inst_name;
     std::string inst_regex;
     int num_op;
-  } inst_def_t;
+  };
 
   // SCM specific insctructions
   const inst_def_t COMMIT_INST = DEF_INST(COMMIT, "[ ]*(COMMIT;).*", 0);                                          /* COMMIT; */
@@ -112,6 +104,81 @@ namespace scm {
    */
   enum instType {UNKNOWN, COMMIT, CONTROL_INST, BASIC_ARITH_INST, EXECUTE_INST, MEMORY_INST};
 
+  /** \brief Decoded register structure
+   *  
+   *  Contains the register name a register size that is taken out of a encoded register
+   *
+   */
+  struct decoded_reg_t {
+    std::string reg_size;
+    uint32_t reg_size_bytes;
+    uint32_t reg_number;
+    unsigned char * reg_ptr;
+    
+    decoded_reg_t(std::string sizeStr, uint32_t sizeBytes, uint32_t regNum, unsigned char * ptr):
+      reg_size(sizeStr), reg_size_bytes(sizeBytes), reg_number(regNum), reg_ptr(ptr) { };
+
+    decoded_reg_t(const decoded_reg_t & other) {
+      reg_size = other.reg_size;
+      reg_size_bytes = other.reg_size_bytes;
+      reg_number = other.reg_number;
+      reg_ptr = other.reg_ptr;
+    }
+
+    void operator=(decoded_reg_t const & other) {
+      reg_size = other.reg_size;
+      reg_size_bytes = other.reg_size_bytes;
+      reg_number = other.reg_number;
+      reg_ptr = other.reg_ptr;
+    }
+  };
+
+  /** \brief Decoded operand structure
+   *  
+   *  An operand can be either a register or an immediate value, it is enconded in a union and it gets used accordingly 
+   *  depending on the type.
+   *   
+   *
+   */
+  struct operand_t {
+    enum {UNKNOWN, REGISTER, IMMEDIATE_VAL} type;
+    union value_t {
+      uint64_t immediate;
+      decoded_reg_t reg;
+      value_t (): immediate(0) {}
+      ~value_t() {};
+    };
+    value_t value;
+
+    operand_t() {
+      type = UNKNOWN;
+    }
+
+    operand_t(operand_t const & other) {
+      type = other.type;
+      if (type == REGISTER)
+        value.reg = other.value.reg;
+      else if (type == IMMEDIATE_VAL)
+        value.immediate = other.value.immediate;
+    }
+
+    operand_t(operand_t && other) {
+      type = other.type;
+      if (type == REGISTER)
+        value.reg = other.value.reg;
+      else if (type == IMMEDIATE_VAL)
+        value.immediate = other.value.immediate;
+    }
+
+    void operator=(operand_t const & other) {
+      type = other.type;
+      if (type == REGISTER)
+        value.reg = other.value.reg;
+      else if (type == IMMEDIATE_VAL)
+        value.immediate = other.value.immediate;
+    }
+  };
+
   class decoded_instruction_t {
     private:
       /** \brief contains the break down of an instruction
@@ -122,16 +189,20 @@ namespace scm {
        */
       instType type;
       std::string instruction;
-      std::string op1;
-      std::string op2;
-      std::string op3;
+      std::string op1_s;
+      std::string op2_s;
+      std::string op3_s;
+      codelet * cod_exec;
+      operand_t op1;
+      operand_t op2;
+      operand_t op3;
 
    public:
       // Constructors
       decoded_instruction_t (instType type) :
-        type(type), instruction(""), op1(""), op2(""), op3("")  {}
-      decoded_instruction_t (instType type, std::string inst, std::string op1, std::string op2, std::string op3) :
-        type(type), instruction(inst), op1(op1), op2(op2), op3(op3)  {}
+        type(type), instruction("")  {}
+      decoded_instruction_t (instType type, std::string inst, std::string op1s, std::string op2s, std::string op3s) :
+        type(type), instruction(inst), op1_s(op1s), op2_s(op2s), op3_s(op3s)  {}
 
       // Getters and setters
       /** \brief get the instruction type
@@ -141,29 +212,50 @@ namespace scm {
       /** \brief get the instruction name
        */
       inline std::string getInstruction() { return instruction; }
+      /** \brief get Codelet
+       */
+      inline codelet * getExecCodelet() { return cod_exec; }
       /** \brief set the instruction name
        */
       inline void setInstruction(std::string newInstName) { instruction = newInstName; }
       /** \brief set the op1 
        */
-      inline void setOp1(std::string newOpVal) { op1 = newOpVal; }
+      inline void setOp1(operand_t newOpVal) { op1 = newOpVal; }
       /** \brief set the op2
        */
-      inline void setOp2(std::string newOpVal) { op2 = newOpVal; }
+      inline void setOp2(operand_t newOpVal) { op2 = newOpVal; }
       /** \brief set the op3
        */
-      inline void setOp3(std::string newOpVal) { op3 = newOpVal; }
+      inline void setOp3(operand_t newOpVal) { op3 = newOpVal; }
       /** \brief set the op1 
        */
-      inline std::string getOp1() { return op1; }
+      inline operand_t getOp1() { return op1; }
       /** \brief get the op2
        */
-      inline std::string getOp2() { return op2; }
+      inline operand_t getOp2() { return op2; }
       /** \brief get the op3
        */
-      inline std::string getOp3() { return op3; }
+      inline operand_t getOp3() { return op3; }
+      /** \brief get the op1_s
+       */
+      inline std::string getOp1Str() { return op1_s; }
+      /** \brief get the op2_s
+       */
+      inline std::string getOp2Str() { return op2_s; }
+      /** \brief get the op3_s
+       */
+      inline std::string getOp3Str() { return op3_s; }
+      /** \brief set the op1_s 
+       */
+      inline void setOp1Str(std::string str) { op1_s = str; }
+      /** \brief set the op2_s
+       */
+      inline void setOp2Str(std::string str) { op2_s = str; }
+      /** \brief set the op3_s
+       */
+      inline void setOp3Str(std::string str) { op3_s = str; }
 
-
+      void decodeOperands(reg_file_module * const reg_file_m);
   };
 
   class instructions {
@@ -262,7 +354,7 @@ namespace scm {
       if (!dec) isMemory(instruction, &dec);
       if (!dec) dec = new decoded_instruction_t(UNKNOWN);
 
-      SCMULATE_INFOMSG(4, "decoded: {type = %d, opcode = %s, op1 = %s, op2 = %s, op3 = %s}, ", dec->getType(), dec->getInstruction().c_str(), dec->getOp1().c_str(), dec->getOp2().c_str(), dec->getOp3().c_str());
+      SCMULATE_INFOMSG(4, "decoded: {type = %d, opcode = %s, op1 = %s, op2 = %s, op3 = %s}, ", dec->getType(), dec->getInstruction().c_str(), dec->getOp1Str().c_str(), dec->getOp2Str().c_str(), dec->getOp3Str().c_str());
       
 
       return dec;
@@ -308,7 +400,7 @@ namespace scm {
     instructions::decodeRegister(std::string const op) {
       std::regex search_exp(REGISTER_SPLIT_REGEX, std::regex_constants::ECMAScript);
       std::smatch matches;
-      decoded_reg_t res = {"", 0};
+      decoded_reg_t res(std::string(""), 0, 0, nullptr);
       if (std::regex_search(op.begin(), op.end(), matches, search_exp)) {
          res.reg_size = matches[1];
          res.reg_number = std::stoi(matches[2]);
@@ -392,11 +484,11 @@ namespace scm {
           token = operands.substr(0, pos);
           token = trim(token);
           if (opNum == 0) {
-            (*decInst)->setOp1(token);
+            (*decInst)->setOp1Str(token);
           } else if (opNum == 1) {
-            (*decInst)->setOp2(token);
+            (*decInst)->setOp2Str(token);
           } else if (opNum == 2) {
-            (*decInst)->setOp3(token);
+            (*decInst)->setOp3Str(token);
           } else {
             SCMULATE_ERROR(0, "Unsupported number of operands for EXECUTE_INST instruction");
             break;

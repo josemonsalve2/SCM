@@ -23,7 +23,9 @@ scm::inst_mem_module::loader(string const filename) {
             SCMULATE_INFOMSG(4, "Found label: '%s'", label.c_str());
             labels[label] = curInst; 
           } else if (!instructions::isComment(line)) {
-            this->memory.push_back(scm::instructions::findInstType(line));
+            scm::decoded_instruction_t * inst = scm::instructions::findInstType(line); 
+            inst->decodeOperands(this->reg_file_m);
+            this->memory.push_back(inst);
             // Any other instruction we store it in memory
             curInst++;
           }
@@ -36,7 +38,8 @@ scm::inst_mem_module::loader(string const filename) {
     return true;
 }
 
-scm::inst_mem_module::inst_mem_module(string const filename ) {
+scm::inst_mem_module::inst_mem_module(string const filename, reg_file_module * const reg_file_m):
+  reg_file_m(reg_file_m) {
   SCMULATE_INFOMSG(3, "CREATING INSTRUCTION MEMORY");
   this->is_valid = true;
   // Open the file, if specified, otherwise read from stdio

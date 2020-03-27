@@ -29,6 +29,16 @@ if (TIMERS_COUNTERS)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DTIMERS_COUNTERS=1")
 endif (TIMERS_COUNTERS)
 
+## OS Specific
+if (APPLE)
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    include_directories("/usr/local/include" "/usr/local/opt/llvm/include")
+    link_directories("/usr/local/lib" "/usr/local/opt/llvm/lib")
+    set(CMAKE_C_COMPILER "/usr/local/opt/llvm/bin/clang")
+    set(CMAKE_CXX_COMPILER "/usr/local/opt/llvm/bin/clang++")
+  endif()
+endif (APPLE)
+
 ## COMPILER SPECIFIC
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   # using Clang
@@ -51,6 +61,10 @@ set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -O3 -std=c++17")
 
 add_subdirectory (src) 
 if (CMAKE_BUILD_TYPE MATCHES Debug)
+  if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+    # using Clang
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
+  endif()
   enable_testing()
   add_subdirectory (tests) 
 endif()

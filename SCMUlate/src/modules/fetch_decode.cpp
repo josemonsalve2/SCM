@@ -20,6 +20,7 @@ scm::fetch_decode_module::behavior() {
   // Initialization barrier
   #pragma omp barrier
     while (*(this->aliveSignal)) {
+      SCMULATE_INFOMSG(5, "Executing PC = %d", this->PC);
       TIMERS_COUNTERS_GUARD(
         this->time_cnt_m->addEvent(this->su_timer_name, FETCH_DECODE_INSTRUCTION);
       );
@@ -90,8 +91,8 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
   ///// CONTROL LOGIC FOR THE JMPLBL INSTRUCTION
   /////////////////////////////////////////////////////
   if (inst->getInstruction() == "JMPLBL") {
-    int newPC = this->inst_mem_m->getMemoryLabel(inst->getOp1()) - 1;
-    SCMULATE_ERROR_IF(0, newPC == -2,   "Incorrect label translation");
+    int newPC = this->inst_mem_m->getMemoryLabel(inst->getOp1Str()) - 1;
+    SCMULATE_ERROR_IF(0, newPC == -1,   "Incorrect label translation");
     PC = newPC;
     return;
   }
@@ -99,7 +100,7 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
   ///// CONTROL LOGIC FOR THE JMPPC INSTRUCTION
   /////////////////////////////////////////////////////
   if (inst->getInstruction() == "JMPPC") {
-    int offset = std::stoi(inst->getOp1());
+    int offset = inst->getOp1().value.immediate;
     int target = offset + PC - 1;
     SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0),  "Incorrect destination offset");
     PC = target;
@@ -109,21 +110,21 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
   ///// CONTROL LOGIC FOR THE BREQ INSTRUCTION
   /////////////////////////////////////////////////////
   if (inst->getInstruction() == "BREQ" ) {
-    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
-    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
-    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    decoded_reg_t reg1 = inst->getOp1().value.reg;
+    decoded_reg_t reg2 = inst->getOp2().value.reg;
+    unsigned char * reg1_ptr = reg1.reg_ptr;
+    unsigned char * reg2_ptr = reg2.reg_ptr;
     SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
     bool bitComparison = true;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
-    for (uint32_t i = 0; i < this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size); ++i) {
+    for (uint32_t i = 0; i < reg1.reg_size_bytes; ++i) {
       if (reg1_ptr[i] ^ reg2_ptr[i]) {
         bitComparison = false;
         break;
       }
     }
     if (bitComparison) {
-      int offset = std::stoi(inst->getOp3());
+      int offset = inst->getOp3().value.immediate;
       int target = offset + PC - 1;
       SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0),  "Incorrect destination offset");
       PC = target;
@@ -134,14 +135,14 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
   ///// CONTROL LOGIC FOR THE BGT INSTRUCTION
   /////////////////////////////////////////////////////
   if (inst->getInstruction() == "BGT" ) {
-    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
-    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
-    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    decoded_reg_t reg1 = inst->getOp1().value.reg;
+    decoded_reg_t reg2 = inst->getOp2().value.reg;
+    unsigned char * reg1_ptr = reg1.reg_ptr;
+    unsigned char * reg2_ptr = reg2.reg_ptr;
     SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
     bool reg1_gt_reg2 = false;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
-    for (uint32_t i = 0; i < this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size); ++i) {
+    for (uint32_t i = 0; i < reg1.reg_size_bytes; ++i) {
       // Find the first byte from MSB to LSB that is different in reg1 and reg2. If reg1 > reg2 in that byte, then reg1 > reg2 in general
       if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] > reg2_ptr[i]) {
         reg1_gt_reg2 = true;
@@ -149,7 +150,7 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
       }
     }
     if (reg1_gt_reg2) {
-      int offset = std::stoi(inst->getOp3());
+      int offset = inst->getOp3().value.immediate;
       int target = offset + PC - 1;
       SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0),  "Incorrect destination offset");
       PC = target;
@@ -160,14 +161,14 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
   ///// CONTROL LOGIC FOR THE BGET INSTRUCTION
   /////////////////////////////////////////////////////
   if (inst->getInstruction() == "BGET" ) {
-    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
-    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
-    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    decoded_reg_t reg1 = inst->getOp1().value.reg;
+    decoded_reg_t reg2 = inst->getOp2().value.reg;
+    unsigned char * reg1_ptr = reg1.reg_ptr;
+    unsigned char * reg2_ptr = reg2.reg_ptr;
     SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
     bool reg1_get_reg2 = false;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
-    uint32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+    uint32_t size_reg_bytes = reg1.reg_size_bytes;
     for (uint32_t i = 0; i < size_reg_bytes; ++i) {
       // Find the first byte from MSB to LSB that is different in reg1 and reg2. If reg1 > reg2 in that byte, then reg1 > reg2 in general
       if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] > reg2_ptr[i]) {
@@ -179,7 +180,7 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
         reg1_get_reg2 = true;
     }
     if (reg1_get_reg2) {
-      int offset = std::stoi(inst->getOp3());
+      int offset = inst->getOp3().value.immediate;
       int target = offset + PC - 1;
       SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0),  "Incorrect destination offset");
       PC = target;
@@ -190,14 +191,14 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
   ///// CONTROL LOGIC FOR THE BLT INSTRUCTION
   /////////////////////////////////////////////////////
   if (inst->getInstruction() == "BLT" ) {
-    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
-    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
-    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    decoded_reg_t reg1 = inst->getOp1().value.reg;
+    decoded_reg_t reg2 = inst->getOp2().value.reg;
+    unsigned char * reg1_ptr = reg1.reg_ptr;
+    unsigned char * reg2_ptr = reg2.reg_ptr;
     SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
     bool reg1_lt_reg2 = false;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
-    for (uint32_t i = 0; i < this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size); ++i) {
+    for (uint32_t i = 0; i < reg1.reg_size_bytes; ++i) {
       // Find the first byte from MSB to LSB that is different in reg1 and reg2. If reg1 < reg2 in that byte, then reg1 < reg2 in general
       if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] < reg2_ptr[i]) {
         reg1_lt_reg2 = true;
@@ -205,7 +206,7 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
       }
     }
     if (reg1_lt_reg2) {
-      int offset = std::stoi(inst->getOp3());
+      int offset = inst->getOp3().value.immediate;
       int target = offset + PC - 1;
       SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0),  "Incorrect destination offset");
       PC = target;
@@ -216,14 +217,14 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
   ///// CONTROL LOGIC FOR THE BLET INSTRUCTION
   /////////////////////////////////////////////////////
   if (inst->getInstruction() == "BLET" ) {
-    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
-    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
-    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
+    decoded_reg_t reg1 = inst->getOp1().value.reg;
+    decoded_reg_t reg2 = inst->getOp2().value.reg;
+    unsigned char * reg1_ptr = reg1.reg_ptr;
+    unsigned char * reg2_ptr = reg2.reg_ptr;
     SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
     bool reg1_let_reg2 = false;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
-    uint32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+    uint32_t size_reg_bytes = reg1.reg_size_bytes;
     for (uint32_t i = 0; i < size_reg_bytes; ++i) {
       // Find the first byte from MSB to LSB that is different in reg1 and reg2. If reg1 < reg2 in that byte, then reg1 < reg2 in general
       if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] < reg2_ptr[i]) {
@@ -235,7 +236,7 @@ scm::fetch_decode_module::executeControlInstruction(scm::decoded_instruction_t *
         reg1_let_reg2 = true;
     }
     if (reg1_let_reg2) {
-      int offset = std::stoi(inst->getOp3());
+      int offset = inst->getOp3().value.immediate;
       int target = offset + PC - 1;
       SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0),  "Incorrect destination offset");
       PC = target;
@@ -250,19 +251,19 @@ scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instruction
   ///// ARITHMETIC LOGIC FOR THE ADD INSTRUCTION
   /////////////////////////////////////////////////////
   if (inst->getInstruction() == "ADD") {
-    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
-    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
+    decoded_reg_t reg1 = inst->getOp1().value.reg;
+    decoded_reg_t reg2 = inst->getOp2().value.reg;
     // Second operand may be register or immediate. We assumme immediate are no longer than a long long
-    if (!instructions::isRegister(inst->getOp3())) {
+    if (inst->getOp3().type == scm::operand_t::IMMEDIATE_VAL) {
       // IMMEDIATE ADDITION CASE
       // TODO: Think about the signed option of these operands
-      unsigned long long immediate_val = std::stoull(inst->getOp3());
+      uint64_t immediate_val = inst->getOp3().value.immediate;
 
-      unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
+      unsigned char * reg2_ptr = reg2.reg_ptr; 
 
       // Where to store the result
-      unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
-      int32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+      unsigned char * reg1_ptr = reg1.reg_ptr; 
+      int32_t size_reg_bytes = reg1.reg_size_bytes;
 
       // Addition
       uint32_t temp = 0;
@@ -275,13 +276,13 @@ scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instruction
       }
     } else {
       // REGISTER REGISTER ADD CASE
-      decoded_reg_t reg3 = instructions::decodeRegister(inst->getOp3());
-      unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
-      unsigned char * reg3_ptr = this->reg_file_m->getRegisterByName(reg3.reg_size, reg3.reg_number); 
+      decoded_reg_t reg3 = inst->getOp3().value.reg;
+      unsigned char * reg2_ptr = reg2.reg_ptr; 
+      unsigned char * reg3_ptr = reg3.reg_ptr; 
 
       // Where to store the result
-      unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
-      int32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+      unsigned char * reg1_ptr = reg1.reg_ptr; 
+      int32_t size_reg_bytes = reg1.reg_size_bytes;
 
       // Addition
       int temp = 0;
@@ -299,20 +300,20 @@ scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instruction
   ///// ARITHMETIC LOGIC FOR THE SUB INSTRUCTION
   /////////////////////////////////////////////////////
   if (inst->getInstruction() == "SUB") {
-    decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
-    decoded_reg_t reg2 = instructions::decodeRegister(inst->getOp2());
+    decoded_reg_t reg1 = inst->getOp1().value.reg;
+    decoded_reg_t reg2 = inst->getOp2().value.reg;
 
     // Second operand may be register or immediate. We assumme immediate are no longer than a long long
-    if (!instructions::isRegister(inst->getOp3())) {
+    if (inst->getOp3().type == scm::operand_t::IMMEDIATE_VAL) {
       // IMMEDIATE ADDITION CASE
       // TODO: Think about the signed option of these operands
-      unsigned long long immediate_val = std::stoull(inst->getOp3());
+      uint16_t immediate_val = inst->getOp3().value.immediate;
 
-      unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
+      unsigned char * reg2_ptr = reg2.reg_ptr; 
 
       // Where to store the result
-      unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
-      int32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+      unsigned char * reg1_ptr = reg1.reg_ptr; 
+      int32_t size_reg_bytes = reg1.reg_size_bytes;
 
       // Subtraction
       uint32_t temp = 0;
@@ -330,13 +331,13 @@ scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instruction
       SCMULATE_ERROR_IF(0, temp == 1, "Registers must be possitive numbers, addition of numbers resulted in negative number. Carry was 1 at the end of the operation");
     } else {
       // REGISTER REGISTER ADD CASE
-      decoded_reg_t reg3 = instructions::decodeRegister(inst->getOp3());
-      unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number); 
-      unsigned char * reg3_ptr = this->reg_file_m->getRegisterByName(reg3.reg_size, reg3.reg_number); 
+      decoded_reg_t reg3 = inst->getOp3().value.reg;
+      unsigned char * reg2_ptr = reg2.reg_ptr; 
+      unsigned char * reg3_ptr = reg3.reg_ptr; 
 
       // Where to store the result
-      unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
-      int32_t size_reg_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+      unsigned char * reg1_ptr = reg1.reg_ptr; 
+      int32_t size_reg_bytes = reg1.reg_size_bytes;
 
       // Subtraction
       uint32_t temp = 0;
@@ -376,44 +377,8 @@ scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instruction
 void
 scm::fetch_decode_module::assignExecuteInstruction(scm::decoded_instruction_t * inst) {
   // Counting the number of arguments 
-  // TODO: THERE IS A BETTER WAY TO DO THIS, BUT THIS DO FOR NOW
-  // We currently only support 3 arguments. Change this 
-  unsigned char ** newArgs = new unsigned char*[3];
-  if (inst->getOp1() != "") {
-    if (!instructions::isRegister(inst->getOp1())) {
-      uint64_t immediate_val = std::stoull(inst->getOp1());
-      newArgs[0] = reinterpret_cast<unsigned char *>(immediate_val);
-    } else {
-      decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp1());
-      newArgs[0] = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
-    }
-  } else {
-    newArgs[0] = nullptr;
-  }
-  if (inst->getOp2() != "") {
-    if (!instructions::isRegister(inst->getOp2())) {
-      uint64_t immediate_val = std::stoull(inst->getOp2());
-      newArgs[1] = reinterpret_cast<unsigned char *>(immediate_val);
-    } else {
-      decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp2());
-      newArgs[1] = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
-    } 
-  } else {
-    newArgs[1] = nullptr;
-  }
-  if (inst->getOp3() != "") {
-    if (!instructions::isRegister(inst->getOp3())) {
-      uint64_t immediate_val = std::stoull(inst->getOp3());
-      newArgs[2] = reinterpret_cast<unsigned char *>(immediate_val);
-    } else {
-      decoded_reg_t reg1 = instructions::decodeRegister(inst->getOp3());
-      newArgs[2] = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number); 
-    } 
-  } else {
-    newArgs[2] = nullptr;
-  }
-  
-  scm::codelet * newCodelet = scm::codeletFactory::createCodelet(inst->getInstruction(), newArgs);
+  // We currently only support 3 arguments. Change this   
+  scm::codelet * newCodelet = inst->getExecCodelet();
   TIMERS_COUNTERS_GUARD(
     this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE);
   );

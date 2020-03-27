@@ -34,7 +34,7 @@ namespace scm {
           // Needs atomic read since it is used for sync purposes 
           // with the SU unit
           #pragma omp atomic write
-          myInstructionSlot = NULL;
+          myInstructionSlot = nullptr;
       }
 
     public: 

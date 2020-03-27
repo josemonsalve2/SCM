@@ -3,6 +3,7 @@
 
 #include "SCMUlate_tools.hpp"
 #include "instructions.hpp"
+#include "register.hpp"
 #include <vector>
 #include <map>
 #include <string>
@@ -23,7 +24,7 @@ namespace scm {
     private: 
       std::vector<decoded_instruction_t*> memory;
       std::map<std::string, int> labels;
-
+      reg_file_module * reg_file_m;
 
       /* This flag checks if the file that is received is a valid flag
        * otherwise it should set it to stop running the machine
@@ -39,7 +40,7 @@ namespace scm {
 
     public:
       inst_mem_module() = delete;
-      inst_mem_module(std::string const filename);
+      inst_mem_module(std::string const filename, reg_file_module * const reg_file_m);
   
       /* This method allows to fetch an instruction from the instruction 
        * memory by passing the address (PC)

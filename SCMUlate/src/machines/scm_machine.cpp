@@ -5,7 +5,7 @@ scm::scm_machine::scm_machine(std::string in_filename, unsigned char * const mem
   init_correct(true), 
   filename(in_filename),
   reg_file_m(),
-  inst_mem_m(filename), 
+  inst_mem_m(filename, &reg_file_m), 
   control_store_m(NUM_CUS),
   fetch_decode_m(&inst_mem_m, &reg_file_m, &control_store_m, &mem_interface_m, &alive),
   mem_interface_m(memory, &reg_file_m, &alive) {

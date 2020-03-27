@@ -22,10 +22,7 @@ scm::cu_executor_module::behavior() {
       );
       scm::codelet * curCodelet = myExecutor->getHead();
       curCodelet->implementation();
-      // TODO Delete args? 
-      unsigned char ** curArgs = static_cast<unsigned char **>(curCodelet->getParams());
-      delete curArgs;
-      delete curCodelet;
+      
       myExecutor->empty_slot();
       TIMERS_COUNTERS_GUARD(
         this->timer_cnt_m->addEvent(this->cu_timer_name, CU_IDLE);

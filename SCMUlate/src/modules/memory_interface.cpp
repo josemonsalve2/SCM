@@ -1,10 +1,12 @@
 #include "memory_interface.hpp"
 
 scm::mem_interface_module::mem_interface_module(unsigned char * const memory, reg_file_module* regFile, bool * aliveSig):
+  myInstructionSlot(nullptr),
   reg_file_m(regFile),
   aliveSignal(aliveSig),
   memorySpace(memory), 
-  memId(0) {
+  memId(0)
+   {
 }
 
 int
@@ -43,14 +45,14 @@ scm::mem_interface_module::executeMemoryInstructions() {
   /////////////////////////////////////////////////////
   if (this->myInstructionSlot->getInstruction() == "LDIMM") {
     // Obtain destination register
-    decoded_reg_t reg1 = instructions::decodeRegister(myInstructionSlot->getOp1());
-    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    int32_t size_reg1_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+    decoded_reg_t reg1 = myInstructionSlot->getOp1().value.reg;
+    unsigned char * reg1_ptr = reg1.reg_ptr;
+    int32_t size_reg1_bytes = reg1.reg_size_bytes;
 
     int32_t i, j;
 
     // Obtain base address and perform copy
-    unsigned long immediate_value = std::stoul(myInstructionSlot->getOp2());
+    unsigned long immediate_value = myInstructionSlot->getOp2().value.immediate;
     
     // Perform actual memory copy
     for (i = size_reg1_bytes-1, j = 0; i >= 0; --i, ++j) {
@@ -72,28 +74,29 @@ scm::mem_interface_module::executeMemoryInstructions() {
   /////////////////////////////////////////////////////
   if (this->myInstructionSlot->getInstruction() == "LDADDR") {
     // Obtain destination register
-    decoded_reg_t reg1 = instructions::decodeRegister(myInstructionSlot->getOp1());
-    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    int32_t size_reg1_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+    decoded_reg_t reg1 = myInstructionSlot->getOp1().value.reg;
+    unsigned char * reg1_ptr = reg1.reg_ptr;
+    int32_t size_reg1_bytes = reg1.reg_size_bytes;
 
     int32_t i, j;
 
     // Obtain base address and perform copy
     unsigned long base_addr = 0;
-    if (!instructions::isRegister(myInstructionSlot->getOp2())) {
+    if (myInstructionSlot->getOp2().type == operand_t::IMMEDIATE_VAL) {
       // Load address immediate value
-      base_addr = std::stoul(myInstructionSlot->getOp2());
-    } else {
+      base_addr = myInstructionSlot->getOp2().value.immediate;
+    } else if (myInstructionSlot->getOp2().type == operand_t::REGISTER) {
       // Load address register value
-      decoded_reg_t reg2 = instructions::decodeRegister(myInstructionSlot->getOp2());
-      unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
-      int32_t size_reg2_bytes = this->reg_file_m->getRegisterSizeInBytes(reg2.reg_size);
+      decoded_reg_t reg2 = myInstructionSlot->getOp2().value.reg;
+      unsigned char * reg2_ptr = reg2.reg_ptr;
+      int32_t size_reg2_bytes = reg2.reg_size_bytes;
       for (i = size_reg2_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg2_ptr[i];
         temp <<= j*8;
         base_addr += temp;
-      }
-      
+      } 
+    } else {
+      SCMULATE_ERROR(0, "Incorrect operand type");
     }
     // Perform actual memory copy
     for (i = 0; i < size_reg1_bytes; i++) {
@@ -109,44 +112,48 @@ scm::mem_interface_module::executeMemoryInstructions() {
   /////////////////////////////////////////////////////
   if (this->myInstructionSlot->getInstruction() == "LDOFF") {
     // Destination register
-    decoded_reg_t reg1 = instructions::decodeRegister(myInstructionSlot->getOp1());
-    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    int32_t size_reg1_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+    decoded_reg_t reg1 = myInstructionSlot->getOp1().value.reg;
+    unsigned char * reg1_ptr = reg1.reg_ptr;
+    int32_t size_reg1_bytes = reg1.reg_size_bytes;
     unsigned long base_addr = 0;
     unsigned long offset = 0;
     int32_t i, j;
 
 
     // Obtaining the base_addr
-    if (!instructions::isRegister(myInstructionSlot->getOp2())) {
+    if (myInstructionSlot->getOp2().type == operand_t::IMMEDIATE_VAL) {
       // Load address inmediate value
-      base_addr = std::stoul(myInstructionSlot->getOp2());
-    } else {
+      base_addr = myInstructionSlot->getOp2().value.immediate;
+    } else if (myInstructionSlot->getOp2().type == operand_t::REGISTER) {
       // Load address register value
-      decoded_reg_t reg2 = instructions::decodeRegister(myInstructionSlot->getOp2());
-      unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
-      int32_t size_reg2_bytes = this->reg_file_m->getRegisterSizeInBytes(reg2.reg_size);
+      decoded_reg_t reg2 = myInstructionSlot->getOp2().value.reg;
+      unsigned char * reg2_ptr = reg2.reg_ptr;
+      int32_t size_reg2_bytes = reg2.reg_size_bytes;
       for (i = size_reg2_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg2_ptr[i];
         temp <<= j*8;
         base_addr += temp;
       }
+    } else {
+      SCMULATE_ERROR(0, "Incorrect operand type");
     }
 
     // Obtaining the offset
-    if (!instructions::isRegister(myInstructionSlot->getOp3())) {
+    if (myInstructionSlot->getOp3().type == operand_t::IMMEDIATE_VAL) {
       // Load address inmediate value
-      offset = std::stoul(myInstructionSlot->getOp3());
-    } else {
+      offset = myInstructionSlot->getOp3().value.immediate;
+    } else if (myInstructionSlot->getOp3().type == operand_t::REGISTER) {
       // Load address register value
-      decoded_reg_t reg3 = instructions::decodeRegister(myInstructionSlot->getOp3());
-      unsigned char * reg3_ptr = this->reg_file_m->getRegisterByName(reg3.reg_size, reg3.reg_number);
-      int32_t size_reg3_bytes = this->reg_file_m->getRegisterSizeInBytes(reg3.reg_size);
+      decoded_reg_t reg3 = myInstructionSlot->getOp3().value.reg;
+      unsigned char * reg3_ptr = reg3.reg_ptr;
+      int32_t size_reg3_bytes = reg3.reg_size_bytes;
       for (i = size_reg3_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg3_ptr[i];
         temp <<= j*8;
         base_addr += temp;
       }
+    } else {
+      SCMULATE_ERROR(0, "Incorrect operand type");
     }
 
     for (i = 0; i < size_reg1_bytes; i++) {
@@ -159,28 +166,29 @@ scm::mem_interface_module::executeMemoryInstructions() {
   /////////////////////////////////////////////////////
   if (this->myInstructionSlot->getInstruction() == "STADR") {
     // Obtain destination register
-    decoded_reg_t reg1 = instructions::decodeRegister(myInstructionSlot->getOp1());
-    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    int32_t size_reg1_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+    decoded_reg_t reg1 = myInstructionSlot->getOp1().value.reg;
+    unsigned char * reg1_ptr = reg1.reg_ptr;
+    int32_t size_reg1_bytes = reg1.reg_size_bytes;
 
     int32_t i, j;
 
     // Obtain base address and perform copy
     unsigned long base_addr = 0;
-    if (!instructions::isRegister(myInstructionSlot->getOp2())) {
+    if (myInstructionSlot->getOp2().type == operand_t::IMMEDIATE_VAL) {
       // Load address inmediate value
-      base_addr = std::stoul(myInstructionSlot->getOp2());
-    } else {
+      base_addr = myInstructionSlot->getOp2().value.immediate;
+    } else if (myInstructionSlot->getOp2().type == operand_t::REGISTER) {
       // Load address register value
-      decoded_reg_t reg2 = instructions::decodeRegister(myInstructionSlot->getOp2());
-      unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
-      int32_t size_reg2_bytes = this->reg_file_m->getRegisterSizeInBytes(reg2.reg_size);
+      decoded_reg_t reg2 = myInstructionSlot->getOp2().value.reg;
+      unsigned char * reg2_ptr = reg2.reg_ptr;
+      int32_t size_reg2_bytes = reg2.reg_size_bytes;
       for (i = size_reg2_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg2_ptr[i];
         temp <<= j*8;
         base_addr += temp;
       }
-      
+    } else {
+      SCMULATE_ERROR(0, "Incorrect operand type");
     }
     // Perform actual memory copy
     for (i = 0; i < size_reg1_bytes; i++) {
@@ -193,44 +201,48 @@ scm::mem_interface_module::executeMemoryInstructions() {
   /////////////////////////////////////////////////////
   if (this->myInstructionSlot->getInstruction() == "STOFF") {
     // Destination register
-    decoded_reg_t reg1 = instructions::decodeRegister(myInstructionSlot->getOp1());
-    unsigned char * reg1_ptr = this->reg_file_m->getRegisterByName(reg1.reg_size, reg1.reg_number);
-    int32_t size_reg1_bytes = this->reg_file_m->getRegisterSizeInBytes(reg1.reg_size);
+    decoded_reg_t reg1 = myInstructionSlot->getOp1().value.reg;
+    unsigned char * reg1_ptr = reg1.reg_ptr;
+    int32_t size_reg1_bytes = reg1.reg_size_bytes;
     unsigned long base_addr = 0;
     unsigned long offset = 0;
     int32_t i, j;
 
 
     // Obtaining the base_addr
-    if (!instructions::isRegister(myInstructionSlot->getOp2())) {
+    if (myInstructionSlot->getOp2().type == operand_t::IMMEDIATE_VAL) {
       // Load address inmediate value
-      base_addr = std::stoul(myInstructionSlot->getOp2());
-    } else {
+      base_addr = myInstructionSlot->getOp2().value.immediate;
+    } else if (myInstructionSlot->getOp2().type == operand_t::REGISTER) {
       // Load address register value
-      decoded_reg_t reg2 = instructions::decodeRegister(myInstructionSlot->getOp2());
-      unsigned char * reg2_ptr = this->reg_file_m->getRegisterByName(reg2.reg_size, reg2.reg_number);
-      int32_t size_reg2_bytes = this->reg_file_m->getRegisterSizeInBytes(reg2.reg_size);
+      decoded_reg_t reg2 = myInstructionSlot->getOp2().value.reg;
+      unsigned char * reg2_ptr = reg2.reg_ptr;
+      int32_t size_reg2_bytes = reg2.reg_size_bytes;
       for (i = size_reg2_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg2_ptr[i];
         temp <<= j*8;
         base_addr += temp;
       }
+    } else {
+      SCMULATE_ERROR(0, "Incorrect operand type");
     }
 
     // Obtaining the offset
-    if (!instructions::isRegister(myInstructionSlot->getOp3())) {
+    if (myInstructionSlot->getOp3().type == operand_t::IMMEDIATE_VAL) {
       // Load address inmediate value
-      offset = std::stoul(myInstructionSlot->getOp3());
-    } else {
+      offset = myInstructionSlot->getOp3().value.immediate;
+    } else if (myInstructionSlot->getOp3().type == operand_t::REGISTER) {
       // Load address register value
-      decoded_reg_t reg3 = instructions::decodeRegister(myInstructionSlot->getOp3());
-      unsigned char * reg3_ptr = this->reg_file_m->getRegisterByName(reg3.reg_size, reg3.reg_number);
-      int32_t size_reg3_bytes = this->reg_file_m->getRegisterSizeInBytes(reg3.reg_size);
+      decoded_reg_t reg3 = myInstructionSlot->getOp3().value.reg;
+      unsigned char * reg3_ptr = reg3.reg_ptr;
+      int32_t size_reg3_bytes = reg3.reg_size_bytes;
       for (i = size_reg3_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg3_ptr[i];
         temp <<= j*8;
         base_addr += temp;
       }
+    } else {
+      SCMULATE_ERROR(0, "Incorrect operand type");
     }
 
     for (i = 0; i < size_reg1_bytes; i++) {

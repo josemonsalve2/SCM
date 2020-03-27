@@ -8,7 +8,7 @@ scm::inst_mem_module::loader(char* filename) {
     SCMULATE_INFOMSG(2, "LOADING FILE %s", filename);
     ifstream file_stream;
     string line;
-    file_stream.open("apps/allInst/myProg.scm");
+    file_stream.open(filename);
     unsigned int curInst = 0;
 
     // If file is valid

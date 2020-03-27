@@ -75,7 +75,7 @@ int main (int argc, char * argv[]) {
 
 void parseProgramOptions(int argc, char* argv[]) {
   // there are other arguments
-  for (int i = 1; i < argc; i++) {
+  for (int i = 1; i + 1 < argc; i++) {
     if (strcmp(argv[i], "-i") == 0) {
       program_options.fileInput = true;
       program_options.fileName = argv[++i];

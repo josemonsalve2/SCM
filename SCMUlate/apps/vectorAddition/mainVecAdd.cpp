@@ -63,12 +63,16 @@ int main (int argc, char * argv[]) {
   );
 
   // Checking result
+  bool success = true;
   for (long unsigned i = 0; i < NumElements; ++i) {
     if (C[i] != 2) {
+      success = false;
       SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %d", i, C[i]);
       break;  
     }
   }
+  if (success)
+    printf("SUCCESS!!!\n");
   delete myMachine;
   return 0;
 }

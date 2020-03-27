@@ -211,7 +211,7 @@ namespace scm {
       /** \brief get the instruction type
        *  \sa istType
        */
-      inline instType getType() { return type; }
+      inline instType& getType() { return type; }
       /** \brief get the instruction name
        */
       inline std::string getInstruction() { return instruction; }

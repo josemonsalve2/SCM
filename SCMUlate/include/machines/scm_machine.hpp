@@ -26,7 +26,7 @@ namespace scm {
     private: 
       bool alive;
       bool init_correct;
-      std::string filename;
+      char* filename;
       TIMERS_COUNTERS_GUARD(timers_counters time_cnt_m;)
       
       // Modules
@@ -39,7 +39,7 @@ namespace scm {
 
     public: 
       scm_machine() = delete;
-      scm_machine(std::string in_filename, unsigned char * const external_memory); 
+      scm_machine(char * in_filename, unsigned char * const external_memory); 
 
       TIMERS_COUNTERS_GUARD( 
         void inline setTimersOutput(std::string outputName) { this->time_cnt_m.setFilename(outputName); }

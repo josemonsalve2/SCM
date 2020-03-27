@@ -59,7 +59,7 @@ namespace scm {
           if (op1.type == operand_t::IMMEDIATE_VAL) {
             newArgs[0] = reinterpret_cast<unsigned char *>(op1.value.immediate);
           } else if (op1.type == operand_t::REGISTER) {
-            newArgs[0] = op2.value.reg.reg_ptr; 
+            newArgs[0] = op1.value.reg.reg_ptr; 
           } else {
             newArgs[0] = nullptr;
           }

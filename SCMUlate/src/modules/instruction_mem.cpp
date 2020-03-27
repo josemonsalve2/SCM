@@ -1,13 +1,14 @@
 #include "instruction_mem.hpp"
+#include <string.h>
 
 using namespace std;
 
 bool
-scm::inst_mem_module::loader(string const filename) {
-    SCMULATE_INFOMSG(2, "LOADING FILE %s", filename.c_str());
+scm::inst_mem_module::loader(char* filename) {
+    SCMULATE_INFOMSG(2, "LOADING FILE %s", filename);
     ifstream file_stream;
     string line;
-    file_stream.open(filename);
+    file_stream.open("apps/allInst/myProg.scm");
     unsigned int curInst = 0;
 
     // If file is valid
@@ -32,19 +33,19 @@ scm::inst_mem_module::loader(string const filename) {
         }
       file_stream.close();
     } else {
-      SCMULATE_ERROR(0, "PROGRAM DOES NOT EXIST %s", filename.c_str());
+      SCMULATE_ERROR(0, "PROGRAM DOES NOT EXIST %s", filename);
       return false;
     }
     return true;
 }
 
-scm::inst_mem_module::inst_mem_module(string const filename, reg_file_module * const reg_file_m):
+scm::inst_mem_module::inst_mem_module(char * filename, reg_file_module * const reg_file_m):
   reg_file_m(reg_file_m) {
   SCMULATE_INFOMSG(3, "CREATING INSTRUCTION MEMORY");
   this->is_valid = true;
   // Open the file, if specified, otherwise read from stdio
   string line;
-  if (filename.length() != 0) {
+  if (strlen(filename) != 0) {
     this->is_valid = this->loader(filename);
   } else {
     while ((cin >> line) && line != "-")

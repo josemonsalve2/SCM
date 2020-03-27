@@ -28,19 +28,21 @@ int main (int argc, char * argv[]) {
     myMachine = new scm::scm_machine(program_options.fileName, memory);
   } else {
     SCMULATE_INFOMSG(0, "Reading from stdin");
-    myMachine = new scm::scm_machine("", memory);
+    char emptyStr[10] = "";
+    myMachine = new scm::scm_machine(emptyStr, memory);
   }
 
   myMachine->run();
-  
-  myMachine->setTimersOutput("trace.json");
+  TIMERS_COUNTERS_GUARD(
+    myMachine->setTimersOutput("trace.json");
+  );
   delete myMachine;
   return 0;
 }
 
 void parseProgramOptions(int argc, char* argv[]) {
   // there are other arguments
-  for (int i = 1; i < argc; i++) {
+  for (int i = 1; i + 1 < argc; i++) {
     if (strcmp(argv[i], "-i") == 0) {
       program_options.fileInput = true;
       program_options.fileName = argv[++i];

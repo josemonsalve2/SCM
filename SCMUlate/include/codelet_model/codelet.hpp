@@ -19,7 +19,7 @@ namespace scm {
       codelet () {};
       codelet (uint32_t nparms, void * params): numParams(nparms), params(params) {};
       virtual void implementation() = 0;
-      void * getParams() { return this->params; };
+      inline void * getParams() { return this->params; };
       virtual ~codelet() { }
   };
 

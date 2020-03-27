@@ -115,6 +115,9 @@ namespace scm {
     uint32_t reg_number;
     unsigned char * reg_ptr;
     
+    decoded_reg_t():
+      reg_size(""), reg_size_bytes(0), reg_number(0), reg_ptr(nullptr) { };
+
     decoded_reg_t(std::string sizeStr, uint32_t sizeBytes, uint32_t regNum, unsigned char * ptr):
       reg_size(sizeStr), reg_size_bytes(sizeBytes), reg_number(regNum), reg_ptr(ptr) { };
 
@@ -229,13 +232,13 @@ namespace scm {
       inline void setOp3(operand_t newOpVal) { op3 = newOpVal; }
       /** \brief set the op1 
        */
-      inline operand_t getOp1() { return op1; }
+      inline operand_t& getOp1() { return op1; }
       /** \brief get the op2
        */
-      inline operand_t getOp2() { return op2; }
+      inline operand_t& getOp2() { return op2; }
       /** \brief get the op3
        */
-      inline operand_t getOp3() { return op3; }
+      inline operand_t& getOp3() { return op3; }
       /** \brief get the op1_s
        */
       inline std::string getOp1Str() { return op1_s; }

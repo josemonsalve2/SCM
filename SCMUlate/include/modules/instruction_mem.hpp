@@ -36,11 +36,11 @@ namespace scm {
        * If the program is invalid it will return false. If the program is 
        * valid it will return true
        */
-      bool loader(std::string const filename);
+      bool loader(char * filename);
 
     public:
       inst_mem_module() = delete;
-      inst_mem_module(std::string const filename, reg_file_module * const reg_file_m);
+      inst_mem_module(char * filename, reg_file_module * const reg_file_m);
   
       /* This method allows to fetch an instruction from the instruction 
        * memory by passing the address (PC)

@@ -1,6 +1,6 @@
 #include "scm_machine.hpp"
 
-scm::scm_machine::scm_machine(std::string in_filename, unsigned char * const memory):
+scm::scm_machine::scm_machine(char * in_filename, unsigned char * const memory):
   alive(false), 
   init_correct(true), 
   filename(in_filename),

@@ -9,7 +9,7 @@ include_directories(include/system_codelets)
 
 # FLAGS FOR ALL CASES 
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wextra")
-set(CMAKE_CXX_STANDARD 14)
+set(CMAKE_CXX_STANDARD 17)
 
 
 ## CHECK FOR DEBUG MODE

@@ -18,16 +18,16 @@ scm::mem_interface_module::behavior() {
   // Initialization barrier
   #pragma omp barrier
   while (*(this->aliveSignal)) {
+    if (!this->isInstSlotEmpty()) {
     TIMERS_COUNTERS_GUARD(
       this->timer_cnt_m->addEvent(this->mem_timer_name, MEM_EXECUTION);
     );
-    if (!this->isInstSlotEmpty()) {
       executeMemoryInstructions();
       emptyInstSlot();
-    }
     TIMERS_COUNTERS_GUARD(
         this->timer_cnt_m->addEvent(this->mem_timer_name, MEM_IDLE);
       );
+    }
   }
   SCMULATE_INFOMSG(1, "Shutting down MEMORY MODULE");
   TIMERS_COUNTERS_GUARD(
@@ -59,7 +59,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
       if (j < 8) {
         unsigned char temp = immediate_value & 255;
         reg1_ptr[i] = temp;
-        immediate_value>>=8;
+        immediate_value >>= 8;
       } else {
         // Zero out the rest of the register
         reg1_ptr[i] = 0;
@@ -99,9 +99,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
       SCMULATE_ERROR(0, "Incorrect operand type");
     }
     // Perform actual memory copy
-    for (i = 0; i < size_reg1_bytes; i++) {
-      reg1_ptr[i] = this->memorySpace[base_addr + i];
-    }
+    std::memcpy(reg1_ptr, this->memorySpace+base_addr, size_reg1_bytes);
     return;
   }
   /////////////////////////////////////////////////////
@@ -156,9 +154,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
       SCMULATE_ERROR(0, "Incorrect operand type");
     }
 
-    for (i = 0; i < size_reg1_bytes; i++) {
-      reg1_ptr[i] = this->memorySpace[base_addr + offset + i];
-    }
+    std::memcpy(reg1_ptr, this->memorySpace+base_addr+offset, size_reg1_bytes);
     return;
   }
   /////////////////////////////////////////////////////
@@ -191,9 +187,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
       SCMULATE_ERROR(0, "Incorrect operand type");
     }
     // Perform actual memory copy
-    for (i = 0; i < size_reg1_bytes; i++) {
-      this->memorySpace[base_addr + i] = reg1_ptr[i];
-    }
+    std::memcpy(this->memorySpace+base_addr, reg1_ptr, size_reg1_bytes);
     return;
   }
   /////////////////////////////////////////////////////
@@ -245,9 +239,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
       SCMULATE_ERROR(0, "Incorrect operand type");
     }
 
-    for (i = 0; i < size_reg1_bytes; i++) {
-      this->memorySpace[base_addr + offset + i] = reg1_ptr[i];
-    }
+    std::memcpy(this->memorySpace+base_addr+offset, reg1_ptr, size_reg1_bytes);
     return;
   }
 }

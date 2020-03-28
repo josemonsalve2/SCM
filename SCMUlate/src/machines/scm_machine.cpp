@@ -9,12 +9,6 @@ scm::scm_machine::scm_machine(char * in_filename, unsigned char * const memory):
   control_store_m(NUM_CUS),
   fetch_decode_m(&inst_mem_m, &reg_file_m, &control_store_m, &mem_interface_m, &alive),
   mem_interface_m(memory, &reg_file_m, &alive) {
-    TIMERS_COUNTERS_GUARD(
-      this->time_cnt_m.resetTimer();
-      this->fetch_decode_m.setTimerCounter(&this->time_cnt_m);
-      this->time_cnt_m.addTimer("SCM_MACHINE",scm::SYS_TIMER);
-      this->mem_interface_m.setTimerCnt(&this->time_cnt_m);
-    )
     SCMULATE_INFOMSG(0, "Initializing SCM machine")
   
     // We check the register configuration is valid
@@ -29,6 +23,12 @@ scm::scm_machine::scm_machine(char * in_filename, unsigned char * const memory):
       init_correct = false;
       return;
     }
+
+    TIMERS_COUNTERS_GUARD(
+      this->fetch_decode_m.setTimerCounter(&this->time_cnt_m);
+      this->time_cnt_m.addTimer("SCM_MACHINE",scm::SYS_TIMER);
+      this->mem_interface_m.setTimerCnt(&this->time_cnt_m);
+    )
 
     // Creating execution Units
     int exec_units_threads[] = {CUS};
@@ -48,6 +48,7 @@ scm::scm_machine::scm_machine(char * in_filename, unsigned char * const memory):
 scm::run_status
 scm::scm_machine::run() {
   TIMERS_COUNTERS_GUARD(
+    this->time_cnt_m.resetTimer();
     this->time_cnt_m.addEvent("SCM_MACHINE",SYS_START);
   );
   if (!this->init_correct) return SCM_RUN_FAILURE;

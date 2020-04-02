@@ -36,7 +36,7 @@ namespace scm {
 // HELPER MACROS TO CREATE NEW CODELETS 
 
 #define COD_CLASS_NAME(name) _cod_ ## name
-#define COD_INSTANCE_NAME(name,post) _cod_ ## name ## post
+#define COD_INSTANCE_NAME(name, post) _cod_ ## name ## post
 
 #define DEFINE_CODELET(name, nparms) \
   namespace scm { \

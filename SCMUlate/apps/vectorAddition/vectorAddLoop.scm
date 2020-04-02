@@ -1,10 +1,10 @@
 LDIMM R64B_1, 0; // Loading base address A
-LDIMM R64B_2, 524288; // Loading base address B
-LDIMM R64B_3, 1048576; // Loading base address C
+LDIMM R64B_2, 52428800; // Loading base address B
+LDIMM R64B_3, 104857600; // Loading base address C
 
 LDIMM R64B_4, 0; // For iteration variable
 LDIMM R64B_5, 0; // For offset
-LDIMM R64B_6, 4; // For number of iterations
+LDIMM R64B_6, 400; // For number of iterations
 
 loop:
   BREQ R64B_4, R64B_6, 8;

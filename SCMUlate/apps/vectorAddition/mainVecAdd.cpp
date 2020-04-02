@@ -5,11 +5,11 @@
 #include <cstring>
 #include <iostream>
 
-//B offset = sizeRegister*4 = 524288
-#define B_offset (64*2048*4)
-//C offset = sizeRegister*4*2 = 1048576
-#define C_offset (64*2048*4*2)
-#define NumElements (524288/sizeof(int))
+//B offset = sizeRegister*400 = 52428800
+#define B_offset (64*2048*400)
+//C offset = sizeRegister*400*2 = 104857600
+#define C_offset (64*2048*400*2)
+#define NumElements ((64*2048*400)/sizeof(int))
 
 static struct {
   bool fileInput = false;

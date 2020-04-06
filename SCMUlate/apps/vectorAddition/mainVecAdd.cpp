@@ -9,7 +9,7 @@
 #define B_offset (64*2048*400)
 //C offset = sizeRegister*400*2 = 104857600
 #define C_offset (64*2048*400*2)
-#define NumElements ((64*2048*400)/sizeof(int))
+#define NumElements ((64*2048*400)/sizeof(double))
 
 static struct {
   bool fileInput = false;
@@ -37,13 +37,13 @@ int main (int argc, char * argv[]) {
     return 1;
   }
   
-  int *A = reinterpret_cast<int*> (memory); 
-  int *B = reinterpret_cast<int*> (&memory[B_offset]); 
-  int *C = reinterpret_cast<int*> (&memory[C_offset]); 
+  double *A = reinterpret_cast<double*> (memory); 
+  double *B = reinterpret_cast<double*> (&memory[B_offset]); 
+  double *C = reinterpret_cast<double*> (&memory[C_offset]); 
 
   for (unsigned long i = 0; i < NumElements; ++i) {
-      A[i] = 1;
-      B[i] = 1;
+      A[i] = i;
+      B[i] = i;
   }
   // SCM MACHINE
   scm::scm_machine * myMachine;
@@ -65,7 +65,7 @@ int main (int argc, char * argv[]) {
   // Checking result
   bool success = true;
   for (long unsigned i = 0; i < NumElements; ++i) {
-    if (C[i] != 2) {
+    if (C[i] != i*i) {
       success = false;
       SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %d", i, C[i]);
       break;  

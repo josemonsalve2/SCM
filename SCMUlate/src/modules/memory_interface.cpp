@@ -1,8 +1,7 @@
 #include "memory_interface.hpp"
 
-scm::mem_interface_module::mem_interface_module(unsigned char * const memory, reg_file_module* regFile, bool * aliveSig):
+scm::mem_interface_module::mem_interface_module(unsigned char * const memory, bool * aliveSig):
   myInstructionSlot(nullptr),
-  reg_file_m(regFile),
   aliveSignal(aliveSig),
   memorySpace(memory), 
   memId(0)

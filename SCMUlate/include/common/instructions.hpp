@@ -24,164 +24,10 @@
 #include "SCMUlate_tools.hpp"
 #include "stringHelper.hpp"
 #include "register.hpp"
+#include "instructions_def.hpp"
 
-#define REGISTER_REGEX "R[BbLl0-9_]+"
-#define REGISTER_SPLIT_REGEX "R([BbLl0-9]+)_([0-9]+)"
-#define INMIDIATE_REGEX "[-]?[0-9]+"
-#define LABEL_REGEX "([a-zA-Z0-9_]+)"
-#define COMMENT_REGEX "([ ]*//.*)"
-
-#define DEF_INST(name, regExp, numOp) {#name, regExp, numOp}
-#define NUM_OF_INST(a) sizeof(a)/sizeof(inst_def_t)
 
 namespace scm {
-  /** \brief Instruction definition
-   *
-   *  This struct contains all the information needed for the definition of a instruction 
-   *  from the language perspective
-   *
-   *  To add an instruction you must create it with DEF_INST() and then add it to the vector for 
-   *  the corresponding group
-   */
-  struct inst_def_t {
-    std::string inst_name;
-    std::string inst_regex;
-    int num_op;
-  };
-
-  // SCM specific insctructions
-  const inst_def_t COMMIT_INST = DEF_INST(COMMIT, "[ ]*(COMMIT;).*", 0);                                          /* COMMIT; */
-  const inst_def_t LABEL_INST = DEF_INST(LABEL,   "[ ]*([a-zA-Z0-9_]+)[ ]*:.*", 0);                                 /* myLabel: */
-  const inst_def_t CODELET_INST = DEF_INST(CODELET, "[ ]*COD[ ]+([a-zA-Z0-9_]+)[ ]+([a-zA-Z0-9_, ]*);.*", 0);      /* COD codelet_name arg1, arg2, arg3; */
-  
-  // CONTROL FLOW INSTRUCTIONS
-  /** \brief All the control instructions
-   *
-   * All the different regular expressions used for Control flow instructions.  
-   * each has its own format. This regexp can be used to identify the instruction
-   * or to obtain the parameters
-   */
-  static inst_def_t const controlInsts[] = {
-    DEF_INST( JMPLBL,  "[ ]*(JMPLBL)[ ]+(" LABEL_REGEX ");.*", 1),                                                   /* JMPLBL destination;*/
-    DEF_INST( JMPPC,   "[ ]*(JMPPC)[ ]+(" INMIDIATE_REGEX ");.*", 1),                                                      /* JMPPC -100;*/
-    DEF_INST( BREQ,    "[ ]*(BREQ)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3),            /* BREQ R1, R2, -100; */
-    DEF_INST( BGT,     "[ ]*(BGT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3),             /* BGT R1, R2, -100; */
-    DEF_INST( BGET,    "[ ]*(BGET)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3),            /* BGET R1, R2, -100; */
-    DEF_INST( BLT,     "[ ]*(BLT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3),             /* BLT R1, R2, -100; */
-    DEF_INST( BLET,    "[ ]*(BLET)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3)};            /* BLET R1, R2, -100; */
-
-  //BASIC ARITHMETIC INSTRUCTIONS
-  /** \brief All the basic arithmetic instructions
-   *
-   * All the different regular expressions used for basic arithmetic instructions.  
-   * each has its own format. This regexp can be used to identify the instruction
-   * or to obtain the parameters
-   */
-  static inst_def_t const basicArithInsts[] = {
-  DEF_INST( ADD,  "[ ]*(ADD)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3),     /* ADD R1, R2, R3; R2 and R3 can be literals*/
-  DEF_INST( SUB,  "[ ]*(SUB)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3),     /* SUB R1, R2, R3; R2 and R3 can be literals*/
-  DEF_INST( SHFL, "[ ]*(SHFL)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2),                            /* SHFL R1, R2; R2 can be a literal representing how many positions to shift*/
-  DEF_INST( SHFR, "[ ]*(SHFR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2)};                            /* SHFR R1, R2; R2 can be a literal representing how many positions to shift*/
-
-  //MEMORY INSTRUNCTIONS
-  /** \brief All the memory related instructions
-   *
-   * All the different regular expressions used for Control flow instructions.  
-   * each has its own format. This regexp can be used to identify the instruction
-   * or to obtain the parameters
-   */
-  static inst_def_t const memInsts[] = {
-  DEF_INST( LDIMM, "[ ]*(LDIMM)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ")[ ]*;.*", 2),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
-  DEF_INST( LDADR, "[ ]*(LDADR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
-  DEF_INST( LDOFF, "[ ]*(LDOFF)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3),  /* LDOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
-  DEF_INST( STADR, "[ ]*(STADR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
-  DEF_INST( STOFF, "[ ]*(STOFF)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3)};  /* LDOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
-
-  /** \brief Definition of the instruction types 
-   *
-   *  There are several instructions types. This is important for the decoding of instructions
-   *  and for knwoing where to send the instruction for execution 
-   */
-  enum instType {UNKNOWN, COMMIT, CONTROL_INST, BASIC_ARITH_INST, EXECUTE_INST, MEMORY_INST};
-
-  /** \brief Decoded register structure
-   *  
-   *  Contains the register name a register size that is taken out of a encoded register
-   *
-   */
-  struct decoded_reg_t {
-    std::string reg_size;
-    uint32_t reg_size_bytes;
-    uint32_t reg_number;
-    unsigned char * reg_ptr;
-    
-    decoded_reg_t():
-      reg_size(""), reg_size_bytes(0), reg_number(0), reg_ptr(nullptr) { };
-
-    decoded_reg_t(std::string sizeStr, uint32_t sizeBytes, uint32_t regNum, unsigned char * ptr):
-      reg_size(sizeStr), reg_size_bytes(sizeBytes), reg_number(regNum), reg_ptr(ptr) { };
-
-    decoded_reg_t(const decoded_reg_t & other) {
-      reg_size = other.reg_size;
-      reg_size_bytes = other.reg_size_bytes;
-      reg_number = other.reg_number;
-      reg_ptr = other.reg_ptr;
-    }
-
-    void operator=(decoded_reg_t const & other) {
-      reg_size = other.reg_size;
-      reg_size_bytes = other.reg_size_bytes;
-      reg_number = other.reg_number;
-      reg_ptr = other.reg_ptr;
-    }
-  };
-
-  /** \brief Decoded operand structure
-   *  
-   *  An operand can be either a register or an immediate value, it is enconded in a union and it gets used accordingly 
-   *  depending on the type.
-   *   
-   *
-   */
-  struct operand_t {
-    enum {UNKNOWN, REGISTER, IMMEDIATE_VAL} type;
-    union value_t {
-      uint64_t immediate;
-      decoded_reg_t reg;
-      value_t (): reg(){}
-      ~value_t() {};
-    };
-    value_t value;
-
-    operand_t() {
-      type = UNKNOWN;
-    }
-
-    operand_t(operand_t const & other) {
-      type = other.type;
-      if (type == REGISTER)
-        value.reg = other.value.reg;
-      else if (type == IMMEDIATE_VAL)
-        value.immediate = other.value.immediate;
-    }
-
-    operand_t(operand_t && other) {
-      type = other.type;
-      if (type == REGISTER)
-        value.reg = other.value.reg;
-      else if (type == IMMEDIATE_VAL)
-        value.immediate = other.value.immediate;
-    }
-
-    void operator=(operand_t const & other) {
-      type = other.type;
-      if (type == REGISTER)
-        value.reg = other.value.reg;
-      else if (type == IMMEDIATE_VAL)
-        value.immediate = other.value.immediate;
-    }
-  };
-
   class decoded_instruction_t {
     private:
       /** \brief contains the break down of an instruction
@@ -195,6 +41,7 @@ namespace scm {
       std::string op1_s;
       std::string op2_s;
       std::string op3_s;
+      std::uint_fast16_t op_in_out;
       codelet * cod_exec;
       operand_t op1;
       operand_t op2;
@@ -203,9 +50,9 @@ namespace scm {
    public:
       // Constructors
       decoded_instruction_t (instType type) :
-        type(type), instruction(""), op1_s(""), op2_s(""), op3_s(""), cod_exec(nullptr), op1(), op2(), op3() {}
+        type(type), instruction(""), op1_s(""), op2_s(""), op3_s(""), op_in_out(OP_IO::NO_RD_WR), cod_exec(nullptr), op1(), op2(), op3() {}
       decoded_instruction_t (instType type, std::string inst, std::string op1s, std::string op2s, std::string op3s) :
-        type(type), instruction(inst), op1_s(op1s), op2_s(op2s), op3_s(op3s), cod_exec(nullptr), op1(), op2(), op3()  {}
+        type(type), instruction(inst), op1_s(op1s), op2_s(op2s), op3_s(op3s), op_in_out(OP_IO::NO_RD_WR), cod_exec(nullptr), op1(), op2(), op3()  {}
 
       // Getters and setters
       /** \brief get the instruction type
@@ -221,6 +68,12 @@ namespace scm {
       /** \brief set the instruction name
        */
       inline void setInstruction(std::string newInstName) { instruction = newInstName; }
+      /** \brief set the op_in_out name
+       */
+      inline void setOpIO(std::uint_fast16_t opIO) { op_in_out = opIO; }
+      /** \brief get the op_in_out name
+       */
+      inline std::uint_fast16_t getOpIO() { return op_in_out; }
       /** \brief set the op1 
        */
       inline void setOp1(operand_t newOpVal) { op1 = newOpVal; }
@@ -447,6 +300,7 @@ namespace scm {
           } else {
             SCMULATE_ERROR(0, "Unsupported number of operands for CONTROL instruction");
           }
+          (*decInst)->setOpIO(controlInsts[i].op_in_out);
           return true; 
         }
       }
@@ -471,6 +325,7 @@ namespace scm {
           } else {
             SCMULATE_ERROR(0, "Unsupported number of operands for BASIC_ARITH_INST instruction");
           }
+          (*decInst)->setOpIO(basicArithInsts[i].op_in_out);
           return true; 
         }
       }
@@ -531,6 +386,7 @@ namespace scm {
           } else {
             SCMULATE_ERROR(0, "Unsupported number of operands for MEMORY_INST instruction");
           }
+          (*decInst)->setOpIO(memInsts[i].op_in_out);
           return true; 
         }
       }

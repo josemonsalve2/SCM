@@ -2,9 +2,8 @@
 #include <string> 
 #include <vector> 
 
-scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem, reg_file_module * const reg_file_m, control_store_module * const control_store_m, mem_interface_module * const mem_int, bool * const aliveSig):
+scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const control_store_m, mem_interface_module * const mem_int, bool * const aliveSig):
   inst_mem_m(inst_mem),
-  reg_file_m(reg_file_m),
   ctrl_st_m(control_store_m),
   mem_interface_m(mem_int),
   aliveSignal(aliveSig),

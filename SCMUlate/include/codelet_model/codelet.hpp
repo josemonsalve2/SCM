@@ -4,6 +4,7 @@
 #include <map>
 #include <iostream>
 #include "SCMUlate_tools.hpp"
+#include "instructions_def.hpp"
 
 namespace scm {
 
@@ -15,11 +16,13 @@ namespace scm {
       // support for different parameters packing according to immediate vs register values. 
       // For now, we start with a registers only implementation
       void * params;
+      std::uint_fast16_t op_in_out;
     public:
       codelet () : params(nullptr) {};
-      codelet (uint32_t nparms, void * params): numParams(nparms), params(params) {};
+      codelet (uint32_t nparms, void * params, std::uint_fast16_t opIO): numParams(nparms), params(params), op_in_out(opIO) {};
       virtual void implementation() = 0;
       inline void * getParams() { return this->params; };
+      inline std::uint_fast16_t& getOpIO() { return op_in_out; };
       virtual ~codelet() { }
   };
 
@@ -38,19 +41,14 @@ namespace scm {
 #define COD_CLASS_NAME(name) _cod_ ## name
 #define COD_INSTANCE_NAME(name, post) _cod_ ## name ## post
 
-#define DEFINE_CODELET(name, nparms) \
+#define DEFINE_CODELET(name, nparms, opIO) \
   namespace scm { \
    class COD_CLASS_NAME(name) : public codelet { \
     public: \
       static bool hasBeenRegistered; \
       /* Constructors */ \
-      static void codeletRegistrer() __attribute__((constructor)) { \
-        if(!hasBeenRegistered) { \
-          registerCodelet(); \
-          hasBeenRegistered = true; \
-        } \
-      } \
-      COD_CLASS_NAME(name) (void* parms) : codelet(nparms, parms) {} \
+      static void codeletRegistrer() __attribute__((constructor)); \
+      COD_CLASS_NAME(name) (void* parms) : codelet(nparms, parms, opIO) {} \
       \
       /* Helper functions */ \
       static codelet* codeletCreator(void * usedParams) ; \
@@ -71,11 +69,16 @@ namespace scm {
 #define IMPLEMENT_CODELET(name,code) \
   namespace scm {\
     bool COD_CLASS_NAME(name)::hasBeenRegistered = false; \
+    void COD_CLASS_NAME(name)::codeletRegistrer() { \
+        if(!hasBeenRegistered) { \
+          registerCodelet(); \
+          hasBeenRegistered = true; \
+        } \
+      } \
     codelet* COD_CLASS_NAME(name)::codeletCreator(void * usedParams) { \
       codelet* res = new COD_CLASS_NAME(name)(usedParams); \
       return res; \
     } \
     void COD_CLASS_NAME(name)::implementation() { code; } \
-    \
   }
 #endif

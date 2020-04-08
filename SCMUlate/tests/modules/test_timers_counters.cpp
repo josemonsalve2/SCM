@@ -4,7 +4,7 @@
 #define WASTE_TIME(aVar) for(int i = 0; i < 10000000; i++) pow(aVar,0.5)
 
 int main () {
-    volatile double aVar; 
+    volatile double aVar = 1; 
   scm::timers_counters timers;
 
   //timers.setFilename("test.json");

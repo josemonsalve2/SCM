@@ -3,6 +3,6 @@
 
 #include "codelet.hpp"
 
-DEFINE_CODELET(print, 2);
+DEFINE_CODELET(print, 2, scm::OP_IO::OP1_RD);
 
 #endif

@@ -44,7 +44,7 @@ scm::inst_mem_module::inst_mem_module(char * filename, reg_file_module * const r
   SCMULATE_INFOMSG(3, "CREATING INSTRUCTION MEMORY");
   this->is_valid = true;
   // Open the file, if specified, otherwise read from stdio
-  string line;
+  string line = "";
   if (strlen(filename) != 0) {
     this->is_valid = this->loader(filename);
   } else {

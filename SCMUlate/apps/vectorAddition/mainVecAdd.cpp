@@ -67,7 +67,7 @@ int main (int argc, char * argv[]) {
   for (long unsigned i = 0; i < NumElements; ++i) {
     if (C[i] != i*i) {
       success = false;
-      SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %d", i, C[i]);
+      SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %f", i, C[i]);
       break;  
     }
   }

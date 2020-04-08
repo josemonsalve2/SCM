@@ -20,6 +20,8 @@ namespace scm {
               op1.value.reg.reg_ptr = reg_file_m->getRegisterByName(op1.value.reg.reg_size, op1.value.reg.reg_number);
               op1.value.reg.reg_size_bytes = reg_file_m->getRegisterSizeInBytes(op1.value.reg.reg_size);
             }
+            op1.read = OP_IO::OP1_RD & this->op_in_out;
+            op1.write = OP_IO::OP1_WR & this->op_in_out;
           }
           if (op2_s != "" && op2.type == operand_t::UNKNOWN) {
             // Check for imm or regisiter
@@ -35,6 +37,8 @@ namespace scm {
               op2.value.reg.reg_ptr = reg_file_m->getRegisterByName(op2.value.reg.reg_size, op2.value.reg.reg_number);
               op2.value.reg.reg_size_bytes = reg_file_m->getRegisterSizeInBytes(op2.value.reg.reg_size);
             }
+            op2.read = OP_IO::OP2_RD & this->op_in_out;
+            op2.write = OP_IO::OP2_WR & this->op_in_out;
           }
           if (op3_s != "" && op3.type == operand_t::UNKNOWN) {
             // Check for imm or regisiter
@@ -50,6 +54,8 @@ namespace scm {
               op3.value.reg.reg_ptr = reg_file_m->getRegisterByName(op3.value.reg.reg_size, op3.value.reg.reg_number);
               op3.value.reg.reg_size_bytes = reg_file_m->getRegisterSizeInBytes(op3.value.reg.reg_size);
             }
+            op3.read = OP_IO::OP3_RD & this->op_in_out;
+            op3.write = OP_IO::OP3_WR & this->op_in_out;
           }
         }
 
@@ -80,6 +86,12 @@ namespace scm {
             newArgs[2] = nullptr;
           }
           cod_exec = scm::codeletFactory::createCodelet(this->getInstruction(), newArgs);
+          op1.read = OP_IO::OP1_RD & cod_exec->getOpIO();
+          op1.write = OP_IO::OP1_WR & cod_exec->getOpIO();
+          op2.read = OP_IO::OP2_RD & cod_exec->getOpIO();
+          op2.write = OP_IO::OP2_WR & cod_exec->getOpIO();
+          op3.read = OP_IO::OP3_RD & cod_exec->getOpIO();
+          op3.write = OP_IO::OP3_WR & cod_exec->getOpIO();
       }
     }
 }

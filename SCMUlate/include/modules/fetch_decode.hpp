@@ -33,7 +33,6 @@ namespace scm {
        *  
        */
       inst_mem_module * inst_mem_m; /**< From where the instructions are read*/
-      reg_file_module * reg_file_m; /**< Used to identify and read the registers to be used by the instructions */
       control_store_module * ctrl_st_m; /**< Used to assing operations to the executors */
       mem_interface_module * mem_interface_m; /**< Used to assing memory instructions for execution */
       bool * aliveSignal; /**< When the machine is done, this flag is set to true finishing all the other units */
@@ -47,7 +46,7 @@ namespace scm {
 
     public: 
       fetch_decode_module() = delete;
-      fetch_decode_module(inst_mem_module * const inst_mem, reg_file_module * const, control_store_module * const, mem_interface_module * const mem_int, bool * const aliveSig);
+      fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const, mem_interface_module * const mem_int, bool * const aliveSig);
 
       /** \brief logic to execute an instruction
        * 

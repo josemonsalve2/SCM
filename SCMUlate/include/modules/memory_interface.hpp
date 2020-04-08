@@ -19,7 +19,6 @@ namespace scm {
   class mem_interface_module{
     private:
       decoded_instruction_t* myInstructionSlot;
-      reg_file_module* reg_file_m;
       volatile bool* aliveSignal;
       unsigned char * memorySpace;
       uint32_t memId;
@@ -39,7 +38,7 @@ namespace scm {
 
     public: 
       mem_interface_module() = delete;
-      mem_interface_module(unsigned char * const memory, reg_file_module* regFile, bool * aliveSig);
+      mem_interface_module(unsigned char * const memory, bool * aliveSig);
 
       inline bool isInstSlotEmpty() {
           decoded_instruction_t* temp;

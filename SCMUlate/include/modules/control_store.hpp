@@ -52,6 +52,7 @@ namespace scm {
      control_store_module(const int numExecUnits);
 
      inline execution_slot* get_executor(const int exec) { return this->execution_slots[exec]; }
+     inline uint32_t numExecutors() { return execution_slots.size(); }
 
      ~control_store_module();
 

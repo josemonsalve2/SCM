@@ -5,11 +5,13 @@
 #include <cstring>
 #include <iostream>
 
+// Reps
+#define REPS 400
 //B offset = sizeRegister*400 = 52428800
-#define B_offset (64*2048*400)
+#define B_offset (64*2048*REPS)
 //C offset = sizeRegister*400*2 = 104857600
-#define C_offset (64*2048*400*2)
-#define NumElements ((64*2048*400)/sizeof(double))
+#define C_offset (64*2048*REPS*2)
+#define NumElements ((64*2048*REPS)/sizeof(double))
 
 static struct {
   bool fileInput = false;
@@ -65,7 +67,7 @@ int main (int argc, char * argv[]) {
   // Checking result
   bool success = true;
   for (long unsigned i = 0; i < NumElements; ++i) {
-    if (C[i] != i*i) {
+    if (C[i] != i+i) {
       success = false;
       SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %f", i, C[i]);
       break;  

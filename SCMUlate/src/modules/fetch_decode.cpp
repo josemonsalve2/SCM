@@ -25,7 +25,7 @@ scm::fetch_decode_module::behavior() {
       );
       scm::decoded_instruction_t* cur_inst = this->inst_mem_m->fetch(this->PC);
       SCMULATE_ERROR_IF(0, !cur_inst, "Returned instruction is NULL. This should not happen");
-      if (!cur_inst) { 
+      if (!cur_inst) {
         *(this->aliveSignal) = false; 
         continue;
       }
@@ -381,6 +381,10 @@ scm::fetch_decode_module::assignExecuteInstruction(scm::decoded_instruction_t * 
   TIMERS_COUNTERS_GUARD(
     this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE);
   );
-  this->ctrl_st_m->get_executor(0)->assign(newCodelet);
-  while (!this->ctrl_st_m->get_executor(0)->is_empty());
+  static uint32_t curSched = 0;
+  curSched++;
+  curSched %= this->ctrl_st_m->numExecutors();
+  SCMULATE_INFOMSG(5, "Scheduling to CU %d", curSched);
+  this->ctrl_st_m->get_executor(curSched)->assign(newCodelet);
+  while (!this->ctrl_st_m->get_executor(curSched)->is_empty());
 }

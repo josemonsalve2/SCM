@@ -1,14 +1,13 @@
 #include "scm_machine.hpp"
 
-scm::scm_machine::scm_machine(char * in_filename, unsigned char * const memory):
+scm::scm_machine::scm_machine(char * in_filename, l2_memory_t const memory):
   alive(false), 
   init_correct(true), 
   filename(in_filename),
   reg_file_m(),
   inst_mem_m(filename, &reg_file_m), 
   control_store_m(NUM_CUS),
-  fetch_decode_m(&inst_mem_m, &control_store_m, &mem_interface_m, &alive),
-  mem_interface_m(memory, &alive) {
+  fetch_decode_m(&inst_mem_m, &control_store_m, &alive) {
     SCMULATE_INFOMSG(0, "Initializing SCM machine")
   
     // We check the register configuration is valid
@@ -27,15 +26,14 @@ scm::scm_machine::scm_machine(char * in_filename, unsigned char * const memory):
     TIMERS_COUNTERS_GUARD(
       this->fetch_decode_m.setTimerCounter(&this->time_cnt_m);
       this->time_cnt_m.addTimer("SCM_MACHINE",scm::SYS_TIMER);
-      this->mem_interface_m.setTimerCnt(&this->time_cnt_m);
     )
 
     // Creating execution Units
     int exec_units_threads[] = {CUS};
     int * cur_exec = exec_units_threads;
     for (int i = 0; i < NUM_CUS; i++, cur_exec++) {
-      SCMULATE_INFOMSG(4, "Creating executor %d out of %d for thread %d", i, NUM_CUS, *cur_exec);
-      cu_executor_module* newExec = new cu_executor_module(*cur_exec, &control_store_m, i, &alive);
+      SCMULATE_INFOMSG(4, "Creating executor (CUMEM) %d out of %d for thread %d", i, NUM_CUS, *cur_exec);
+      cu_executor_module* newExec = new cu_executor_module(*cur_exec, &control_store_m, i, &alive, memory);
       TIMERS_COUNTERS_GUARD(
         newExec->setTimerCnt(&this->time_cnt_m);
       )
@@ -63,9 +61,6 @@ scm::scm_machine::run() {
     switch (omp_get_thread_num()) {
       case SU_THREAD:
         fetch_decode_m.behavior();
-        break;
-      case MEM_THREAD:
-        mem_interface_m.behavior();
         break;
       case CU_THREADS:
         // Find my executor

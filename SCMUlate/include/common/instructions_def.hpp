@@ -55,7 +55,7 @@ namespace scm {
       static constexpr std::uint_fast16_t OP7_RD  { 0b0001'0000'0000'0000 }; // represents bit 13
       static constexpr std::uint_fast16_t OP7_WR { 0b0010'0000'0000'0000 }; // represents bit 14
       static constexpr std::uint_fast16_t OP8_RD  { 0b0100'0000'0000'0000 }; // represents bit 15
-      static constexpr std::uint_fast16_t OP9_WR { 0b1000'0000'0000'0000 }; // represents bit 16
+      static constexpr std::uint_fast16_t OP8_WR { 0b1000'0000'0000'0000 }; // represents bit 16
   };
 
   /** \brief Instruction definition

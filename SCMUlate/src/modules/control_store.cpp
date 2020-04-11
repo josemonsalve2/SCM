@@ -1,10 +1,10 @@
 #include "control_store.hpp"
 
 void 
-scm::execution_slot::assign(scm::codelet *newCodelet) {
+scm::execution_slot::assign(scm::decoded_instruction_t *newInstruction) {
   // TODO: Where is the codelet created and where is it destroid? we might want to 
   //       have this as pointers instead of make a codelet copy every time
-  this->executionCodelet = newCodelet;
+  this->executionInstruction = newInstruction;
   #pragma omp atomic write
   this->empty = false;
 }

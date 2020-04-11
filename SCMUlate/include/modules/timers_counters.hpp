@@ -20,7 +20,7 @@ namespace scm {
     SYS_TIMER,
     SU_TIMER, 
     MEM_TIMER, 
-    CU_TIMER
+    CUMEM_TIMER
   };
 
   enum SYS_event {
@@ -38,18 +38,12 @@ namespace scm {
     SU_IDLE
   };
 
-  enum MEM_event {
-    MEM_START,
-    MEM_END,
-    MEM_EXECUTION,
-    MEM_IDLE
-  };
-
-  enum CU_event {
-    CU_START, 
-    CU_END,
-    CU_EXECUTION,
-    CU_IDLE
+  enum CUMEM_event {
+    CUMEM_START, 
+    CUMEM_END,
+    CUMEM_EXECUTION_COD,
+    CUMEM_EXECUTION_MEM,
+    CUMEM_IDLE
   };
 
   class timer_event {

@@ -12,7 +12,6 @@
 #include "executor.hpp"
 #include "instruction_mem.hpp"
 #include "fetch_decode.hpp"
-#include "memory_interface.hpp"
 #include "system_codelets.hpp"
 #include "timers_counters.hpp"
 
@@ -34,7 +33,6 @@ namespace scm {
       inst_mem_module inst_mem_m;
       control_store_module control_store_m;
       fetch_decode_module fetch_decode_m;
-      mem_interface_module mem_interface_m;
       std::vector<cu_executor_module*> executors_m;
 
     public: 

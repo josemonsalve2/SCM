@@ -3,6 +3,7 @@
 
 #include "SCMUlate_tools.hpp"
 #include "threads_configuration.hpp"
+#include "instructions.hpp"
 #include "codelet.hpp"
 #include <vector>
 
@@ -23,16 +24,16 @@ namespace scm {
   class execution_slot {
     private:
       volatile bool empty;
-      codelet *executionCodelet;
+      decoded_instruction_t* executionInstruction;
 
     public:
       // Constructor 
-      execution_slot(): empty(true), executionCodelet(NULL) {}; 
+      execution_slot(): empty(true), executionInstruction(NULL) {}; 
 
-      void assign(codelet *);
+      void assign(decoded_instruction_t *);
       void empty_slot();
       inline bool is_empty() { return this->empty; }
-      inline codelet * getHead() { return this->executionCodelet; }
+      inline decoded_instruction_t * getHead() { return this->executionInstruction; }
   };
 
 

@@ -1,37 +1,16 @@
 #include "memory_interface.hpp"
 
-scm::mem_interface_module::mem_interface_module(unsigned char * const memory, bool * aliveSig):
+scm::mem_interface_module::mem_interface_module(l2_memory_t const memory):
   myInstructionSlot(nullptr),
-  aliveSignal(aliveSig),
-  memorySpace(memory), 
-  memId(0)
-   {
-}
+  memorySpace(memory)
+  { }
 
 int
 scm::mem_interface_module::behavior() {
-  TIMERS_COUNTERS_GUARD(
-    this->timer_cnt_m->addEvent(this->mem_timer_name, MEM_START);
-  );
-  SCMULATE_INFOMSG(1, "Starting MEM MODULE behavior");
-  // Initialization barrier
-  #pragma omp barrier
-  while (*(this->aliveSignal)) {
-    if (!this->isInstSlotEmpty()) {
-    TIMERS_COUNTERS_GUARD(
-      this->timer_cnt_m->addEvent(this->mem_timer_name, MEM_EXECUTION);
-    );
-      executeMemoryInstructions();
-      emptyInstSlot();
-    TIMERS_COUNTERS_GUARD(
-        this->timer_cnt_m->addEvent(this->mem_timer_name, MEM_IDLE);
-      );
-    }
+  if (!this->isInstSlotEmpty()) {
+    executeMemoryInstructions();
+    emptyInstSlot();
   }
-  SCMULATE_INFOMSG(1, "Shutting down MEMORY MODULE");
-  TIMERS_COUNTERS_GUARD(
-    this->timer_cnt_m->addEvent(this->mem_timer_name, MEM_END);
-  );
   return 0;
 }
  
@@ -69,7 +48,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
   /////////////////////////////////////////////////////
   ///// LOGIC FOR THE LDADDR INSTRUCTION
   ///// Operand 1 is where to load the instructions
-  ///// Operand 2 is the memory address either a register or inmediate value. Only cosider 64 bits
+  ///// Operand 2 is the memory address either a register or immediate value. Only consider 64 bits
   /////////////////////////////////////////////////////
   if (this->myInstructionSlot->getInstruction() == "LDADDR") {
     // Obtain destination register

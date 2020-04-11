@@ -10,6 +10,8 @@
 #include <cstdlib>
 #include <cstring>
 
+typedef unsigned char * l2_memory_t;
+
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
 #ifndef VERBOSE_MODE
 #define VERBOSE_MODE -1

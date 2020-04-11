@@ -48,7 +48,7 @@ color_map = {
     "SYS_TIMER": "lightslategray",
     "SU_TIMER": "peachpuff",
     "MEM_TIMER": "midnightblue",
-    "CU_TIMER": "mediumseagreen",
+    "CUMEM_TIMER": "mediumseagreen",
     "SYS_START": "lightgray",
     "SYS_END": "yellow",
     "SU_START": "thistle",
@@ -57,22 +57,19 @@ color_map = {
     "DISPATCH_INSTRUCTION": "blue",
     "EXECUTE_CONTROL_INSTRUCTION": "darkblue",
     "EXECUTE_ARITH_INSTRUCTION": "black",
-    "SU_IDLE": "whitesmoke",
-    "MEM_START": "silver",
-    "MEM_END": "teal",
-    "MEM_EXECUTION": "yellowgreen",
-    "MEM_IDLE": "palevioletred",
-    "CU_START": "mediumaquamarine",
-    "CU_END": "linen",
-    "CU_EXECUTION": "darkviolet",
-    "CU_IDLE": "darkslateblue"
+    "SUMEM_IDLE": "whitesmoke",
+    "CUMEM_START": "mediumaquamarine",
+    "CUMEM_END": "linen",
+    "CUMEM_EXECUTION_MEM": "yellowgreen",
+    "CUMEM_EXECUTION_COD": "darkviolet",
+    "CUMEM_IDLE": "darkslateblue"
 }
 
 class counter_type(Enum):
     SYS_TIMER = 0
     SU_TIMER = 1
     MEM_TIMER = 2
-    CU_TIMER = 3
+    CUMEM_TIMER = 3
 
 class SYS_event(Enum):
     SYS_START = 0
@@ -87,27 +84,20 @@ class SU_event(Enum):
     EXECUTE_ARITH_INSTRUCTION = 5
     SU_IDLE = 6
 
-class MEM_event(Enum):
-    MEM_START = 0
-    MEM_END = 1
-    MEM_EXECUTION = 2
-    MEM_IDLE = 3
-
-class CU_event(Enum):
-    CU_START = 0
-    CU_END = 1
-    CU_EXECUTION = 2
-    CU_IDLE = 3
+class CUMEM_event(Enum):
+    CUMEM_START = 0
+    CUMEM_END = 1
+    CUMEM_EXECUTION_COD = 2
+    CUMEM_EXECUTION_MEM = 3
+    CUMEM_IDLE = 4
 
 def getEnumPerType(typeName, eventID):
     if typeName == "SYS_TIMER":
         return SYS_event(eventID)
     if typeName == "SU_TIMER":
         return SU_event(eventID)
-    if typeName == "MEM_TIMER":
-        return MEM_event(eventID)
-    if typeName == "CU_TIMER":
-        return CU_event(eventID)
+    if typeName == "CUMEM_TIMER":
+        return CUMEM_event(eventID)
     return None
 
 

@@ -15,7 +15,6 @@
 #include "control_store.hpp"
 #include "register.hpp"
 #include "instructions.hpp"
-#include "memory_interface.hpp"
 #include "timers_counters.hpp"
 #include <string>
 
@@ -34,7 +33,6 @@ namespace scm {
        */
       inst_mem_module * inst_mem_m; /**< From where the instructions are read*/
       control_store_module * ctrl_st_m; /**< Used to assing operations to the executors */
-      mem_interface_module * mem_interface_m; /**< Used to assing memory instructions for execution */
       bool * aliveSignal; /**< When the machine is done, this flag is set to true finishing all the other units */
       int PC; /**< Program counter, this corresponds to the current instruction being executed */
       uint32_t su_number; /**< This corresponds to the current SU number */
@@ -46,7 +44,7 @@ namespace scm {
 
     public: 
       fetch_decode_module() = delete;
-      fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const, mem_interface_module * const mem_int, bool * const aliveSig);
+      fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const, bool * const aliveSig);
 
       /** \brief logic to execute an instruction
        * 
@@ -67,6 +65,12 @@ namespace scm {
        *  We select a CU and we assign a new codelet to it. When it is done, we delete the codelet
        */
       inline void assignExecuteInstruction(decoded_instruction_t * inst);
+
+      /** \brief get the SU number
+       *
+       *  We select a CU and we assign a new codelet to it. When it is done, we delete the codelet
+       */
+      inline uint32_t getSUnum() { return this->su_number; }
 
       /** Actual logic of this unit
        * 

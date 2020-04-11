@@ -2,20 +2,20 @@
 #include <string> 
 #include <vector> 
 
-scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const control_store_m, mem_interface_module * const mem_int, bool * const aliveSig):
+scm::fetch_decode_module::fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const control_store_m, bool * const aliveSig):
   inst_mem_m(inst_mem),
   ctrl_st_m(control_store_m),
-  mem_interface_m(mem_int),
   aliveSignal(aliveSig),
   PC(0), 
-  su_number(0) { }
+  su_number(0) 
+    { }
 
 int
 scm::fetch_decode_module::behavior() {
   TIMERS_COUNTERS_GUARD(
     this->time_cnt_m->addEvent(this->su_timer_name, SU_START);
   );
-  SCMULATE_INFOMSG(1, "I am an SU");
+  SCMULATE_INFOMSG(1, "Initializing the SU");
   // Initialization barrier
   #pragma omp barrier
     while (*(this->aliveSignal)) {
@@ -60,12 +60,7 @@ scm::fetch_decode_module::behavior() {
           break;
         case MEMORY_INST:
           SCMULATE_INFOMSG(4, "I've identified a MEMORY_INST");
-          TIMERS_COUNTERS_GUARD(
-            this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE);
-          );
-          mem_interface_m->assignInstSlot(cur_inst);
-          // Waiting for the instruction to finish execution
-          while (!mem_interface_m->isInstSlotEmpty());
+          assignExecuteInstruction(cur_inst);
           break;
         default:
           SCMULATE_ERROR(0, "Instruction not recognized");
@@ -375,16 +370,14 @@ scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instruction
 
 void
 scm::fetch_decode_module::assignExecuteInstruction(scm::decoded_instruction_t * inst) {
-  // Counting the number of arguments 
-  // We currently only support 3 arguments. Change this   
-  scm::codelet * newCodelet = inst->getExecCodelet();
-  TIMERS_COUNTERS_GUARD(
-    this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE);
-  );
+  // TODO: Jose this is the point where you can select scheduing policies
   static uint32_t curSched = 0;
   curSched++;
   curSched %= this->ctrl_st_m->numExecutors();
-  SCMULATE_INFOMSG(5, "Scheduling to CU %d", curSched);
-  this->ctrl_st_m->get_executor(curSched)->assign(newCodelet);
+  SCMULATE_INFOMSG(5, "Scheduling to CUMEM %d", curSched);
+  TIMERS_COUNTERS_GUARD(
+    this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE);
+  );
+  this->ctrl_st_m->get_executor(curSched)->assign(inst);
   while (!this->ctrl_st_m->get_executor(curSched)->is_empty());
 }

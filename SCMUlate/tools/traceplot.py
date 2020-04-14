@@ -57,7 +57,7 @@ color_map = {
     "DISPATCH_INSTRUCTION": "blue",
     "EXECUTE_CONTROL_INSTRUCTION": "darkblue",
     "EXECUTE_ARITH_INSTRUCTION": "black",
-    "SUMEM_IDLE": "whitesmoke",
+    "CUMEM_IDLE": "whitesmoke",
     "CUMEM_START": "mediumaquamarine",
     "CUMEM_END": "linen",
     "CUMEM_EXECUTION_MEM": "yellowgreen",

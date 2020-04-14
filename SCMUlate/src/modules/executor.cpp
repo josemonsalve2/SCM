@@ -16,7 +16,7 @@ scm::cu_executor_module::behavior() {
   // Initialization barrier
   #pragma omp barrier
   while (*(this->aliveSignal)) {
-    if (!myExecutor->is_empty()) {
+    if (myExecutor->is_busy()) {
       SCMULATE_INFOMSG(4, "  CUMEM[%d]: Executing instruction ", cu_executor_id);
       scm::decoded_instruction_t * curInstruction = myExecutor->getHead();
       if (curInstruction->getType()== scm::instType::MEMORY_INST) {
@@ -34,7 +34,7 @@ scm::cu_executor_module::behavior() {
         SCMULATE_ERROR(0, "Error. Executor received an unknown instruction type");
       }
       
-      myExecutor->empty_slot();
+      myExecutor->done_execution();
       TIMERS_COUNTERS_GUARD(
         this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_IDLE);
       );

@@ -16,6 +16,7 @@
 #include "register.hpp"
 #include "instructions.hpp"
 #include "timers_counters.hpp"
+#include "ilp_controller.hpp"
 #include <string>
 
 
@@ -36,6 +37,7 @@ namespace scm {
       bool * aliveSignal; /**< When the machine is done, this flag is set to true finishing all the other units */
       int PC; /**< Program counter, this corresponds to the current instruction being executed */
       uint32_t su_number; /**< This corresponds to the current SU number */
+      ilp_controller instructionLevelParallelism;
 
       TIMERS_COUNTERS_GUARD(
         std::string su_timer_name;
@@ -64,7 +66,7 @@ namespace scm {
        *
        *  We select a CU and we assign a new codelet to it. When it is done, we delete the codelet
        */
-      inline void assignExecuteInstruction(decoded_instruction_t * inst);
+      inline bool attemptAssignExecuteInstruction(decoded_instruction_t * inst);
 
       /** \brief get the SU number
        *

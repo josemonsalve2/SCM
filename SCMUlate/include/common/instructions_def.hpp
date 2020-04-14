@@ -134,18 +134,20 @@ namespace scm {
    *
    */
   struct decoded_reg_t {
+    std::string reg_name;
     std::string reg_size;
     uint32_t reg_size_bytes;
     uint32_t reg_number;
     unsigned char * reg_ptr;
     
     decoded_reg_t():
-      reg_size(""), reg_size_bytes(0), reg_number(0), reg_ptr(nullptr) { };
+      reg_name(""),reg_size(""), reg_size_bytes(0), reg_number(0), reg_ptr(nullptr) { };
 
-    decoded_reg_t(std::string sizeStr, uint32_t sizeBytes, uint32_t regNum, unsigned char * ptr):
-      reg_size(sizeStr), reg_size_bytes(sizeBytes), reg_number(regNum), reg_ptr(ptr) { };
+    decoded_reg_t(std::string regName, std::string sizeStr, uint32_t sizeBytes, uint32_t regNum, unsigned char * ptr):
+      reg_name(regName), reg_size(sizeStr), reg_size_bytes(sizeBytes), reg_number(regNum), reg_ptr(ptr) { };
 
     decoded_reg_t(const decoded_reg_t & other) {
+      reg_name = other.reg_name;
       reg_size = other.reg_size;
       reg_size_bytes = other.reg_size_bytes;
       reg_number = other.reg_number;
@@ -153,6 +155,7 @@ namespace scm {
     }
 
     void operator=(decoded_reg_t const & other) {
+      reg_name = other.reg_name;
       reg_size = other.reg_size;
       reg_size_bytes = other.reg_size_bytes;
       reg_number = other.reg_number;

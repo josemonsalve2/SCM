@@ -265,7 +265,7 @@ namespace scm {
     instructions::decodeRegister(std::string const op) {
       std::regex search_exp(REGISTER_SPLIT_REGEX, std::regex_constants::ECMAScript);
       std::smatch matches;
-      decoded_reg_t res(std::string(""), 0, 0, nullptr);
+      decoded_reg_t res(op, std::string(""), 0, 0, nullptr);
       if (std::regex_search(op.begin(), op.end(), matches, search_exp)) {
          res.reg_size = matches[1];
          res.reg_number = std::stoi(matches[2]);

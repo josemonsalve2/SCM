@@ -2,17 +2,22 @@
 
 void 
 scm::execution_slot::assign(scm::decoded_instruction_t *newInstruction) {
-  // TODO: Where is the codelet created and where is it destroid? we might want to 
-  //       have this as pointers instead of make a codelet copy every time
   this->executionInstruction = newInstruction;
   #pragma omp atomic write
-  this->empty = false;
+  this->state = BUSY;
 }
 
 void 
 scm::execution_slot::empty_slot() {
+  this->executionInstruction = NULL;
   #pragma omp atomic write
-  this->empty = true;
+  this->state = EMPTY;
+}
+
+void 
+scm::execution_slot::done_execution() {
+  #pragma omp atomic write
+  this->state = DONE;
 }
 
 scm::control_store_module::control_store_module(const int numExecUnits) {

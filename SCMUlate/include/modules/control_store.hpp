@@ -21,18 +21,22 @@ namespace scm {
    * a list of all the execution slots and chose one according to some 
    * scheduling policy. 
    */
+  typedef enum {EMPTY, BUSY, DONE} executorState;
   class execution_slot {
     private:
-      volatile bool empty;
+      volatile executorState state;
       decoded_instruction_t* executionInstruction;
 
     public:
       // Constructor 
-      execution_slot(): empty(true), executionInstruction(NULL) {}; 
+      execution_slot(): state(EMPTY), executionInstruction(NULL) {}; 
 
       void assign(decoded_instruction_t *);
       void empty_slot();
-      inline bool is_empty() { return this->empty; }
+      void done_execution();
+      inline bool is_busy() { return this->state == BUSY; }
+      inline bool is_empty() { return this->state == EMPTY; }
+      inline bool is_done() { return this->state == DONE; }
       inline decoded_instruction_t * getHead() { return this->executionInstruction; }
   };
 

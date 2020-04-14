@@ -9,6 +9,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstring>
+#include "system_config.hpp"
 
 typedef unsigned char * l2_memory_t;
 

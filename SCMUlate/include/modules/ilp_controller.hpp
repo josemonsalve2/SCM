@@ -5,7 +5,7 @@
  *
  * This file contains all the necessary definitions and book keeping to 
  * know if an instruction can be scheduled or not. It contains the needed tables that
- * keep track of data depeendencies and others. 
+ * keep track of data dependencies and others. 
  */
 
 #include "SCMUlate_tools.hpp"
@@ -81,6 +81,16 @@ namespace scm {
           return (this->memoryAddress == other.memoryAddress && this->size == other.size);
         }
       };
+      struct register_reservation {
+        std::string reg_name;
+        std::uint_fast16_t reg_direction;
+        register_reservation(): reg_name(""), reg_direction(OP_IO::NO_RD_WR) {}
+        register_reservation(const register_reservation& other) : reg_name(other.reg_name), reg_direction(other.reg_direction) {}
+        register_reservation(std::string name, std::uint_fast16_t mask): reg_name(name), reg_direction(mask) {}
+        inline bool operator<(const register_reservation& other) const {
+          return this->reg_name < other.reg_name;
+        }
+      };
       class memory_queue_controller {
         private:
           // Ranges are exclusive on begining and end
@@ -118,7 +128,7 @@ namespace scm {
           }
       };
       memory_queue_controller memCtrl;
-      std::set<std::string> busyRegisters;
+      std::set<register_reservation> busyRegisters;
       //std::queue<decoded_instruction_t> reservationTable;
       std::set<memory_location> memoryLocations;
     public:
@@ -137,7 +147,7 @@ namespace scm {
           int32_t size_dest = inst->getOp1().value.reg.reg_size_bytes;
           unsigned long base_addr = 0;
           unsigned long offset = 0;
-          if (isRegBusy(inst->getOp1().value.reg.reg_name)) {
+          if (hazardExist(inst->getOp1().value.reg.reg_name, inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR))) {
             return false;
           } else if (inst->getInstruction() != "LDIMM") {
             // Check for the memory address
@@ -145,7 +155,7 @@ namespace scm {
               // Load address immediate value
               base_addr = inst->getOp2().value.immediate;
             } else if (inst->getOp2().type == operand_t::REGISTER) {
-              if (isRegBusy(inst->getOp2().value.reg.reg_name))
+              if (hazardExist(inst->getOp2().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR))>>2))
                 return false;
               // Load address register value
               decoded_reg_t reg = inst->getOp2().value.reg;
@@ -168,7 +178,7 @@ namespace scm {
                 // Load address immediate value
                 offset = inst->getOp3().value.immediate;
               } else if (inst->getOp3().type == operand_t::REGISTER) {
-                if (isRegBusy(inst->getOp3().value.reg.reg_name))
+                if (hazardExist(inst->getOp3().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR))>>4))
                   return false;
                 // Load address register value
                 decoded_reg_t reg = inst->getOp3().value.reg;
@@ -196,28 +206,34 @@ namespace scm {
           }
 
         } else {
-          if (inst->getOp1().type == operand_t::REGISTER && isRegBusy(inst->getOp1().value.reg.reg_name))
+          if (inst->getOp1().type == operand_t::REGISTER && hazardExist(inst->getOp1().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR))))
             return false;
-          if (inst->getOp2().type == operand_t::REGISTER && isRegBusy(inst->getOp2().value.reg.reg_name)) 
+          if (inst->getOp2().type == operand_t::REGISTER && hazardExist(inst->getOp2().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR))>>2)) 
             return false;
-          if (inst->getOp3().type == operand_t::REGISTER && isRegBusy(inst->getOp3().value.reg.reg_name)) 
+          if (inst->getOp3().type == operand_t::REGISTER && hazardExist(inst->getOp3().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR))>>4)) 
             return false;
         }
 
         if (markAsync) {
           // Mark the registers
           if (inst->getOp1().type == operand_t::REGISTER) {
-            SCMULATE_INFOMSG(5, "Mariking register %s as busy",inst->getOp1().value.reg.reg_name.c_str() );
-            busyRegisters.insert(inst->getOp1().value.reg.reg_name);
+            uint_fast16_t io = inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR);
+            SCMULATE_INFOMSG(5, "Mariking register %s as busy with IO %lX", inst->getOp1().value.reg.reg_name.c_str(), io);
+            register_reservation reserv(inst->getOp1().value.reg.reg_name, io);
+            busyRegisters.insert(reserv);
           }
           if (inst->getOp2().type == operand_t::REGISTER) {
-            SCMULATE_INFOMSG(5, "Mariking register %s as busy",inst->getOp2().value.reg.reg_name.c_str() );
-            busyRegisters.insert(inst->getOp2().value.reg.reg_name);
-          }
+            uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR)) >> 2;
+            SCMULATE_INFOMSG(5, "Mariking register %s as busy with IO %lX", inst->getOp2().value.reg.reg_name.c_str(), io);
+            register_reservation reserv(inst->getOp2().value.reg.reg_name, io);
+            busyRegisters.insert(reserv);          
+            }
           if (inst->getOp3().type == operand_t::REGISTER) {
-            SCMULATE_INFOMSG(5, "Mariking register %s as busy",inst->getOp3().value.reg.reg_name.c_str() );
-            busyRegisters.insert(inst->getOp3().value.reg.reg_name);
-          }
+            uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR)) >> 4;
+            SCMULATE_INFOMSG(5, "Mariking register %s as busy with IO %lX", inst->getOp3().value.reg.reg_name.c_str(), io);
+            register_reservation reserv(inst->getOp3().value.reg.reg_name, io);
+            busyRegisters.insert(reserv);          
+            }
         }
         return true;
       }
@@ -270,38 +286,34 @@ namespace scm {
         }
 
         if (inst->getOp1().type == operand_t::REGISTER) {
-          SCMULATE_INFOMSG(5, "Unmariking register %s as busy",inst->getOp1().value.reg.reg_name.c_str() );
-          busyRegisters.erase(inst->getOp1().value.reg.reg_name);
+          uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR));
+          SCMULATE_INFOMSG(5, "Unmariking register %s as busy with IO %lX", inst->getOp1().value.reg.reg_name.c_str(), io );
+          eraseReg(inst->getOp1().value.reg.reg_name, io);
         }
         if (inst->getOp2().type == operand_t::REGISTER) {
-          SCMULATE_INFOMSG(5, "Unmariking register %s as busy",inst->getOp2().value.reg.reg_name.c_str() );
-          busyRegisters.erase(inst->getOp2().value.reg.reg_name);
+          uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR)) >> 2;
+          SCMULATE_INFOMSG(5, "Unmariking register %s as busy with IO %lX",inst->getOp2().value.reg.reg_name.c_str(), io );
+          eraseReg(inst->getOp2().value.reg.reg_name, io);
         }
         if (inst->getOp3().type == operand_t::REGISTER) {
-          SCMULATE_INFOMSG(5, "Unmariking register %s as busy",inst->getOp3().value.reg.reg_name.c_str() );
-          busyRegisters.erase(inst->getOp3().value.reg.reg_name);
+          uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR)) >> 4;
+          SCMULATE_INFOMSG(5, "Unmariking register %s as busy with IO %lX",inst->getOp3().value.reg.reg_name.c_str(), io);
+          eraseReg(inst->getOp3().value.reg.reg_name, io);
         }
         SCMULATE_INFOMSG(5, "The number of busy regs is %lu", this->busyRegisters.size());
       }
 
-      bool inline isRegBusy(std::string& regName) { return busyRegisters.find(regName) != busyRegisters.end(); }
-      /** \brief Remove hazards from table after an instruction has finished
-      * Once an instruction has been detected to have finished, then we mark that 
-      * instruction to be clean
-      */
-      // void propagateResult(decoded_instruction_t * inst) {
-
-      // }
-
-      // bool isReservationFull () {
-      //   return reservationTable.size() >= RESERVATION_TABLE_SIZE;
-      // }
-      /** \brief Takes an instruction that is ready from the reservation table
-       * 
-      */
-      // decoded_instruction_t * getReadyInstruction() {
-
-      // }
+      bool inline hazardExist(std::string& regName, uint_fast16_t io_dir) { 
+        auto foundReg = busyRegisters.find(register_reservation(regName, io_dir));
+        bool isFound = busyRegisters.find(register_reservation(regName, io_dir)) != busyRegisters.end();
+        SCMULATE_INFOMSG_IF(5, isFound, "Hazard detected");
+        if (!isFound) return false;
+        if ((foundReg->reg_direction & OP_IO::OP1_WR) | (io_dir & OP_IO::OP1_WR)) return true; // WAW or RAW or WAR
+        return false;
+      }
+      void inline eraseReg(std::string& regName, uint_fast16_t io_dir) { 
+       busyRegisters.erase(register_reservation(regName, io_dir));
+      }
   };
 
 } // namespace scm

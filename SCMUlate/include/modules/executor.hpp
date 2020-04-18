@@ -41,6 +41,10 @@ namespace scm {
       int codeletExecutor();
 
       int get_executor_id(){ return this->cu_executor_id; };
+
+      ~cu_executor_module() {
+        delete mem_interface_t;
+      }
   
   };
   

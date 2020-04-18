@@ -1,5 +1,6 @@
 configure_file(vectorAddNoLoop.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 configure_file(vectorAddLoop.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+configure_file(vectorAddLoopUnrolled.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 
 add_subdirectory(Codelets)
 

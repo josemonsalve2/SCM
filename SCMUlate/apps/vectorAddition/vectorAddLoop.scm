@@ -15,3 +15,5 @@ loop:
   ADD R64B_4, R64B_4, 1;
   ADD R64B_5, R64B_5, 131072;
   JMPLBL loop;
+
+COMMIT;

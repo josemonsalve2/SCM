@@ -1,1 +1,9 @@
+#ifndef __SCMULATE_SYS_CONFIG__
+#define __SCMULATE_SYS_CONFIG__
 #define RESERVATION_TABLE_SIZE 100
+
+namespace scm {
+    enum ILP_MODES {SEQUENTIAL, SUPERSCALAR};
+}
+
+#endif // __SCMULATE_SYS_CONFIG__

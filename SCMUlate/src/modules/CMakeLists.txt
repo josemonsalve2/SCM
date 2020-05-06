@@ -15,11 +15,10 @@ set( instruction_mem_inc
 add_library(instruction_mem ${instruction_mem_src} ${instruction_mem_inc})
 
 # FETCH_DECODE
-set( fetch_decode_src fetch_decode.cpp )
+set( fetch_decode_src fetch_decode.cpp ilp_controller.cpp )
 set( fetch_decode_inc
-    ${CMAKE_SOURCE_DIR}/include/modules/register.hpp
-    ${CMAKE_SOURCE_DIR}/include/common/SCMUlate_tools.hpp
-    ${CMAKE_SOURCE_DIR}/include/modules/fetch_decode.hpp)
+    ${CMAKE_SOURCE_DIR}/include/modules/fetch_decode.hpp
+    ${CMAKE_SOURCE_DIR}/include/modules/ilp_controller.hpp)
 
 add_library(fetch_decode ${fetch_decode_src} ${fetch_decode_inc})
 

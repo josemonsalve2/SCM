@@ -6,6 +6,7 @@
 
 // SCM Related Includes
 #include "SCMUlate_tools.hpp"
+#include "system_config.hpp"
 #include "threads_configuration.hpp"
 #include "register.hpp"
 #include "control_store.hpp"
@@ -37,7 +38,7 @@ namespace scm {
 
     public: 
       scm_machine() = delete;
-      scm_machine(char * in_filename, unsigned char * const external_memory); 
+      scm_machine(char * in_filename, unsigned char * const external_memory, ILP_MODES ilp_mode = ILP_MODES::SEQUENTIAL); 
 
       TIMERS_COUNTERS_GUARD( 
         void inline setTimersOutput(std::string outputName) { this->time_cnt_m.setFilename(outputName); }

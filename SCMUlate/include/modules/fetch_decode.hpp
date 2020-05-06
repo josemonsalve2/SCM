@@ -46,7 +46,7 @@ namespace scm {
 
     public: 
       fetch_decode_module() = delete;
-      fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const, bool * const aliveSig);
+      fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const, bool * const aliveSig, ILP_MODES ilp_mode);
 
       /** \brief logic to execute an instruction
        * 

@@ -1,14 +1,15 @@
 #include "scm_machine.hpp"
 
-scm::scm_machine::scm_machine(char * in_filename, l2_memory_t const memory):
+scm::scm_machine::scm_machine(char * in_filename, l2_memory_t const memory, ILP_MODES ilp_mode):
   alive(false), 
   init_correct(true), 
   filename(in_filename),
   reg_file_m(),
   inst_mem_m(filename, &reg_file_m), 
   control_store_m(NUM_CUS),
-  fetch_decode_m(&inst_mem_m, &control_store_m, &alive) {
+  fetch_decode_m(&inst_mem_m, &control_store_m, &alive, ilp_mode) {
     SCMULATE_INFOMSG(0, "Initializing SCM machine")
+    // Configuration parameters
   
     // We check the register configuration is valid
     if(!reg_file_m.checkRegisterConfig()) {

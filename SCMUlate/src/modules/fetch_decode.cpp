@@ -2,11 +2,16 @@
 #include <string>
 #include <vector>
 
-scm::fetch_decode_module::fetch_decode_module(inst_mem_module *const inst_mem, control_store_module *const control_store_m, bool *const aliveSig) : inst_mem_m(inst_mem),
-                                                                                                                                                    ctrl_st_m(control_store_m),
-                                                                                                                                                    aliveSignal(aliveSig),
-                                                                                                                                                    PC(0),
-                                                                                                                                                    su_number(0)
+scm::fetch_decode_module::fetch_decode_module(inst_mem_module *const inst_mem, 
+                                              control_store_module *const control_store_m, 
+                                              bool *const aliveSig, 
+                                              ILP_MODES ilp_mode) : 
+                                              inst_mem_m(inst_mem),
+                                              ctrl_st_m(control_store_m),
+                                              aliveSignal(aliveSig),
+                                              PC(0),
+                                              su_number(0), 
+                                              instructionLevelParallelism(ilp_mode)
 {
 }
 
@@ -59,6 +64,7 @@ int scm::fetch_decode_module::behavior()
           executeControlInstruction(cur_inst);
           TIMERS_COUNTERS_GUARD(
               this->time_cnt_m->addEvent(this->su_timer_name, SCHED_IDLE););
+          instructionLevelParallelism.instructionFinished(cur_inst);
         }
         break;
       case BASIC_ARITH_INST:
@@ -71,6 +77,7 @@ int scm::fetch_decode_module::behavior()
           executeArithmeticInstructions(cur_inst);
           TIMERS_COUNTERS_GUARD(
               this->time_cnt_m->addEvent(this->su_timer_name, SCHED_IDLE););
+          instructionLevelParallelism.instructionFinished(cur_inst);
         }
         break;
       case EXECUTE_INST:

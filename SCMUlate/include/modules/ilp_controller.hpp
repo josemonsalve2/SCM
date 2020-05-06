@@ -9,6 +9,7 @@
  */
 
 #include "SCMUlate_tools.hpp"
+#include "system_config.hpp"
 #include "instructions.hpp"
 #include <set>
 #include <string>
@@ -63,76 +64,82 @@
  */
 
 namespace scm {
+  
+  struct memory_location
+  {
+    l2_memory_t memoryAddress;
+    uint32_t size;
 
-  class ilp_controller {
+    memory_location() : memoryAddress(0), size(0) {}
+    memory_location(l2_memory_t memAddr, uint32_t nsize) : memoryAddress(memAddr), size(nsize) {}
+    memory_location(const memory_location &other) : memoryAddress(other.memoryAddress), size(other.size) {}
+    l2_memory_t upperLimit() const { return memoryAddress + size; }
+    inline bool operator<(const memory_location &other) const
+    {
+      return this->memoryAddress < other.memoryAddress;
+    }
+    inline bool operator==(const memory_location &other) const
+    {
+      return (this->memoryAddress == other.memoryAddress && this->size == other.size);
+    }
+  };
+  struct register_reservation
+  {
+    std::string reg_name;
+    std::uint_fast16_t reg_direction;
+    register_reservation() : reg_name(""), reg_direction(OP_IO::NO_RD_WR) {}
+    register_reservation(const register_reservation &other) : reg_name(other.reg_name), reg_direction(other.reg_direction) {}
+    register_reservation(std::string name, std::uint_fast16_t mask) : reg_name(name), reg_direction(mask) {}
+    inline bool operator<(const register_reservation &other) const
+    {
+      return this->reg_name < other.reg_name;
+    }
+  };
+
+  class memory_queue_controller {
     private:
-      struct memory_location {
-        l2_memory_t memoryAddress;
-        uint32_t size;
-        public:
-        memory_location() : memoryAddress(0), size(0) {}
-        memory_location(l2_memory_t memAddr, uint32_t nsize) : memoryAddress(memAddr), size(nsize) {}
-        memory_location(const memory_location& other) : memoryAddress(other.memoryAddress), size(other.size) {}
-        l2_memory_t upperLimit() const { return memoryAddress + size; }
-        inline bool operator<(const memory_location& other) const {
-          return this->memoryAddress < other.memoryAddress;
-        }
-        inline bool operator==(const memory_location& other) const {
-          return (this->memoryAddress == other.memoryAddress && this->size == other.size);
-        }
-      };
-      struct register_reservation {
-        std::string reg_name;
-        std::uint_fast16_t reg_direction;
-        register_reservation(): reg_name(""), reg_direction(OP_IO::NO_RD_WR) {}
-        register_reservation(const register_reservation& other) : reg_name(other.reg_name), reg_direction(other.reg_direction) {}
-        register_reservation(std::string name, std::uint_fast16_t mask): reg_name(name), reg_direction(mask) {}
-        inline bool operator<(const register_reservation& other) const {
-          return this->reg_name < other.reg_name;
-        }
-      };
-      class memory_queue_controller {
-        private:
-          // Ranges are exclusive on begining and end
-          std::set<memory_location> ranges;
-        public:
-          memory_queue_controller() {
-          };
-          uint32_t inline numberOfRanges () { return ranges.size(); }
-          void inline addRange(memory_location& curLocation) {
-            SCMULATE_INFOMSG(0, "Adding range [%lu. %lu]",(unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size );
-            this->ranges.insert(curLocation);
+      // Ranges are exclusive on begining and end
+      std::set<memory_location> ranges;
+    public:
+      memory_queue_controller() { };
+      uint32_t inline numberOfRanges () { return ranges.size(); }
+      void inline addRange(memory_location& curLocation) {
+        SCMULATE_INFOMSG(0, "Adding range [%lu. %lu]",(unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size );
+        this->ranges.insert(curLocation);
+      }
+      void inline removeRange(memory_location& curLocation) {
+        SCMULATE_INFOMSG(0, "Adding range [%lu. %lu]",(unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size );
+        this->ranges.erase(curLocation);
+      }
+      bool inline itOverlaps(memory_location& curLocation) {
+        // The start of the curLocation cannot be in between a beginning and end of the range
+        // The end of the curLocation cannot be between a beginning and end
+        auto itRange = ranges.begin();
+        bool res = false;
+        for (; itRange != ranges.end(); itRange++) {
+          if (itRange->memoryAddress < curLocation.memoryAddress && itRange->upperLimit() > curLocation.memoryAddress) {
+            res = true;
+            break;
           }
-          void inline removeRange(memory_location& curLocation) {
-            SCMULATE_INFOMSG(0, "Adding range [%lu. %lu]",(unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size );
-            this->ranges.erase(curLocation);
+          if (itRange->memoryAddress < curLocation.upperLimit() && itRange->upperLimit() > curLocation.upperLimit()) {
+            res = true;
+            break;
           }
-          bool inline itOverlaps(memory_location& curLocation) {
-            // The start of the curLocation cannot be in between a beginning and end of the range
-            // The end of the curLocation cannot be between a beginning and end
-            auto itRange = ranges.begin();
-            bool res = false;
-            for (; itRange != ranges.end(); itRange++) {
-              if ( itRange->memoryAddress < curLocation.memoryAddress && itRange->upperLimit() > curLocation.memoryAddress) {
-                res = true;
-                break;
-              }
-              if (itRange->memoryAddress < curLocation.upperLimit() && itRange->upperLimit() > curLocation.upperLimit()) {
-                res = true;
-                break;
-              }
-              if (itRange->memoryAddress > curLocation.upperLimit() && itRange->upperLimit() > curLocation.upperLimit())
-                break;
-            }
-            return res;
-          }
-      };
+          if (itRange->memoryAddress > curLocation.upperLimit() && itRange->upperLimit() > curLocation.upperLimit())
+            break;
+        }
+        return res;
+      }
+  };
+
+  class ilp_superscalar {
+    private:
       memory_queue_controller memCtrl;
       std::set<register_reservation> busyRegisters;
       //std::queue<decoded_instruction_t> reservationTable;
       std::set<memory_location> memoryLocations;
     public:
-      ilp_controller() { }
+      ilp_superscalar() { }
       /** \brief check if instruction can be scheduled 
       * Returns true if the instruction could be scheduled according to
       * the current detected hazards. If it is possible to schedule it, then
@@ -238,7 +245,7 @@ namespace scm {
         return true;
       }
 
-      void instructionFinished(decoded_instruction_t * inst) {
+      void inline instructionFinished(decoded_instruction_t * inst) {
         // In memory instructions we need to figure out if there is a hazard in the memory
         if (inst->getType() == instType::MEMORY_INST) {
           int32_t size_dest = inst->getOp1().value.reg.reg_size_bytes;
@@ -313,6 +320,57 @@ namespace scm {
       }
       void inline eraseReg(std::string& regName, uint_fast16_t io_dir) { 
        busyRegisters.erase(register_reservation(regName, io_dir));
+      }
+  };
+
+  class ilp_sequential {
+    private:
+      bool sequential_sw;
+    public:
+      ilp_sequential() : sequential_sw(true) {}
+      bool inline checkMarkInstructionToSched() {
+        if (sequential_sw) {
+          sequential_sw = false;
+          return true;
+        }
+        return false;
+      }
+      void inline instructionFinished() {
+        sequential_sw = true;
+      }
+  };
+
+  class ilp_controller {
+      ILP_MODES SCMULATE_ILP_MODE;
+      ilp_sequential seq_ctrl;
+      ilp_superscalar supscl_ctrl;
+    public:
+      ilp_controller (ILP_MODES ilp_mode) : SCMULATE_ILP_MODE(ilp_mode) {
+        SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::SEQUENTIAL, "Using %d ILP_MODES::SEQUENTIAL",SCMULATE_ILP_MODE );
+        SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::SUPERSCALAR, "Using %d ILP_MODES::SUPERSCALAR", SCMULATE_ILP_MODE);
+       }
+      bool inline checkMarkInstructionToSched(decoded_instruction_t * inst, bool markAsync = true) {
+        if (SCMULATE_ILP_MODE == ILP_MODES::SEQUENTIAL) {
+          return seq_ctrl.checkMarkInstructionToSched();
+        }
+        else if (SCMULATE_ILP_MODE  == ILP_MODES::SUPERSCALAR) {
+          return supscl_ctrl.checkMarkInstructionToSched(inst,markAsync);
+        }
+        else {
+          SCMULATE_ERROR(0, "What are you doing here?");
+        }
+        return false;
+      }
+      void inline instructionFinished(decoded_instruction_t * inst) {
+        if (SCMULATE_ILP_MODE == ILP_MODES::SEQUENTIAL) {
+          seq_ctrl.instructionFinished();
+        }
+        else if (SCMULATE_ILP_MODE  == ILP_MODES::SUPERSCALAR) {
+          supscl_ctrl.instructionFinished(inst);
+        }
+        else {
+          SCMULATE_ERROR(0, "What are you doing here?");
+        }
       }
   };
 

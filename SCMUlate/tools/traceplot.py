@@ -126,7 +126,7 @@ class traces:
         self.bases = {}
         self.colors = {}
         self.fig = go.Figure()
-        self.config = dict({'scrollzoom': True})
+        self.config = dict({'scrollZoom': True})
 
     
     def addNewTrace(self, name):
@@ -164,7 +164,7 @@ class traces:
             else:
                 self.fig.add_trace(go.Bar(x=[0], y=[name], orientation='h'))
         self.fig.update_layout(barmode='relative', title_text='Relative Barmode', dragmode=False, yaxis={'fixedrange': True})
-        self.fig.show(self.config)
+        self.fig.show(config=self.config)
 
     
 

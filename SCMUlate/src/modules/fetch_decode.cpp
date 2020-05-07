@@ -63,7 +63,7 @@ int scm::fetch_decode_module::behavior()
               this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_CONTROL_INSTRUCTION););
           executeControlInstruction(cur_inst);
           TIMERS_COUNTERS_GUARD(
-              this->time_cnt_m->addEvent(this->su_timer_name, SCHED_IDLE););
+              this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
           instructionLevelParallelism.instructionFinished(cur_inst);
         }
         break;
@@ -76,7 +76,7 @@ int scm::fetch_decode_module::behavior()
               this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_ARITH_INSTRUCTION););
           executeArithmeticInstructions(cur_inst);
           TIMERS_COUNTERS_GUARD(
-              this->time_cnt_m->addEvent(this->su_timer_name, SCHED_IDLE););
+              this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
           instructionLevelParallelism.instructionFinished(cur_inst);
         }
         break;
@@ -86,7 +86,7 @@ int scm::fetch_decode_module::behavior()
           SCMULATE_INFOMSG(4, "Scheduling an EXECUTE_INST %s", cur_inst->getInstruction().c_str());
           hasBeenSched = attemptAssignExecuteInstruction(cur_inst);
           TIMERS_COUNTERS_GUARD(
-              this->time_cnt_m->addEvent(this->su_timer_name, SCHED_IDLE););
+              this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
         }
         break;
       case MEMORY_INST:
@@ -95,7 +95,7 @@ int scm::fetch_decode_module::behavior()
           SCMULATE_INFOMSG(4, "Scheduling a MEMORY_INST %s", cur_inst->getInstruction().c_str());
           hasBeenSched = attemptAssignExecuteInstruction(cur_inst);
           TIMERS_COUNTERS_GUARD(
-              this->time_cnt_m->addEvent(this->su_timer_name, SCHED_IDLE););
+              this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
         }
         break;
       default:
@@ -110,7 +110,7 @@ int scm::fetch_decode_module::behavior()
         SCMULATE_INFOMSG(4, "Instruction %s cannot be scheduled yet", cur_inst->getInstruction().c_str());
         showOnlyOnce = true;
         TIMERS_COUNTERS_GUARD(
-              this->time_cnt_m->addEvent(this->su_timer_name, SCHED_IDLE););
+              this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
       }
       // Check if instructions have finished
       for (uint32_t i = 0; i < this->ctrl_st_m->numExecutors(); i++)

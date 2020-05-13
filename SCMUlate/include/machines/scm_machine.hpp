@@ -40,6 +40,13 @@ namespace scm {
       scm_machine() = delete;
       scm_machine(char * in_filename, unsigned char * const external_memory, ILP_MODES ilp_mode = ILP_MODES::SEQUENTIAL); 
 
+      // getters
+      inline reg_file_module * getRegFile() {return &reg_file_m; }
+      inline inst_mem_module * getInstMemory() { return &inst_mem_m; }
+      inline control_store_module * getControlStore() { return &control_store_m; }
+      inline fetch_decode_module * getFetchDecode() { return &fetch_decode_m; }
+      inline cu_executor_module * getExecutorCU (uint32_t execID) { return executors_m[execID]; }
+
       TIMERS_COUNTERS_GUARD( 
         void inline setTimersOutput(std::string outputName) { this->time_cnt_m.setFilename(outputName); }
       )

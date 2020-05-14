@@ -111,7 +111,7 @@ namespace scm {
        */
       inline void setOp3Str(std::string str) { op3_s = str; }
 
-      void decodeOperands(reg_file_module * const reg_file_m);
+      bool decodeOperands(reg_file_module * const reg_file_m);
 
       ~decoded_instruction_t() {
         if (type == EXECUTE_INST) {

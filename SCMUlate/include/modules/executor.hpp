@@ -11,9 +11,9 @@ namespace scm {
   /** brief: Executors 
    *
    *  The cu_executor performs the execution of instructions, usually in
-   *  the form of codelets. It requiers an execution slot which contains
+   *  the form of codelets. It requires an execution slot which contains
    *  the codelet that is to be executed.*/
-  class cu_executor_module{
+  class cu_executor_module {
     private:
       int cu_executor_id;
       execution_slot * myExecutor;
@@ -40,7 +40,8 @@ namespace scm {
       int behavior();
       int codeletExecutor();
 
-      int get_executor_id(){ return this->cu_executor_id; };
+      int get_executor_id(){ return this->cu_executor_id; }
+      mem_interface_module* get_mem_interface() { return this->mem_interface_t; }
 
       ~cu_executor_module() {
         delete mem_interface_t;

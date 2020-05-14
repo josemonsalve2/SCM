@@ -1,10 +1,16 @@
 #include "codelet.hpp"
 #include "instructions.hpp"
+#include "executor.hpp"
 
 namespace scm {
 
 std::map<std::string, creatorFnc> *codeletFactory::registeredCodelets;
 static int codeletFactoryInit;
+
+l2_memory_t 
+  codelet::getAddress(uint64_t addr) {
+   return this->getExecutor()->get_mem_interface()->getAddress(addr);
+}
 
 codelet* 
   codeletFactory::createCodelet(std::string name, void * usedParams) {
@@ -13,7 +19,7 @@ codelet*
     auto found = registeredCodelets->find(name);
     if ( found == registeredCodelets->end()) {
       // If not found, we display error, and then return null.
-      SCMULATE_ERROR(0,"Trying to create a codelet that has not been implemented");
+      SCMULATE_ERROR(0, "Trying to create a codelet that has not been implemented");
       return nullptr;
     } else {
       // If found we call the creator function and then 

@@ -1,7 +1,7 @@
 #include "instructions.hpp"
 
 namespace scm {
-    void 
+    bool 
     decoded_instruction_t::decodeOperands(reg_file_module * const reg_file_m) {
         // TODO: JMPLBL cannot be decoded because the potential of labels that have not been
         // parsed yet. Probably need to find a solution for this. 
@@ -86,6 +86,8 @@ namespace scm {
             newArgs[2] = nullptr;
           }
           cod_exec = scm::codeletFactory::createCodelet(this->getInstruction(), newArgs);
+          if (cod_exec == nullptr) 
+            return false;
           op1.read = OP_IO::OP1_RD & cod_exec->getOpIO();
           op1.write = OP_IO::OP1_WR & cod_exec->getOpIO();
           op2.read = OP_IO::OP2_RD & cod_exec->getOpIO();
@@ -93,5 +95,6 @@ namespace scm {
           op3.read = OP_IO::OP3_RD & cod_exec->getOpIO();
           op3.write = OP_IO::OP3_WR & cod_exec->getOpIO();
       }
+      return true;
     }
 }

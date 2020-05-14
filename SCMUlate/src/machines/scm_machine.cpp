@@ -46,11 +46,11 @@ scm::scm_machine::scm_machine(char * in_filename, l2_memory_t const memory, ILP_
 
 scm::run_status
 scm::scm_machine::run() {
+  if (!this->init_correct) return SCM_RUN_FAILURE;
   TIMERS_COUNTERS_GUARD(
     this->time_cnt_m.resetTimer();
     this->time_cnt_m.addEvent("SCM_MACHINE",SYS_START);
   );
-  if (!this->init_correct) return SCM_RUN_FAILURE;
   this->alive = true;
   int run_result = 0;
 #pragma omp parallel reduction(+: run_result) shared(alive)

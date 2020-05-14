@@ -7,7 +7,7 @@
 #include "instructions_def.hpp"
 
 namespace scm {
-
+  class cu_executor_module;
   class codelet {
     protected:
       uint32_t numParams;
@@ -17,12 +17,16 @@ namespace scm {
       // For now, we start with a registers only implementation
       void * params;
       std::uint_fast16_t op_in_out;
+      cu_executor_module * myExecutor;
     public:
       codelet () : params(nullptr) {};
       codelet (uint32_t nparms, void * params, std::uint_fast16_t opIO): numParams(nparms), params(params), op_in_out(opIO) {};
       virtual void implementation() = 0;
       inline void * getParams() { return this->params; };
       inline std::uint_fast16_t& getOpIO() { return op_in_out; };
+      inline void setExecutor (cu_executor_module * exec) {this->myExecutor = exec;}
+      inline cu_executor_module * getExecutor() {return this->myExecutor;}
+      l2_memory_t getAddress(uint64_t addr);
       virtual ~codelet() { }
   };
 

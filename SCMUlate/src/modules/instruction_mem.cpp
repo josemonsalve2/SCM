@@ -25,7 +25,10 @@ scm::inst_mem_module::loader(char* filename) {
             labels[label] = curInst; 
           } else if (!instructions::isComment(line)) {
             scm::decoded_instruction_t * inst = scm::instructions::findInstType(line); 
-            inst->decodeOperands(this->reg_file_m);
+            if (!inst->decodeOperands(this->reg_file_m)) {
+              SCMULATE_ERROR(0, "PROBLEM DECODING OPERANDS %s", filename);
+              return false;
+            }
             this->memory.push_back(inst);
             // Any other instruction we store it in memory
             curInst++;

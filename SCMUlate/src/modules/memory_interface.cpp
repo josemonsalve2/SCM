@@ -77,7 +77,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
       SCMULATE_ERROR(0, "Incorrect operand type");
     }
     // Perform actual memory copy
-    std::memcpy(reg1_ptr, this->memorySpace+base_addr, size_reg1_bytes);
+    std::memcpy(reg1_ptr, this->getAddress(base_addr), size_reg1_bytes);
     return;
   }
   /////////////////////////////////////////////////////
@@ -132,7 +132,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
       SCMULATE_ERROR(0, "Incorrect operand type");
     }
 
-    std::memcpy(reg1_ptr, this->memorySpace+base_addr+offset, size_reg1_bytes);
+    std::memcpy(reg1_ptr, this->getAddress(base_addr+offset), size_reg1_bytes);
     return;
   }
   /////////////////////////////////////////////////////
@@ -165,7 +165,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
       SCMULATE_ERROR(0, "Incorrect operand type");
     }
     // Perform actual memory copy
-    std::memcpy(this->memorySpace+base_addr, reg1_ptr, size_reg1_bytes);
+    std::memcpy(this->getAddress(base_addr), reg1_ptr, size_reg1_bytes);
     return;
   }
   /////////////////////////////////////////////////////
@@ -217,7 +217,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
       SCMULATE_ERROR(0, "Incorrect operand type");
     }
 
-    std::memcpy(this->memorySpace+base_addr+offset, reg1_ptr, size_reg1_bytes);
+    std::memcpy(this->getAddress(base_addr+offset), reg1_ptr, size_reg1_bytes);
     return;
   }
 }

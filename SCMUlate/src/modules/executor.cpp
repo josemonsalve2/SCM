@@ -19,7 +19,7 @@ scm::cu_executor_module::behavior() {
     if (myExecutor->is_busy()) {
       SCMULATE_INFOMSG(4, "  CUMEM[%d]: Executing instruction ", cu_executor_id);
       scm::decoded_instruction_t * curInstruction = myExecutor->getHead();
-      if (curInstruction->getType()== scm::instType::MEMORY_INST) {
+      if (curInstruction->getType() == scm::instType::MEMORY_INST) {
         TIMERS_COUNTERS_GUARD(
           this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_EXECUTION_MEM);
         );
@@ -51,6 +51,7 @@ scm::cu_executor_module::behavior() {
 int scm::cu_executor_module::codeletExecutor() {
     scm::decoded_instruction_t * curInstruction = myExecutor->getHead();
     scm::codelet * curCodelet = curInstruction->getExecCodelet();
+    curCodelet->setExecutor(this);
     curCodelet->implementation();
     return 0;
 }

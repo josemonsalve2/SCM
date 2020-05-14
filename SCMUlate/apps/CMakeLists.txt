@@ -1,2 +1,3 @@
 add_subdirectory(allInst)
 add_subdirectory(vectorAddition)
+add_subdirectory(matrixMult)

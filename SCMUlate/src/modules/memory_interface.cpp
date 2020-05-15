@@ -17,7 +17,7 @@ scm::mem_interface_module::behavior() {
 void
 scm::mem_interface_module::executeMemoryInstructions() {
   /////////////////////////////////////////////////////
-  ///// LOGIC FOR THE LDADDR INSTRUCTION
+  ///// LOGIC FOR THE LDIMM INSTRUCTION
   ///// Operand 1 is where to load the instructions
   ///// Operand 2 the inmediate value to be used
   /////////////////////////////////////////////////////
@@ -30,9 +30,9 @@ scm::mem_interface_module::executeMemoryInstructions() {
     int32_t i, j;
 
     // Obtain base address and perform copy
-    unsigned long immediate_value = myInstructionSlot->getOp2().value.immediate;
+    uint64_t immediate_value = myInstructionSlot->getOp2().value.immediate;
     
-    // Perform actual memory copy
+    // Perform actual memory assignment
     for (i = size_reg1_bytes-1, j = 0; i >= 0; --i, ++j) {
       if (j < 8) {
         unsigned char temp = immediate_value & 255;

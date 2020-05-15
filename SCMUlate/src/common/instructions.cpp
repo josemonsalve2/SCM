@@ -61,6 +61,7 @@ namespace scm {
 
         // For codelets
         if (type == EXECUTE_INST) {
+          // TODO: To change the number oof arguments, wee should change this number
           unsigned char ** newArgs = new unsigned char*[3];
           if (op1.type == operand_t::IMMEDIATE_VAL) {
             newArgs[0] = reinterpret_cast<unsigned char *>(op1.value.immediate);

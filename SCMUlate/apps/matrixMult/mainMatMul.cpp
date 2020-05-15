@@ -15,12 +15,12 @@
 // Reps
 #define TILES 1
 #define REG_SIZE (64*2048)
-#define TILE_DIM sqrt(REG_SIZE)
-//B offset = sizeRegister*400 = 52428800 (64 is the cacheline size)
+//B offset = sizeRegister*TILES (64 is the cacheline size)
 #define B_offset (REG_SIZE*TILES)
-//C offset = sizeRegister*400*2 = 104857600
+//C offset = sizeRegister*TILES*2
 #define C_offset (REG_SIZE*TILES *2)
 #define NumElements ((REG_SIZE*TILES)/sizeof(double))
+#define TILE_DIM sqrt(REG_SIZE/sizeof(double))
 
 static struct {
   bool fileInput = false;
@@ -28,7 +28,7 @@ static struct {
 } program_options;
 
  // 4 GB
-#define SIZEOFMEM (unsigned long)4e9 
+#define SIZEOFMEM ((unsigned long)4e9)
 
 void parseProgramOptions(int argc, char* argv[]);
 
@@ -51,19 +51,19 @@ int main (int argc, char * argv[]) {
   double *A = reinterpret_cast<double*> (memory); 
   double *B = reinterpret_cast<double*> (&memory[B_offset]); 
   double *C = reinterpret_cast<double*> (&memory[C_offset]);
-  double testC[REG_SIZE];
+  double *testC = new double[NumElements];
 
   for (unsigned long i = 0; i < NumElements; ++i) {
       A[i] = i;
       B[i] = i;
       C[i] = 0;
-      testC[0] = 0;
+      testC[i] = 0;
   }
   // SCM MACHINE
   scm::scm_machine * myMachine;
   if (program_options.fileInput) {
     SCMULATE_INFOMSG(0, "Reading program file %s", program_options.fileName);
-    myMachine = new scm::scm_machine(program_options.fileName, memory, scm::SUPERSCALAR);
+    myMachine = new scm::scm_machine(program_options.fileName, memory, scm::SEQUENTIAL);
   } else {
     std::cout << "Need to give a file to read. use -i <filename>" << std::endl;
     return 1;
@@ -80,11 +80,11 @@ int main (int argc, char * argv[]) {
 
   // Checking result
   bool success = true;
-  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM, 1, A, 0, B, 0, 1, testC, 0);
+  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM, 1, A, TILE_DIM, B, TILE_DIM, 0, testC, TILE_DIM);
   for (long unsigned i = 0; i < NumElements; ++i) {
     if (C[i] != testC[i]) {
       success = false;
-      SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %f", i, C[i]);
+      SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %f  vs testC[i] = %f", i, C[i], testC[i]);
       break;  
     }
   }

@@ -14,7 +14,7 @@ message("Could not find MKL")
         add_definitions("-DBLAS")
     endif()
 else()
-    add_definitions("-DMKL")
+    add_definitions("-DMKL" "-DMKL_ILP64")
 endif()
 
 add_subdirectory(Codelets)

@@ -1,4 +1,5 @@
 configure_file(matMul1tile.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+configure_file(matMul128x1280.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 #configure_file(vectorAddLoop.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 #configure_file(vectorAddLoopUnrolled.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 

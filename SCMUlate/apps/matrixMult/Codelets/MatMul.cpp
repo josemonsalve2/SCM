@@ -8,7 +8,7 @@
 #endif
 
 #define TILE_DIM 128
-// JOSE TODO: We need a mechanism that allows us  to translate a memory  address  
+
 IMPLEMENT_CODELET(LoadSqTile_2048L,
   // Obtaining the parameters
   unsigned char ** args = static_cast<unsigned char **>(this->getParams());
@@ -38,7 +38,7 @@ IMPLEMENT_CODELET(MatMult_2048L,
   double *B = reinterpret_cast<double*>(reg3);
   double *C = reinterpret_cast<double*>(reg1);
 
-  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM, 1, A, TILE_DIM, B, TILE_DIM, 0, C, TILE_DIM);
+  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM, 1, A, TILE_DIM, B, TILE_DIM, 1, C, TILE_DIM);
 
 );
 

@@ -36,7 +36,7 @@ int scm::fetch_decode_module::behavior()
     }
     // Depending on the instruction do something
     TIMERS_COUNTERS_GUARD(
-        this->time_cnt_m->addEvent(this->su_timer_name, DISPATCH_INSTRUCTION););
+        this->time_cnt_m->addEvent(this->su_timer_name, DISPATCH_INSTRUCTION, cur_inst->getInstruction()););
     bool hasBeenSched = false;
     bool canSchedule = false;
     bool showOnlyOnce = false;
@@ -60,7 +60,7 @@ int scm::fetch_decode_module::behavior()
           SCMULATE_INFOMSG(4, "Scheduling a CONTROL_INST %s", cur_inst->getInstruction().c_str());
           hasBeenSched = true;
           TIMERS_COUNTERS_GUARD(
-              this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_CONTROL_INSTRUCTION););
+              this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_CONTROL_INSTRUCTION, cur_inst->getInstruction()););
           executeControlInstruction(cur_inst);
           TIMERS_COUNTERS_GUARD(
               this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););

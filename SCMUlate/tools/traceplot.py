@@ -1,10 +1,21 @@
 #!/usr/bin/env python3
 
 import plotly.graph_objects as go
+from plotly.subplots import make_subplots
 from enum import Enum
 import argparse
 import json
 import sys
+from collections import OrderedDict
+import numpy as np
+
+def EngNumber(v,i):
+    return str(v)
+try:
+    from engineering_notation import EngNumber
+except ImportError as e:
+    print("No engineering_notation package. Numbers will be shown long and ugly")
+    pass  
 
 ''' List of possible colors
 aliceblue, antiquewhite, aqua, aquamarine, azure,
@@ -62,7 +73,8 @@ color_map = {
     "CUMEM_END": "linen",
     "CUMEM_EXECUTION_MEM": "yellowgreen",
     "CUMEM_EXECUTION_COD": "darkviolet",
-    "CUMEM_IDLE": "darkslateblue"
+    "CUMEM_IDLE": "darkslateblue",
+    "SCM_MACHINE": "mediumseagreen"
 }
 
 class counter_type(Enum):
@@ -110,22 +122,25 @@ def load_file(fileName):
         exit()
 
 class traces:
-    curNumPlots = 0
-    plotNum = {}
+    numPlots = 0
+    plotNum = list()
+    plotOrder = list()
     y = {}
     x = {}
     legend = {}
     bases = {}
     colors = {}
+    minPlot = sys.maxsize
+    maxPlot = 0
+
     fig = None
     def __init__(self):
-        self.curNumPlots = 0
         self.curNumPlots = 0
         self.y = {}
         self.x = {}
         self.bases = {}
         self.colors = {}
-        self.fig = go.Figure()
+        self.fig = None
         self.config = dict({'scrollZoom': True})
 
     
@@ -133,10 +148,10 @@ class traces:
         if name in self.plotNum:
             print("Trying to add same plot twice", file=sys.stderr)
             exit()
-        self.plotNum[name] = self.curNumPlots
-        self.curNumPlots += 1
+        self.plotNum.append(name)
+        self.numPlots += 1
 
-    def addNewPlot(self, name, start, end, eventType):
+    def addNewPlot(self, name, start, end, eventType, description):
         if name not in self.y:
             self.y[name] = []
         if name not in self.x:
@@ -150,21 +165,53 @@ class traces:
         if name not in self.plotNum:
             print("Plot does not exist", file=sys.stderr)
             exit()
-        
+        if (start < self.minPlot):
+            self.minPlot = start
+        if (start+end > self.maxPlot):
+            self.maxPlot = start+end
         self.y[name].append(name)
         self.x[name].append(end)
         self.bases[name].append(start)
-        self.legend[name].append(eventType + " [" + str(end) + " s]")
+        self.legend[name].append(f'{eventType} [{EngNumber(str(end),precision=3)}s]<br>{description}')
         self.colors[name].append(color_map[eventType])
     
-    def plotTrace(self):
-        for name, num in self.plotNum.items():
+    def plotTrace(self, subText=""):
+        self.fig = go.Figure()
+        title = f'SCMULate trace: min = {EngNumber(self.minPlot)}s, max = {EngNumber(self.maxPlot)}s, total = {EngNumber(self.maxPlot-self.minPlot)}s <br> {subText} '
+        print(title)
+        for name in sorted(self.plotNum, reverse=True):
             if name in self.x:
-                self.fig.add_trace(go.Bar(x=self.x[name], y=self.y[name], base=self.bases[name], hovertext=self.legend[name], orientation='h', marker_color=self.colors[name]))
+                self.fig.add_trace(
+                    go.Bar( x = np.array(self.x[name])*1000, 
+                            y = self.y[name], 
+                            base = np.array(self.bases[name])*1000, 
+                            hovertext = self.legend[name], 
+                            orientation = 'h', 
+                            marker_color = self.colors[name],
+                            name = name))
             else:
-                self.fig.add_trace(go.Bar(x=[0], y=[name], orientation='h'))
-        self.fig.update_layout(barmode='relative', title_text='Relative Barmode', dragmode=False, yaxis={'fixedrange': True})
+                self.fig.add_trace(
+                    go.Bar( x = [(self.maxPlot - self.minPlot)*1000], 
+                            y = [name],
+                            base = [self.minPlot*1000], 
+                            orientation = 'h',
+                            hovertext = f"Duration = {EngNumber(self.maxPlot - self.minPlot)}s",
+                            marker_color = color_map[name],
+                            name = name))
+        self.fig.update_layout(
+            barmode = 'relative', 
+            title_text = title,
+            dragmode = False, 
+            yaxis = {'fixedrange': True,
+                     'title': "SCM Unit", 
+                     'tickson': 'boundaries'},
+            font = dict(size=18),
+            xaxis = {
+                'categoryorder': 'array',
+                'title': "Time (ms)"})
         self.fig.show(config=self.config)
+        
+
 
     
 
@@ -172,10 +219,13 @@ def main():
     parser = argparse.ArgumentParser(description='Plots the trace result of SCMUlate')
     parser.add_argument('--input', '-i', dest='fileName', action='store', nargs=1,
                     help='File name to be plot', required=True)
+    parser.add_argument('--subtitle', '-st', dest='subtitle', action='store', nargs=1, help="Subtitle to be added to the plot", required=False)
 
     args = parser.parse_args()
     fileName = args.fileName[0]
-
+    subText = ""
+    if (args.subtitle != None):
+        subText = args.subtitle[0]
     tracePloter = traces()
     if fileName != "":
         data = load_file(fileName)
@@ -188,14 +238,16 @@ def main():
                 if prevTime is None:
                     prevTime = event["value"]
                     prevType = event["type"]
+                    prevEvent = event["description"]
                 else:
                     typeEnum = getEnumPerType(counter_t, int(prevType))
                     if (typeEnum.name[-4:] != "IDLE" and typeEnum.name[-3:] != "END" and typeEnum.name[-5:] != "START"):
-                        tracePloter.addNewPlot(name, prevTime, event["value"] - prevTime, typeEnum.name )
+                        tracePloter.addNewPlot(name, prevTime, event["value"] - prevTime, typeEnum.name, prevEvent )
                     prevTime = event["value"]
                     prevType = event["type"]
+                    prevEvent = event["description"]
 
-        tracePloter.plotTrace()
+        tracePloter.plotTrace(subText)
     else:
         print("No file specified")
         parser.print_help()

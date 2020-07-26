@@ -14,6 +14,10 @@
 #define TIMERS_COUNTERS_GUARD(code) /* code */
 #endif
 
+#ifdef PAPI_COUNT
+#include "papi.h"
+#endif
+
 namespace scm {
 
   enum counter_type {
@@ -49,10 +53,12 @@ namespace scm {
   class timer_event {
     private:
       int eventID;
+      std::string description;
       std::chrono::time_point<std::chrono::high_resolution_clock> counter;
     public:
-      timer_event(int id) : eventID(id), counter(std::chrono::high_resolution_clock::now()) { }
+      timer_event(int id, std::string desc = std::string()) : eventID(id), description(desc), counter(std::chrono::high_resolution_clock::now()) { }
       inline int getID() { return this->eventID; }
+      inline std::string getDescription() { return this->description; }
       inline std::chrono::time_point<std::chrono::high_resolution_clock> getValue() { return this->counter; }     
       inline bool operator==(const timer_event& other){ return (eventID == other.eventID && counter == other.counter); }
       bool operator != (const timer_event& other) { return eventID != other.eventID || counter != other.counter;  }
@@ -60,6 +66,12 @@ namespace scm {
 
   class timers_counters {
     private:
+#ifdef PAPI_COUNT
+    int PAPI_events[] = {
+      PAPI_TOT_CYC,
+      PAPI_L2_DCM,
+      PAPI_L2_DCA };
+#endif
       std::chrono::time_point<std::chrono::high_resolution_clock> globalInitialTimer;
       std::map <std::string, std::vector<timer_event>> counters;
       std::map <std::string, counter_type> counterType;
@@ -69,11 +81,14 @@ namespace scm {
     public:
       timers_counters () : numCounters(0), dumpFilename("") {
         globalInitialTimer = std::chrono::high_resolution_clock::now();
+        #ifdef PAPI_COUNT
+          	PAPI_library_init(PAPI_VER_CURRENT);
+        #endif
       }
 
       void resetTimer() { globalInitialTimer = std::chrono::high_resolution_clock::now(); }
       void addTimer(std::string, counter_type type);
-      void addEvent(std::string, timer_event);
+      void addEvent(std::string, int, std::string = std::string());
       void dumpTimers();
       inline void setFilename(std::string fn) { dumpFilename = fn; }
   };

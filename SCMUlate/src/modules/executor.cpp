@@ -21,13 +21,13 @@ scm::cu_executor_module::behavior() {
       scm::decoded_instruction_t * curInstruction = myExecutor->getHead();
       if (curInstruction->getType() == scm::instType::MEMORY_INST) {
         TIMERS_COUNTERS_GUARD(
-          this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_EXECUTION_MEM);
+          this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_EXECUTION_MEM, curInstruction->getInstruction());
         );
         this->mem_interface_t->assignInstSlot(curInstruction);
         this->mem_interface_t->behavior();
       } else if (curInstruction->getType() == scm::instType::EXECUTE_INST) {
         TIMERS_COUNTERS_GUARD(
-          this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_EXECUTION_COD);
+          this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_EXECUTION_COD, curInstruction->getInstruction());
         );
         codeletExecutor();
       } else {

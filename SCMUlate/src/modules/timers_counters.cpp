@@ -9,9 +9,9 @@ void timers_counters::addTimer(std::string counterName, counter_type type)
   this->counterType[counterName] = type;
 }
 
-void timers_counters::addEvent(std::string counterName, timer_event newEvent)
+void timers_counters::addEvent(std::string counterName, int newEvent, std::string desc)
 {
-  this->counters.at(counterName).push_back(newEvent);
+  this->counters.at(counterName).push_back(timer_event(newEvent, desc));
 }
 
 void timers_counters::dumpTimers()
@@ -47,7 +47,8 @@ void timers_counters::dumpTimers()
         std::cout << indent << "\"type\": \"" << std::to_string(event.getID()) << "\",\n";
         // Get the event timer value 
         std::chrono::duration<double> diff = event.getValue() - this->globalInitialTimer;
-        std::cout << indent << "\"value\": "<< std::to_string(diff.count()) << "\n";
+        std::cout << indent << "\"value\": " << std::to_string(diff.count()) << ",\n";
+        std::cout << indent << "\"description\": \"" << event.getDescription() << "\"\n";
         indent_pop();
         if (event != element.second.back())
           std::cout << indent << "},\n";
@@ -88,7 +89,8 @@ void timers_counters::dumpTimers()
         // Get the event timer value 
         std::chrono::duration<double> diff = event.getValue() - this->globalInitialTimer;
 
-        logFile << indent << "\"value\": " << std::to_string(diff.count()) << "\n";
+        logFile << indent << "\"value\": " << std::to_string(diff.count()) << ",\n";
+        logFile << indent << "\"description\": \"" << event.getDescription() << "\"\n";
         indent_pop();
         if (event != element.second.back())
           logFile << indent << "},\n";

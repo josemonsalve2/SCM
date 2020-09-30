@@ -127,6 +127,9 @@ class traces:
     plotOrder = list()
     y = {}
     x = {}
+    utilization = {}
+    memory = {}
+    compute = {}
     legend = {}
     bases = {}
     colors = {}
@@ -138,6 +141,7 @@ class traces:
         self.curNumPlots = 0
         self.y = {}
         self.x = {}
+        self.utilization = {}
         self.bases = {}
         self.colors = {}
         self.fig = None
@@ -156,6 +160,12 @@ class traces:
             self.y[name] = []
         if name not in self.x:
             self.x[name] = []
+        if name not in self.utilization:
+            self.utilization[name] = 0
+        if name not in self.memory:
+            self.memory[name] = 0
+        if name not in self.compute:
+            self.compute[name] = 0
         if name not in self.bases:
             self.bases[name] = []
         if name not in self.legend:
@@ -167,20 +177,27 @@ class traces:
             exit()
         if (start < self.minPlot):
             self.minPlot = start
-        if (start+end > self.maxPlot):
-            self.maxPlot = start+end
+        if (start + end > self.maxPlot):
+            self.maxPlot = start + end
+        if (eventType == "CUMEM_EXECUTION_MEM"):
+            self.memory[name] += end
+        if (eventType == "CUMEM_EXECUTION_COD"):
+            self.compute[name] += end
         self.y[name].append(name)
         self.x[name].append(end)
+        self.utilization[name] += end
         self.bases[name].append(start)
         self.legend[name].append(f'{eventType} [{EngNumber(str(end),precision=3)}s]<br>{description}')
         self.colors[name].append(color_map[eventType])
     
-    def plotTrace(self, subText=""):
+    def plotTrace(self, subText = ""):
         self.fig = go.Figure()
-        title = f'SCMULate trace: min = {EngNumber(self.minPlot)}s, max = {EngNumber(self.maxPlot)}s, total = {EngNumber(self.maxPlot-self.minPlot)}s <br> {subText} '
+        title = f'SCMULate trace: min = {EngNumber(self.minPlot)}s, max = {EngNumber(self.maxPlot)}s, total = {EngNumber(self.maxPlot-self.minPlot)}s <br>{subText} '
+        secondLabel = ""
         print(title)
         for name in sorted(self.plotNum, reverse=True):
             if name in self.x:
+                util = self.utilization[name]/(self.maxPlot - self.minPlot)*100
                 self.fig.add_trace(
                     go.Bar( x = np.array(self.x[name])*1000, 
                             y = self.y[name], 
@@ -188,16 +205,28 @@ class traces:
                             hovertext = self.legend[name], 
                             orientation = 'h', 
                             marker_color = self.colors[name],
-                            name = name))
+                            name = f'{name} [{util:.2f}% util]'))
+                memUtil = self.memory[name]/self.utilization[name]*100
+                compUtil = self.compute[name]/self.utilization[name]*100
+
+                secondLabel += f'{name} [mem = {memUtil:.2f}%, comp = {compUtil:.2f}%]<br>'
             else:
-                self.fig.add_trace(
-                    go.Bar( x = [(self.maxPlot - self.minPlot)*1000], 
-                            y = [name],
-                            base = [self.minPlot*1000], 
-                            orientation = 'h',
-                            hovertext = f"Duration = {EngNumber(self.maxPlot - self.minPlot)}s",
-                            marker_color = color_map[name],
-                            name = name))
+                if name == "SCM_MACHINE":
+                    self.fig.add_trace(
+                        go.Bar( x = [(self.maxPlot - self.minPlot)*1000], 
+                                y = [name],
+                                base = [self.minPlot*1000], 
+                                orientation = 'h',
+                                hovertext = f"Duration = {EngNumber(self.maxPlot - self.minPlot)}s",
+                                marker_color = color_map[name],
+                                name = f'{name}'))
+                else:
+                    self.fig.add_trace(
+                        go.Bar( x = [0], 
+                                y = [name],
+                                base = [0], 
+                                orientation = 'h',
+                                name = name))
         self.fig.update_layout(
             barmode = 'relative', 
             title_text = title,
@@ -208,7 +237,21 @@ class traces:
             font = dict(size=18),
             xaxis = {
                 'categoryorder': 'array',
-                'title': "Time (ms)"})
+                'title': "Time (ms)"},
+            annotations=[
+                go.layout.Annotation(
+                    text=secondLabel,
+                    align='left',
+                    showarrow=False,
+                    xref='paper',
+                    yref='paper',
+                    x=1.3,
+                    y=0,
+                    bordercolor='black',
+                    borderwidth=1, 
+                    font=dict(size=12)
+                )
+            ])
         self.fig.show(config=self.config)
         
 
@@ -241,6 +284,7 @@ def main():
                     prevEvent = event["description"]
                 else:
                     typeEnum = getEnumPerType(counter_t, int(prevType))
+                    prevTypeEnum = getEnumPerType(counter_t, int(prevType))
                     if (typeEnum.name[-4:] != "IDLE" and typeEnum.name[-3:] != "END" and typeEnum.name[-5:] != "START"):
                         tracePloter.addNewPlot(name, prevTime, event["value"] - prevTime, typeEnum.name, prevEvent )
                     prevTime = event["value"]

@@ -1,15 +1,14 @@
-#include "MatMul.hpp"
+#include "MatMulOMPoffload.hpp"
 #include <iomanip>
-#ifdef BLAS
-#include <blas.h>
-#endif
-#ifdef MKL
-#include <mkl.h>
-#endif
+#include "mkl.h"
+#include "mkl_cblas.h"
+#include "mkl_omp_offload.h"
+
+#pragma omp requires unified_shared_memory
 
 #define TILE_DIM 128
 
-IMPLEMENT_CODELET(LoadSqTile_2048L,
+IMPLEMENT_CODELET(LoadSqTileGPU_2048L,
   // Obtaining the parameters
   unsigned char ** args = static_cast<unsigned char **>(this->getParams());
   unsigned char *reg1 = args[0]; // Getting register 1
@@ -28,7 +27,7 @@ IMPLEMENT_CODELET(LoadSqTile_2048L,
   }
 );
 
-IMPLEMENT_CODELET(MatMult_2048L,
+IMPLEMENT_CODELET(MatMultGPU_2048L,
   // Obtaining the parameters
   unsigned char ** args = static_cast<unsigned char **>(this->getParams());
   unsigned char *reg1 = args[0]; // Getting register 1
@@ -38,14 +37,23 @@ IMPLEMENT_CODELET(MatMult_2048L,
   double *B = reinterpret_cast<double*>(reg3);
   double *C = reinterpret_cast<double*>(reg1);
 
-  for (int i = 0; i < TILE_DIM; i++)
-    C[i] = A[i] + B[i];
+    
+_Pragma("omp target data map(to:A[0:2048],B[0:2048]) map(tofrom:C[0:2048])")
+    {
+
+        // run gemm on gpu, use standard oneMKL interface within a variant dispatch construct
+_Pragma("omp target variant dispatch use_device_ptr(A, B, C)")
+        {
+          cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM, 1, A, TILE_DIM, B, TILE_DIM, 1, C, TILE_DIM);
+        }
+        
+    }
   //cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM, 1, A, TILE_DIM, B, TILE_DIM, 1, C, TILE_DIM);
 
 );
 
 
-IMPLEMENT_CODELET(StoreSqTile_2048L,
+IMPLEMENT_CODELET(StoreSqTileGPU_2048L,
   // Obtaining the parameters
   unsigned char ** args = static_cast<unsigned char **>(this->getParams());
   unsigned char *reg1 = args[0]; // Getting register 1

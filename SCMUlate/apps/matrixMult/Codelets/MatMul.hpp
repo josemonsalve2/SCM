@@ -1,5 +1,5 @@
-#ifndef __COD_VECTOR_ADD__
-#define __COD_VECTOR_ADD__
+#ifndef __COD_MATMUL__
+#define __COD_MATMUL__
 
 #include "codelet.hpp"
 

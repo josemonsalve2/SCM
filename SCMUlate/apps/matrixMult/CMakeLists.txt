@@ -1,5 +1,7 @@
 configure_file(matMul1tile.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+configure_file(matMul1tileGPU.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 configure_file(matMul128x1280.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+configure_file(matMul128x1280gpu.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 #configure_file(vectorAddLoop.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 #configure_file(vectorAddLoopUnrolled.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 
@@ -23,4 +25,4 @@ add_subdirectory(Codelets)
 add_executable(MatMul mainMatMul.cpp)
 target_include_directories(MatMul PRIVATE Codelets)
 
-target_link_libraries (MatMul scm_machine mat_mul_cod scm_system_codelets ${BLAS_LIBRARIES})
+target_link_libraries (MatMul scm_machine mat_mul_ofl_cod mat_mul_cod scm_system_codelets ${BLAS_LIBRARIES})

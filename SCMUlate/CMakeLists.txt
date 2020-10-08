@@ -41,8 +41,14 @@ endif (APPLE)
 
 ## COMPILER SPECIFIC
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+  get_filename_component(CLANG_CXX_FAMILY ${CMAKE_CXX_COMPILER} NAME)
+  message("Identified Clang family as ${CLANG_CXX_FAMILY}")
   # using Clang
-  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+  if ("${CLANG_CXX_FAMILY}" STREQUAL "icpx")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fiopenmp ")
+  else()
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+  endif()
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # using GCC
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
@@ -68,7 +74,7 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
     elseif(UNIX)
       message("Adding sanitizer for Clang in Linux")
-      #set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=memory")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=memory")
     endif()
 
   endif()

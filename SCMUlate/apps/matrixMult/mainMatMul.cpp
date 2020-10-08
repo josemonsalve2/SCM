@@ -1,6 +1,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include "MatMul.hpp"
+#include "MatMulOMPoffload.hpp"
 #include "scm_machine.hpp"
 #include <cstring>
 #include <iostream>
@@ -22,7 +23,7 @@ uint32_t KDIM;
 #define B_offset (REG_SIZE*TILES)
 //C offset = sizeRegister*TILES*2
 #define C_offset (REG_SIZE*TILES *2)
-#define NumElements ((REG_SIZE*TILES)/sizeof(double))
+#define NumElements_AB ((REG_SIZE*TILES)/sizeof(double))
 #define TILE_DIM sqrt(REG_SIZE/sizeof(double))
 
 static struct {
@@ -42,12 +43,12 @@ int main (int argc, char * argv[]) {
   unsigned char * memory;
   parseProgramOptions(argc, argv);
   // TODO: Harcoding these for now, until we have a general 
-  if (strcmp(program_options.fileName, "matMul1tile.scm") == 0) {
+  if (strcmp(program_options.fileName, "matMul1tile.scm") == 0 || strcmp(program_options.fileName, "matMul1tileGPU.scm") == 0) {
     TILES = 1;
     MDIM = 1;
     NDIM = 1;
     KDIM = 1;
-  } else if(strcmp(program_options.fileName, "matMul128x1280.scm") == 0) {
+  } else if(strcmp(program_options.fileName, "matMul128x1280.scm") == 0 || strcmp(program_options.fileName, "matMul128x1280gpu.scm") == 0) {
     // A [10 x 1], B [1 x 10], C [1 x 1]
     TILES = 10;
     MDIM = 1;
@@ -78,7 +79,7 @@ int main (int argc, char * argv[]) {
   double *testC = new double[NumElements];
 
   for (unsigned long i = 0; i < NumElements; ++i) {
-      A[i] = i;
+      A[i] = 1;
       B[i] = i;
       C[i] = 0;
       testC[i] = 0;
@@ -105,11 +106,12 @@ int main (int argc, char * argv[]) {
   // Checking result
   bool success = true;
   cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, MDIM*TILE_DIM, NDIM*TILE_DIM, KDIM*TILE_DIM, 1, A, TILE_DIM*KDIM, B, TILE_DIM*NDIM, 0, testC, TILE_DIM*NDIM);
+  int errors = 0;
   for (long unsigned i = 0; i < NumElements; ++i) {
     if (C[i] != testC[i]) {
       success = false;
       SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %f  vs testC[i] = %f", i, C[i], testC[i]);
-      break;  
+      if (++errors > 10) break;  
     }
   }
   if (success)

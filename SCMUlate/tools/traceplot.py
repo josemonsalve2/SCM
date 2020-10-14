@@ -9,7 +9,7 @@ import sys
 from collections import OrderedDict
 import numpy as np
 
-def EngNumber(v,i):
+def EngNumber(v,precision):
     return str(v)
 try:
     from engineering_notation import EngNumber
@@ -138,12 +138,20 @@ class traces:
 
     fig = None
     def __init__(self):
+        self.numPlots = 0
+        self.plotNum = list()
+        self.plotOrder = list()
         self.curNumPlots = 0
         self.y = {}
         self.x = {}
         self.utilization = {}
+        self.memory = {}
+        self.compute = {}
+        self.legend = {}
         self.bases = {}
         self.colors = {}
+        self.minPlot = sys.maxsize
+        self.maxPlot = 0
         self.fig = None
         self.config = dict({'scrollZoom': True})
 
@@ -230,6 +238,7 @@ class traces:
         self.fig.update_layout(
             barmode = 'relative', 
             title_text = title,
+            width=1600, height=800,
             dragmode = False, 
             yaxis = {'fixedrange': True,
                      'title': "SCM Unit", 
@@ -297,7 +306,31 @@ def main():
         parser.print_help()
         exit()
 
-    
+def jupyter(fileName = "",subText = "",):
+    tracePloter = traces()
+    if fileName != "":
+        data = load_file(fileName)
+        for name, counter in data.items():
+            tracePloter.addNewTrace(name)
+            prevTime = None
+            prevType = ""
+            counter_t = counter_type(int(counter["counter type"])).name
+            for event in counter["events"]:
+                if prevTime is None:
+                    prevTime = event["value"]
+                    prevType = event["type"]
+                    prevEvent = event["description"]
+                else:
+                    typeEnum = getEnumPerType(counter_t, int(prevType))
+                    if (typeEnum.name[-4:] != "IDLE" and typeEnum.name[-3:] != "END" and typeEnum.name[-5:] != "START"):
+                        tracePloter.addNewPlot(name, prevTime, event["value"] - prevTime, typeEnum.name, prevEvent )
+                    prevTime = event["value"]
+                    prevType = event["type"]
+                    prevEvent = event["description"]
+
+        tracePloter.plotTrace(subText)
+    else:
+        print("No file specified")
 
 if __name__ == "__main__":
     main()

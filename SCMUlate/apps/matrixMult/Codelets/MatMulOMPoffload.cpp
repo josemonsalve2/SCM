@@ -45,14 +45,8 @@ _Pragma("omp target data map(to:A[0:TILE_DIM*TILE_DIM],B[0:TILE_DIM*TILE_DIM]) m
 _Pragma("omp target variant dispatch use_device_ptr(A, B, C)")
         {
           cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM, 1, A, TILE_DIM, B, TILE_DIM, 1, C, TILE_DIM);
-        }
-  // for (int i = 0; i < TILE_DIM; i++)
-  //   for (int j = 0; j < TILE_DIM; j++)
-  //     for (int k = 0; k < TILE_DIM; k++)
-  //       C[i + j*TILE_DIM] = A[i + k*TILE_DIM]*B[j*TILE_DIM + k]; 
-        
+        }       
     }
-  //cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM, 1, A, TILE_DIM, B, TILE_DIM, 1, C, TILE_DIM);
 
 );
 

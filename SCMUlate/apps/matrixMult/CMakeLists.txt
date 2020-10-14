@@ -2,8 +2,6 @@ configure_file(matMul1tile.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 configure_file(matMul1tileGPU.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 configure_file(matMul128x1280.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 configure_file(matMul128x1280gpu.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
-#configure_file(vectorAddLoop.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
-#configure_file(vectorAddLoopUnrolled.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 
 set(BLA_VENDOR Intel10_64ilp_seq)
 find_package(BLAS)

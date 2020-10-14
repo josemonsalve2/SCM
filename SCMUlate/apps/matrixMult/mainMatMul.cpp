@@ -6,6 +6,7 @@
 #include <cstring>
 #include <iostream>
 #include <math.h>
+#include <omp.h>
 #ifdef MKL
 #include <mkl.h>
 #endif
@@ -24,6 +25,7 @@ uint32_t KDIM;
 //C offset = sizeRegister*TILES*2
 #define C_offset (REG_SIZE*TILES *2)
 #define NumElements_AB ((REG_SIZE*TILES)/sizeof(double))
+#define NumElements_C ((REG_SIZE)/sizeof(double))
 #define TILE_DIM sqrt(REG_SIZE/sizeof(double))
 
 static struct {
@@ -36,11 +38,30 @@ static struct {
 
 void parseProgramOptions(int argc, char* argv[]);
 
+void initMatrix (double * mat, int elements, int val = 0) {
+  for (int i = 0; i < elements; i++)
+    mat[i] = (i)*val;
+} 
+
 // FUNCTION DEFINITIONS
 int SCMUlate();
 
 int main (int argc, char * argv[]) {
   unsigned char * memory;
+  // OMP TARGET WARM UP
+  int isDevice= -1;
+#pragma omp target map(tofrom:isDevice)
+  isDevice = omp_is_initial_device();
+  printf("Is running in the %s\n", (isDevice? "Host": "Device"));
+
+  double warmA[NumElements_AB];
+  double warmB[NumElements_AB];
+  double warmC[NumElements_C];
+  char* vars[3] = { reinterpret_cast<char*>(warmA), reinterpret_cast<char*>(warmB), reinterpret_cast<char*>(warmC)} ;
+  scm::_cod_MatMultGPU_2048L warmCodGPU(vars);
+  warmCodGPU.implementation();
+  scm::_cod_MatMult_2048L warmCod(vars);
+  warmCod.implementation();
   parseProgramOptions(argc, argv);
   // TODO: Harcoding these for now, until we have a general 
   if (strcmp(program_options.fileName, "matMul1tile.scm") == 0 || strcmp(program_options.fileName, "matMul1tileGPU.scm") == 0) {
@@ -76,14 +97,14 @@ int main (int argc, char * argv[]) {
   double *A = reinterpret_cast<double*> (memory); 
   double *B = reinterpret_cast<double*> (&memory[B_offset]); 
   double *C = reinterpret_cast<double*> (&memory[C_offset]);
-  double *testC = new double[NumElements];
+  double *testC = new double[NumElements_C];
 
-  for (unsigned long i = 0; i < NumElements; ++i) {
-      A[i] = 1;
-      B[i] = i;
-      C[i] = 0;
-      testC[i] = 0;
-  }
+  initMatrix(A,NumElements_AB,1);
+  initMatrix(B,NumElements_AB,1);
+  initMatrix(C,NumElements_C,0);
+  initMatrix(testC,NumElements_C,0);
+
+
   // SCM MACHINE
   scm::scm_machine * myMachine;
   if (program_options.fileInput) {
@@ -105,13 +126,20 @@ int main (int argc, char * argv[]) {
 
   // Checking result
   bool success = true;
-  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, MDIM*TILE_DIM, NDIM*TILE_DIM, KDIM*TILE_DIM, 1, A, TILE_DIM*KDIM, B, TILE_DIM*NDIM, 0, testC, TILE_DIM*NDIM);
+
+  std::chrono::time_point<std::chrono::high_resolution_clock> initTimer =  std::chrono::high_resolution_clock::now();
+  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, MDIM*TILE_DIM, NDIM*TILE_DIM, KDIM*TILE_DIM, 1, A, TILE_DIM*KDIM, B, TILE_DIM*NDIM, 1, testC, TILE_DIM*NDIM);
+  // aCod.implementation();
+  std::chrono::time_point<std::chrono::high_resolution_clock> endTimer = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> diff =endTimer - initTimer;
+  printf ("taking %f s\n", diff.count());
+
   int errors = 0;
-  for (long unsigned i = 0; i < NumElements; ++i) {
+  for (long unsigned i = 0; i < NumElements_C; ++i) {
     if (C[i] != testC[i]) {
       success = false;
       SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %f  vs testC[i] = %f", i, C[i], testC[i]);
-      if (++errors > 10) break;  
+      if (++errors > 256) break;
     }
   }
   if (success)

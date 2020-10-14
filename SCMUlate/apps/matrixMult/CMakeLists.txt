@@ -25,4 +25,9 @@ add_subdirectory(Codelets)
 add_executable(MatMul mainMatMul.cpp)
 target_include_directories(MatMul PRIVATE Codelets)
 
-target_link_libraries (MatMul scm_machine mat_mul_ofl_cod mat_mul_cod scm_system_codelets ${BLAS_LIBRARIES})
+if (DECLARE_VARIANT_ENABLED)
+  target_link_libraries (MatMul scm_machine mat_mul_ofl_cod mat_mul_cod scm_system_codelets ${BLAS_LIBRARIES})
+else ()
+  target_link_libraries (MatMul scm_machine mat_mul_cod scm_system_codelets ${BLAS_LIBRARIES})
+endif()
+    

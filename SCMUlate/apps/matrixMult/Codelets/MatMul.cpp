@@ -1,7 +1,7 @@
 #include "MatMul.hpp"
 #include <iomanip>
 #ifdef BLAS
-#include <blas.h>
+#include <cblas.h>
 #endif
 #ifdef MKL
 #include <mkl.h>

@@ -48,18 +48,20 @@ int SCMUlate();
 
 int main (int argc, char * argv[]) {
   unsigned char * memory;
+  
+  double warmA[NumElements_AB];
+  double warmB[NumElements_AB];
+  double warmC[NumElements_C];
+  char* vars[3] = { reinterpret_cast<char*>(warmA), reinterpret_cast<char*>(warmB), reinterpret_cast<char*>(warmC)} ;
+#ifdef DECLARE_VARIANT
   // OMP TARGET WARM UP
   int isDevice= -1;
 #pragma omp target map(tofrom:isDevice)
   isDevice = omp_is_initial_device();
   printf("Is running in the %s\n", (isDevice? "Host": "Device"));
-
-  double warmA[NumElements_AB];
-  double warmB[NumElements_AB];
-  double warmC[NumElements_C];
-  char* vars[3] = { reinterpret_cast<char*>(warmA), reinterpret_cast<char*>(warmB), reinterpret_cast<char*>(warmC)} ;
   scm::_cod_MatMultGPU_2048L warmCodGPU(vars);
   warmCodGPU.implementation();
+#endif
   scm::_cod_MatMult_2048L warmCod(vars);
   warmCod.implementation();
   parseProgramOptions(argc, argv);

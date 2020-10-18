@@ -95,6 +95,7 @@ namespace scm {
           op2.write = OP_IO::OP2_WR & cod_exec->getOpIO();
           op3.read = OP_IO::OP3_RD & cod_exec->getOpIO();
           op3.write = OP_IO::OP3_WR & cod_exec->getOpIO();
+          this->setOpIO(cod_exec->getOpIO());
       }
       return true;
     }

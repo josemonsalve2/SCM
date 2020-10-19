@@ -9,9 +9,11 @@ void timers_counters::addTimer(std::string counterName, counter_type type)
   this->counterType[counterName] = type;
 }
 
-void timers_counters::addEvent(std::string counterName, int newEvent, std::string desc)
+timer_event& timers_counters::addEvent(std::string counterName, int newEvent, std::string desc)
 {
-  this->counters.at(counterName).push_back(timer_event(newEvent, desc));
+  timer_event event(newEvent, desc);
+  this->counters.at(counterName).push_back(event);
+  return this->counters.at(counterName).back();
 }
 
 void timers_counters::dumpTimers()
@@ -40,7 +42,7 @@ void timers_counters::dumpTimers()
       std::cout << indent << "\"events\": [\n";
       indent_push();
       // For each event in the timer.
-      for (timer_event event : element.second)
+      for (timer_event& event : element.second)
       {
         std::cout << indent << "{\n";
         indent_push();
@@ -48,7 +50,28 @@ void timers_counters::dumpTimers()
         // Get the event timer value 
         std::chrono::duration<double> diff = event.getValue() - this->globalInitialTimer;
         std::cout << indent << "\"value\": " << std::to_string(diff.count()) << ",\n";
-        std::cout << indent << "\"description\": \"" << event.getDescription() << "\"\n";
+        #ifdef PAPI_COUNT
+          std::vector <long long> PAPIvals = event.getPAPIcounters();
+          if (PAPIvals.size() > 0) {
+            std::cout << indent << "\"description\": \"" << event.getDescription() << "\",\n";
+            std::cout << indent << "\"hw_counters\": {\n";
+            indent_push();
+            size_t papi_name_count = 0;
+            for (auto vals_it = PAPIvals.begin(); vals_it != PAPIvals.end(); vals_it++, papi_name_count++) {
+              if (papi_name_count != PAPIvals.size()-1) {
+                std::cout << indent << "\""<< this->PAPI_events_str[papi_name_count]<<"\": "<< static_cast<unsigned long long>(*vals_it) << ", \n";
+              } else {
+                std::cout << indent << "\""<< this->PAPI_events_str[papi_name_count]<<"\": "<< static_cast<unsigned long long>(*vals_it) << " \n";
+              }
+            }
+            indent_pop();
+            std::cout << indent << "}\n";
+          } else {
+            std::cout << indent << "\"description\": \"" << event.getDescription() << "\"\n";
+          }
+        #else 
+          std::cout << indent << "\"description\": \"" << event.getDescription() << "\"\n";
+        #endif
         indent_pop();
         if (event != element.second.back())
           std::cout << indent << "},\n";
@@ -90,7 +113,28 @@ void timers_counters::dumpTimers()
         std::chrono::duration<double> diff = event.getValue() - this->globalInitialTimer;
 
         logFile << indent << "\"value\": " << std::to_string(diff.count()) << ",\n";
-        logFile << indent << "\"description\": \"" << event.getDescription() << "\"\n";
+        #ifdef PAPI_COUNT
+          std::vector <long long> PAPIvals = event.getPAPIcounters();
+          if (PAPIvals.size() > 0) {
+            logFile << indent << "\"description\": \"" << event.getDescription() << "\",\n";
+            logFile << indent << "\"hw_counters\": {\n";
+            indent_push();
+            size_t papi_name_count = 0;
+            for (auto vals_it = PAPIvals.begin(); vals_it != PAPIvals.end(); vals_it++, papi_name_count++) {
+              if (papi_name_count != PAPIvals.size()-1) {
+                logFile << indent << "\""<< this->PAPI_events_str[papi_name_count]<<"\": "<< static_cast<unsigned long long>(*vals_it) << ", \n";
+              } else {
+                logFile << indent << "\""<< this->PAPI_events_str[papi_name_count]<<"\": "<< static_cast<unsigned long long>(*vals_it) << " \n";
+              }
+            }
+            indent_pop();
+            logFile << indent << "}\n";
+          } else {
+            logFile << indent << "\"description\": \"" << event.getDescription() << "\"\n";
+          }
+        #else 
+          std::cout << indent << "\"description\": \"" << event.getDescription() << "\"\n";
+        #endif
         indent_pop();
         if (event != element.second.back())
           logFile << indent << "},\n";

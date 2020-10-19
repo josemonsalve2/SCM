@@ -10,6 +10,7 @@ scm::cu_executor_module::cu_executor_module(int CU_ID, control_store_module * co
 int
 scm::cu_executor_module::behavior() {
   TIMERS_COUNTERS_GUARD(
+    this->timer_cnt_m->initPAPIcounter(this->cu_timer_name);
     this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_START);
   );
   SCMULATE_INFOMSG(1, "Starting CUMEM %d behavior", cu_executor_id);
@@ -21,12 +22,18 @@ scm::cu_executor_module::behavior() {
       scm::decoded_instruction_t * curInstruction = myExecutor->getHead();
       if (curInstruction->getType() == scm::instType::MEMORY_INST) {
         TIMERS_COUNTERS_GUARD(
+          #ifdef PAPI_COUNT
+          this->timer_cnt_m->startPAPIcounters(this->cu_timer_name);
+          #endif
           this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_EXECUTION_MEM, curInstruction->getInstruction());
         );
         this->mem_interface_t->assignInstSlot(curInstruction);
         this->mem_interface_t->behavior();
       } else if (curInstruction->getType() == scm::instType::EXECUTE_INST) {
         TIMERS_COUNTERS_GUARD(
+          #ifdef PAPI_COUNT
+          this->timer_cnt_m->startPAPIcounters(this->cu_timer_name);
+          #endif
           this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_EXECUTION_COD, curInstruction->getInstruction());
         );
         codeletExecutor();
@@ -34,10 +41,15 @@ scm::cu_executor_module::behavior() {
         SCMULATE_ERROR(0, "Error. Executor received an unknown instruction type");
       }
       
-      myExecutor->done_execution();
       TIMERS_COUNTERS_GUARD(
-        this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_IDLE);
+        #ifdef PAPI_COUNT
+          timer_event& anEvent = this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_IDLE);
+          this->timer_cnt_m->stopAndRegisterPAPIcounters(this->cu_timer_name, anEvent);
+        #else 
+          this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_IDLE);
+        #endif
       );
+      myExecutor->done_execution();
     }
   }
   SCMULATE_INFOMSG(1, "Shutting down executor CUMEM %d", cu_executor_id);

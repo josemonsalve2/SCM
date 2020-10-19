@@ -295,7 +295,12 @@ def main():
                     typeEnum = getEnumPerType(counter_t, int(prevType))
                     prevTypeEnum = getEnumPerType(counter_t, int(prevType))
                     if (typeEnum.name[-4:] != "IDLE" and typeEnum.name[-3:] != "END" and typeEnum.name[-5:] != "START"):
-                        tracePloter.addNewPlot(name, prevTime, event["value"] - prevTime, typeEnum.name, prevEvent )
+                        description = prevEvent
+                        if "hw_counters" in event:
+                            for counter, value in event["hw_counters"]:
+                                description += "<br>" + counter + ": " + str(value)
+
+                        tracePloter.addNewPlot(name, prevTime, event["value"] - prevTime, typeEnum.name, description )
                     prevTime = event["value"]
                     prevType = event["type"]
                     prevEvent = event["description"]
@@ -323,7 +328,12 @@ def jupyter(fileName = "",subText = "",):
                 else:
                     typeEnum = getEnumPerType(counter_t, int(prevType))
                     if (typeEnum.name[-4:] != "IDLE" and typeEnum.name[-3:] != "END" and typeEnum.name[-5:] != "START"):
-                        tracePloter.addNewPlot(name, prevTime, event["value"] - prevTime, typeEnum.name, prevEvent )
+                        description = prevEvent
+                        if "hw_counters" in event:
+                            for counter in event["hw_counters"]:
+                                description += "<br>" + counter + ": " + str(event["hw_counters"][counter])
+
+                        tracePloter.addNewPlot(name, prevTime, event["value"] - prevTime, typeEnum.name, description )
                     prevTime = event["value"]
                     prevType = event["type"]
                     prevEvent = event["description"]

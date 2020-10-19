@@ -7,3 +7,8 @@ set( scm_machine_inc
 add_library(scm_machine ${scm_machine_src} ${scm_machine_inc})
 target_link_libraries(scm_machine instruction_mem registers fetch_decode executor control_store memory_interface scm_codelet scm_system_codelets scm_string_helper scm_timers_counters scm_instructions)
 target_compile_options(scm_machine PRIVATE -fopenmp)
+if (PAPI)
+    if (PAPI_FOUND)
+        target_link_libraries(scm_machine ${PAPI_LIBRARIES})
+    endif(PAPI_FOUND)
+endif(PAPI)

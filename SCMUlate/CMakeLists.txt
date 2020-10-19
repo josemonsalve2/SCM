@@ -1,6 +1,8 @@
 cmake_minimum_required(VERSION 2.8.9)
 project (proof_of_concept)
 
+set(CMAKE_MODULE_PATH ${CMAKE_MODULE_PATH} "${CMAKE_SOURCE_DIR}/CMakeFinds/")
+
 include_directories(include/common)
 include_directories(include/modules)
 include_directories(include/machines)
@@ -23,6 +25,15 @@ endif (DEBUG)
 if (VERBOSE_MODE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVERBOSE_MODE=${VERBOSE_MODE}")
 endif (VERBOSE_MODE)
+
+## CHECK FOR VERBOSE EXECUTION MODE
+if (PAPI)
+  find_package(PAPI)
+  if (PAPI_FOUND)
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DPAPI_COUNT=1")
+    
+  endif(PAPI_FOUND)
+endif (PAPI)
 
 ## CHECK FOR VERBOSE EXECUTION MODE
 if (TIMERS_COUNTERS)

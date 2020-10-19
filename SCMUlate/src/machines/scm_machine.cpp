@@ -53,7 +53,7 @@ scm::scm_machine::run() {
   );
   this->alive = true;
   int run_result = 0;
-#pragma omp parallel reduction(+: run_result) shared(alive)
+#pragma omp parallel reduction(+: run_result) shared(alive) num_threads(NUM_CUS+1)
   {
     #pragma omp master 
     {

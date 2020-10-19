@@ -62,6 +62,8 @@ namespace scm {
       /** \brief get the instruction name
        */
       inline std::string getInstruction() { return instruction; }
+
+      inline std::string getFullInstruction() { return instruction+" "+op1_s+(op2_s.length() != 0?", "+op2_s:"") + (op3_s.length() != 0?", "+op3_s:""); }
       /** \brief get Codelet
        */
       inline codelet * getExecCodelet() { return cod_exec; }

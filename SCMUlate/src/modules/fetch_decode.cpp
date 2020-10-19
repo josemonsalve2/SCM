@@ -45,7 +45,8 @@ int scm::fetch_decode_module::behavior()
       switch (cur_inst->getType())
       {
       case COMMIT:
-        canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst, false);
+        if (!canSchedule) // If we have not been able to schedule, but we already pass the check, ignore the check
+          canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst, false);
         if (canSchedule) {
           SCMULATE_INFOMSG(4, "Scheduling and Exec a COMMIT");
           SCMULATE_INFOMSG(1, "Turning off machine alive = false");
@@ -55,9 +56,10 @@ int scm::fetch_decode_module::behavior()
         }
         break;
       case CONTROL_INST:
-        canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst, false);
+        if (!canSchedule) // If we have not been able to schedule, but we already pass the check, ignore the check. Not enough resources
+          canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst, false);
         if (canSchedule) {
-          SCMULATE_INFOMSG(4, "Scheduling a CONTROL_INST %s", cur_inst->getInstruction().c_str());
+          SCMULATE_INFOMSG(4, "Scheduling a CONTROL_INST %s", cur_inst->getFullInstruction().c_str());
           hasBeenSched = true;
           TIMERS_COUNTERS_GUARD(
               this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_CONTROL_INSTRUCTION, cur_inst->getInstruction()););
@@ -68,9 +70,10 @@ int scm::fetch_decode_module::behavior()
         }
         break;
       case BASIC_ARITH_INST:
-        canSchedule = (!canSchedule) ? instructionLevelParallelism.checkMarkInstructionToSched(cur_inst, false) : canSchedule;
+        if (!canSchedule) // If we have not been able to schedule, but we already pass the check, ignore the check. Not enough resources
+          canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst, false);
         if (canSchedule) {
-          SCMULATE_INFOMSG(4, "Scheduling a BASIC_ARITH_INST %s", cur_inst->getInstruction().c_str());
+          SCMULATE_INFOMSG(4, "Scheduling a BASIC_ARITH_INST %s", cur_inst->getFullInstruction().c_str());
           hasBeenSched = true;
           TIMERS_COUNTERS_GUARD(
               this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_ARITH_INSTRUCTION););
@@ -81,18 +84,20 @@ int scm::fetch_decode_module::behavior()
         }
         break;
       case EXECUTE_INST:
-        canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst);
+        if (!canSchedule) // If we have not been able to schedule, but we already pass the check, ignore the check. Not enough resources
+          canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst);
         if (canSchedule) {
-          SCMULATE_INFOMSG(4, "Scheduling an EXECUTE_INST %s", cur_inst->getInstruction().c_str());
+          SCMULATE_INFOMSG(4, "Scheduling an EXECUTE_INST %s", cur_inst->getFullInstruction().c_str());
           hasBeenSched = attemptAssignExecuteInstruction(cur_inst);
           TIMERS_COUNTERS_GUARD(
               this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
         }
         break;
       case MEMORY_INST:
-        canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst);
+        if (!canSchedule) // If we have not been able to schedule, but we already pass the check, ignore the check. Not enough resources
+          canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst);
         if (canSchedule) {
-          SCMULATE_INFOMSG(4, "Scheduling a MEMORY_INST %s", cur_inst->getInstruction().c_str());
+          SCMULATE_INFOMSG(4, "Scheduling a MEMORY_INST %s", cur_inst->getFullInstruction().c_str());
           hasBeenSched = attemptAssignExecuteInstruction(cur_inst);
           TIMERS_COUNTERS_GUARD(
               this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
@@ -107,17 +112,15 @@ int scm::fetch_decode_module::behavior()
       }
 
       if (!canSchedule && !showOnlyOnce) {
-        SCMULATE_INFOMSG(4, "Instruction %s cannot be scheduled yet", cur_inst->getInstruction().c_str());
+        SCMULATE_INFOMSG(4, "Instruction %s cannot be scheduled yet", cur_inst->getFullInstruction().c_str());
         showOnlyOnce = true;
         TIMERS_COUNTERS_GUARD(
               this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
       }
       // Check if instructions have finished
-      for (uint32_t i = 0; i < this->ctrl_st_m->numExecutors(); i++)
-      {
-        if (this->ctrl_st_m->get_executor(i)->is_done())
-        {
-          SCMULATE_INFOMSG(5, "Instruction %s has finished executing", this->ctrl_st_m->get_executor(i)->getHead()->getInstruction().c_str());
+      for (uint32_t i = 0; i < this->ctrl_st_m->numExecutors(); i++) {
+        if (this->ctrl_st_m->get_executor(i)->is_done()) {
+          SCMULATE_INFOMSG(5, "Instruction %s has finished executing", this->ctrl_st_m->get_executor(i)->getHead()->getFullInstruction().c_str());
           instructionLevelParallelism.instructionFinished(this->ctrl_st_m->get_executor(i)->getHead());
           this->ctrl_st_m->get_executor(i)->empty_slot();
         }

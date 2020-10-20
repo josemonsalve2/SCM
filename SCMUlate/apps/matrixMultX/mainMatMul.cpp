@@ -1,0 +1,215 @@
+#include <stdlib.h>
+#include <stdio.h>
+#include "MatMul.hpp"
+#include "MatMulOMPoffload.hpp"
+#include "scm_machine.hpp"
+#include <cstring>
+#include <iostream>
+#include <cstdlib>
+#include <math.h>
+#include <omp.h>
+#ifdef MKL
+#include <mkl.h>
+#endif
+#ifdef BLAS
+#include <cblas.h>
+#endif
+
+// Reps
+uint32_t MDIM;
+uint32_t NDIM;
+uint32_t KDIM;
+#define REG_SIZE (64*2048)
+//A offset = sizeRegister*n_args (64 is the cacheline size) (6 args)
+#define A_offset (sizeof(uint64_t)*12)
+//B offset = sizeRegister*TILES (64 is the cacheline size)
+#define B_offset (REG_SIZE*MDIM*KDIM+A_offset)
+//C offset = sizeRegister*TILES*2
+#define C_offset (REG_SIZE*NDIM*KDIM+B_offset)
+#define NumElements_A ((REG_SIZE*MDIM*KDIM)/sizeof(double))
+#define NumElements_B ((REG_SIZE*NDIM*KDIM)/sizeof(double))
+#define NumElements_C ((REG_SIZE*NDIM*MDIM)/sizeof(double))
+#define TILE_DIM sqrt(REG_SIZE/sizeof(double))
+
+static struct {
+  bool fileInput = false;
+  char * fileName;
+  uint32_t MDIM_OPT;
+  uint32_t NDIM_OPT;
+  uint32_t KDIM_OPT;
+} program_options;
+
+ // 4 GB
+#define SIZEOFMEM ((unsigned long)4e9)
+
+void parseProgramOptions(int argc, char* argv[]);
+
+void initMatrix (double * mat, int elements, int val = 0) {
+  for (int i = 0; i < elements; i++)
+    mat[i] = (i)*val;
+} 
+
+// FUNCTION DEFINITIONS
+int SCMUlate();
+
+int main (int argc, char * argv[]) {
+  unsigned char * memory;
+  // argv[1] = M_tiles, argv[2] = N_tiles, argv[3] = K_tiles
+  try {
+    memory = new unsigned char[SIZEOFMEM];
+  }
+  catch (int e) {
+    std::cout << "An exception occurred. Exception Nr. " << e << '\n';
+    return 1;
+  }
+
+  parseProgramOptions(argc, argv);
+  MDIM = program_options.MDIM_OPT;
+  NDIM = program_options.NDIM_OPT;
+  KDIM = program_options.KDIM_OPT;
+
+  double warmA[NumElements_A];
+  double warmB[NumElements_B];
+  double warmC[NumElements_C];
+  char* vars[3] = { reinterpret_cast<char*>(warmA), reinterpret_cast<char*>(warmB), reinterpret_cast<char*>(warmC)} ;
+
+#ifdef DECLARE_VARIANT
+  // OMP TARGET WARM UP
+  int isDevice= -1;
+#pragma omp target map(tofrom:isDevice)
+  isDevice = omp_is_initial_device();
+  printf("Is running in the %s\n", (isDevice? "Host": "Device"));
+  scm::_cod_MatMultGPU_2048L warmCodGPU(vars);
+  warmCodGPU.implementation();
+#endif
+  scm::_cod_MatMult_2048L warmCod(vars);
+  warmCod.implementation();
+
+  
+  // M, N, K are expressed in number of tiles
+  // Address A, B, C are initial locations of the matrices in L1
+  // Offset cbi, aj, bk, ak, cj are the number of bytes between tiles in each direction 
+  // Number of elements between the tiles for LoadSqrTile 
+
+  uint64_t *M = reinterpret_cast<uint64_t*> (memory); 
+  uint64_t *N = reinterpret_cast<uint64_t*> (&memory[sizeof(uint64_t)]); 
+  uint64_t *K = reinterpret_cast<uint64_t*> (&memory[sizeof(uint64_t)*2]); 
+
+  uint64_t *Add_a = reinterpret_cast<uint64_t*> (&memory[sizeof(uint64_t)*3]);
+  uint64_t *Add_b = reinterpret_cast<uint64_t*> (&memory[sizeof(uint64_t)*4]);
+  uint64_t *Add_c = reinterpret_cast<uint64_t*> (&memory[sizeof(uint64_t)*5]); 
+
+  uint64_t *Off_cbi = reinterpret_cast<uint64_t*> (&memory[sizeof(uint64_t)*6]); 
+  uint64_t *Off_aj = reinterpret_cast<uint64_t*> (&memory[sizeof(uint64_t)*7]);
+  uint64_t *Off_bk = reinterpret_cast<uint64_t*> (&memory[sizeof(uint64_t)*8]); 
+  uint64_t *Off_ak = reinterpret_cast<uint64_t*> (&memory[sizeof(uint64_t)*9]); 
+  uint64_t *Off_cj = reinterpret_cast<uint64_t*> (&memory[sizeof(uint64_t)*10]);
+
+  uint64_t *Off_a = reinterpret_cast<uint64_t*> (&memory[sizeof(uint64_t)*11]);
+  uint64_t *Off_b = reinterpret_cast<uint64_t*> (&memory[sizeof(uint64_t)*12]);
+  uint64_t *Off_c = reinterpret_cast<uint64_t*> (&memory[sizeof(uint64_t)*13]); 
+  
+  *M = MDIM;
+  *N = NDIM;
+  *K = KDIM;
+
+  *Add_a = A_offset;
+  *Add_b = B_offset;
+  *Add_c = C_offset;
+
+  *Off_cbi = TILE_DIM*sizeof(double);
+  *Off_aj = KDIM*REG_SIZE;
+  *Off_bk = NDIM*REG_SIZE;
+  *Off_ak = TILE_DIM*sizeof(double);
+  *Off_cj = NDIM*REG_SIZE;
+
+  *Off_a = KDIM*TILE_DIM;
+  *Off_b = NDIM*TILE_DIM;
+  *Off_c = NDIM*TILE_DIM;
+  
+  
+  std::cout << "MDIM = " << MDIM << std::endl
+            << "NDIM = " << NDIM << std::endl
+            << "KDIM = " << KDIM << std::endl
+            << "A_OFFSET = " << A_offset << std::endl
+            << "B_OFFSET = " << B_offset << std::endl
+            << "C_OFFSET = " << C_offset << std::endl;
+
+  double *A = reinterpret_cast<double*> (&memory[A_offset]); 
+  double *B = reinterpret_cast<double*> (&memory[B_offset]); 
+  double *C = reinterpret_cast<double*> (&memory[C_offset]);
+  double *testC = new double[NumElements_C];
+
+  initMatrix(A,NumElements_A,1);
+  initMatrix(B,NumElements_B,1);
+  initMatrix(C,NumElements_C,0);
+  initMatrix(testC,NumElements_C,0);
+
+
+  // SCM MACHINE
+  scm::scm_machine * myMachine;
+  if (program_options.fileInput) {
+    SCMULATE_INFOMSG(0, "Reading program file %s", program_options.fileName);
+    myMachine = new scm::scm_machine(program_options.fileName, memory, scm::SEQUENTIAL);
+  } else {
+    std::cout << "Need to give a file to read. use -i <filename>" << std::endl;
+    return 1;
+  }
+
+  if (myMachine->run() != scm::SCM_RUN_SUCCESS) {
+    SCMULATE_ERROR(0, "THERE WAS AN ERROR WHEN RUNNING THE SCM MACHINE");
+    return 1;
+  }
+
+  TIMERS_COUNTERS_GUARD(
+    myMachine->setTimersOutput("trace.json");
+  );
+
+  // Checking result
+  bool success = true;
+
+  std::chrono::time_point<std::chrono::high_resolution_clock> initTimer =  std::chrono::high_resolution_clock::now();
+  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, MDIM*TILE_DIM, NDIM*TILE_DIM, KDIM*TILE_DIM, 1, A, TILE_DIM*KDIM, B, TILE_DIM*NDIM, 1, testC, TILE_DIM*NDIM);
+  // aCod.implementation();
+  std::chrono::time_point<std::chrono::high_resolution_clock> endTimer = std::chrono::high_resolution_clock::now();
+	std::chrono::duration<double> diff =endTimer - initTimer;
+  printf ("taking %f s\n", diff.count());
+
+  int errors = 0;
+  for (long unsigned i = 0; i < NumElements_C; ++i) {
+    if (C[i] != testC[i]) {
+      success = false;
+      SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %f  vs testC[i] = %f", i, C[i], testC[i]);
+      if (++errors > 256) break;
+    }
+  }
+  if (success)
+    printf("SUCCESS!!!\n");
+  delete myMachine;
+  delete [] memory;
+  return 0;
+}
+
+void parseProgramOptions(int argc, char* argv[]) {
+  // there are other arguments
+  program_options.MDIM_OPT = 1;
+  program_options.NDIM_OPT = 1;
+  program_options.KDIM_OPT = 1;
+
+  for (int i = 1; i + 1 < argc; i++) {
+    if (strcmp(argv[i], "-i") == 0) {
+      program_options.fileInput = true;
+      program_options.fileName = argv[++i];
+    }
+    if (strcmp(argv[i], "-M") == 0) {
+      program_options.MDIM_OPT = std::atoi(argv[++i]);
+    }
+    if (strcmp(argv[i], "-N") == 0) {
+      program_options.NDIM_OPT = std::atoi(argv[++i]);
+    }
+    if (strcmp(argv[i], "-K") == 0) {
+      program_options.KDIM_OPT = std::atoi(argv[++i]);
+    }
+  }
+}
+

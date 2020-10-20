@@ -1,4 +1,5 @@
 #include "scm_machine.hpp"
+#include <iostream>
 
 scm::scm_machine::scm_machine(char * in_filename, l2_memory_t const memory, ILP_MODES ilp_mode):
   alive(false), 
@@ -53,6 +54,7 @@ scm::scm_machine::run() {
   );
   this->alive = true;
   int run_result = 0;
+  std::chrono::time_point<std::chrono::high_resolution_clock> timer = std::chrono::high_resolution_clock::now();
 #pragma omp parallel reduction(+: run_result) shared(alive) num_threads(NUM_CUS+1)
   {
     #pragma omp master 
@@ -82,7 +84,9 @@ scm::scm_machine::run() {
     #pragma omp barrier 
 
   }
-
+  std::chrono::time_point<std::chrono::high_resolution_clock> timer2 = std::chrono::high_resolution_clock::now();
+  std::chrono::duration<double> diff = timer2 - timer;
+  std::cout << "Exec Time = " << diff.count() << std::endl;
   TIMERS_COUNTERS_GUARD(
     this->time_cnt_m.addEvent("SCM_MACHINE",SYS_END);
   );

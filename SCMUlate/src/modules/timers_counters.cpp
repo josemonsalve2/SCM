@@ -6,6 +6,7 @@ namespace scm
 void timers_counters::addTimer(std::string counterName, counter_type type)
 {
   this->counters[counterName] = std::vector<timer_event>();
+  this->counters[counterName].reserve(1e6);
   this->counterType[counterName] = type;
 }
 

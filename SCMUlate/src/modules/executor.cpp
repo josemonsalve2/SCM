@@ -10,7 +10,9 @@ scm::cu_executor_module::cu_executor_module(int CU_ID, control_store_module * co
 int
 scm::cu_executor_module::behavior() {
   TIMERS_COUNTERS_GUARD(
+    #ifdef PAPI_COUNT
     this->timer_cnt_m->initPAPIcounter(this->cu_timer_name);
+    #endif
     this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_START);
   );
   SCMULATE_INFOMSG(1, "Starting CUMEM %d behavior", cu_executor_id);

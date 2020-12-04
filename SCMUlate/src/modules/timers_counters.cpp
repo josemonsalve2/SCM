@@ -134,7 +134,7 @@ void timers_counters::dumpTimers()
             logFile << indent << "\"description\": \"" << event.getDescription() << "\"\n";
           }
         #else 
-          std::cout << indent << "\"description\": \"" << event.getDescription() << "\"\n";
+          logFile << indent << "\"description\": \"" << event.getDescription() << "\"\n";
         #endif
         indent_pop();
         if (event != element.second.back())

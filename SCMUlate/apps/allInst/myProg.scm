@@ -11,11 +11,11 @@
     BGT R64B_1, R64B_2, 2; 
     BGT R64B_1, R64B_2, 1; 
     BGET R64B_1, R64B_2, 2;
-    BGET R64B_1, R64B_2, 1;
+    BGET R64B_1, R64B_2, 1; // Ignored
     BLT R64B_1, R64B_2, 2;
     BLT R64B_1, R64B_2, 1;
     BLET R64B_1, R64B_2, 2;
-    BLET R64B_1, R64B_2, 1;
+    BLET R64B_1, R64B_2, 1; // Ignored
     ADD R64B_1, R64B_2, 100; 
     COD print R64B_1, 8;
     ADD R64B_1, R64B_1, 100; 

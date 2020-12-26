@@ -33,22 +33,68 @@ ADD R64B_26, R64B_26, R64B_15; // C for the outer I offset
 // We are using j for the rows (A and C) and i for the cols (B and C)
 
 loop_j:
-  BREQ R64B_3, R64B_10, 34;
+  BREQ R64B_3, R64B_10, 72; // i + 14
   ADD R64B_3, R64B_3, 1; // j++
   loop_i:
-    BREQ R64B_2, R64B_11, 20;
+    BREQ R64B_2, R64B_11, 58; // k + 16
     ADD R64B_2, R64B_2, 1; // i++
     COD LoadSqTile_2048L R2048L_3, R64B_7, R64B_23; //Load C
+    COD LoadSqTile_2048L R2048L_4, R64B_7, R64B_23; //Load C
+    COD LoadSqTile_2048L R2048L_5, R64B_7, R64B_23; //Load C
+    COD LoadSqTile_2048L R2048L_6, R64B_7, R64B_23; //Load C
+    COD LoadSqTile_2048L R2048L_7, R64B_7, R64B_23; //Load C
+
 
     loop_k:
-      BREQ R64B_4, R64B_12, 8;
-      ADD R64B_4, R64B_4, 1; // k++
+      BREQ R64B_4, R64B_12, 42; // it was 8
+      ADD R64B_4, R64B_4, 4; // k++
       COD LoadSqTile_2048L R2048L_1, R64B_5, R64B_21; //Load A
       COD LoadSqTile_2048L R2048L_2, R64B_6, R64B_22; //Load B
-      COD MatMult_2048L R2048L_3, R2048L_1, R2048L_2;
+      COD MatMult_2048L R2048L_4, R2048L_1, R2048L_2;
       ADD R64B_5, R64B_5, R64B_19; // *A + Off_ak
       ADD R64B_6, R64B_6, R64B_18; // *B + Off_bk
+      LDIMM R64B_27, 0;
+      LDIMM R64B_28, 0;
+      ADD R64B_27, R64B_27, R64B_5; // *A + Off_ak
+      ADD R64B_27, R64B_27, R64B_19; // *A + Off_ak
+      ADD R64B_28, R64B_28, R64B_6; // *A + Off_ak
+      ADD R64B_28, R64B_28, R64B_18; // *A + Off_ak
+      LDIMM R64B_29, 0;
+      LDIMM R64B_30, 0;
+      ADD R64B_29, R64B_29, R64B_27; // *A + Off_ak
+      ADD R64B_29, R64B_29, R64B_19; // *A + Off_ak
+      ADD R64B_30, R64B_30, R64B_28; // *A + Off_ak
+      ADD R64B_30, R64B_30, R64B_18; // *A + Off_ak
+      LDIMM R64B_31, 0;
+      LDIMM R64B_32, 0;
+      ADD R64B_31, R64B_31, R64B_29; // *A + Off_ak
+      ADD R64B_31, R64B_31, R64B_19; // *A + Off_ak
+      ADD R64B_32, R64B_32, R64B_28; // *A + Off_ak
+      ADD R64B_32, R64B_32, R64B_30; // *A + Off_ak
+
+      COD LoadSqTile_2048L R2048L_1, R64B_27, R64B_21; //Load A
+      COD LoadSqTile_2048L R2048L_2, R64B_28, R64B_22; //Load B
+      COD MatMult_2048L R2048L_5, R2048L_1, R2048L_2;
+
+      COD LoadSqTile_2048L R2048L_1, R64B_29, R64B_21; //Load A
+      COD LoadSqTile_2048L R2048L_2, R64B_30, R64B_22; //Load B
+      COD MatMult_2048L R2048L_6, R2048L_1, R2048L_2;
+
+      COD LoadSqTile_2048L R2048L_1, R64B_31, R64B_21; //Load A
+      COD LoadSqTile_2048L R2048L_2, R64B_32, R64B_22; //Load B
+      COD MatMult_2048L R2048L_7, R2048L_1, R2048L_2;
+
+      COD MatMultReduc_2048L R2048L_4, R2048L_4, R2048L_5;
+      COD MatMultReduc_2048L R2048L_6, R2048L_6, R2048L_7;
+      COD MatMultReduc_2048L R2048L_3, R2048L_4, R2048L_6;
+
+      LDIMM R64B_5, 0;
+      LDIMM R64B_6, 0;
+      ADD R64B_5, R64B_5, R64B_31; // *A + Off_ak
+      ADD R64B_6, R64B_6, R64B_32; // *A + Off_ak
+
       JMPLBL loop_k;
+
     COD StoreSqTile_2048L R2048L_3, R64B_7, R64B_23; //Store C
 
     LDIMM R64B_4, 0; // Reset k index loop

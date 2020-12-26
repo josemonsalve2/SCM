@@ -1,3 +1,5 @@
+message(" -> modules")
+
 # Test for REGISTER FILE
 set (test_reg_file_src test_register_file.cpp)
 set (test_reg_file_inc 

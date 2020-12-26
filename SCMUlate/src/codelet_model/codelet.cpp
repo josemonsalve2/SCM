@@ -13,7 +13,7 @@ l2_memory_t
 }
 
 codelet* 
-  codeletFactory::createCodelet(std::string name, void * usedParams) {
+  codeletFactory::createCodelet(std::string name, codelet_params usedParams) {
     codelet * result;
     // Look for the codelet in the map
     auto found = registeredCodelets->find(name);

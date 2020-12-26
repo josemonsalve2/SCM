@@ -62,29 +62,29 @@ namespace scm {
         // For codelets
         if (type == EXECUTE_INST) {
           // TODO: To change the number oof arguments, wee should change this number
-          unsigned char ** newArgs = new unsigned char*[3];
+          codelet_params newArgs;
           if (op1.type == operand_t::IMMEDIATE_VAL) {
-            newArgs[0] = reinterpret_cast<unsigned char *>(op1.value.immediate);
+            newArgs.getParamAs(0) = reinterpret_cast<unsigned char *>(op1.value.immediate);
           } else if (op1.type == operand_t::REGISTER) {
-            newArgs[0] = op1.value.reg.reg_ptr; 
+            newArgs.getParamAs(0) = op1.value.reg.reg_ptr; 
           } else {
-            newArgs[0] = nullptr;
+            newArgs.getParamAs(0) = nullptr;
           }
 
           if (op2.type == operand_t::IMMEDIATE_VAL) {
-            newArgs[1] = reinterpret_cast<unsigned char *>(op2.value.immediate);
+            newArgs.getParamAs(1) = reinterpret_cast<unsigned char *>(op2.value.immediate);
           } else if (op2.type == operand_t::REGISTER) {
-            newArgs[1] = op2.value.reg.reg_ptr; 
+            newArgs.getParamAs(1) = op2.value.reg.reg_ptr; 
           } else {
-            newArgs[1] = nullptr;
+            newArgs.getParamAs(1) = nullptr;
           }
 
           if (op3.type == operand_t::IMMEDIATE_VAL) {
-            newArgs[2] = reinterpret_cast<unsigned char *>(op3.value.immediate);
+            newArgs.getParamAs(2) = reinterpret_cast<unsigned char *>(op3.value.immediate);
           } else if (op3.type == operand_t::REGISTER) {
-            newArgs[2] = op3.value.reg.reg_ptr; 
+            newArgs.getParamAs(2) = op3.value.reg.reg_ptr; 
           } else {
-            newArgs[2] = nullptr;
+            newArgs.getParamAs(2) = nullptr;
           }
           cod_exec = scm::codeletFactory::createCodelet(this->getInstruction(), newArgs);
           if (cod_exec == nullptr) 

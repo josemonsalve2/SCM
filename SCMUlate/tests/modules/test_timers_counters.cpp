@@ -12,13 +12,13 @@ int main () {
   timers.addTimer("test1", scm::SYS_TIMER);
   timers.addTimer("test2", scm::SYS_TIMER);
   WASTE_TIME(aVar);
-  timers.addEvent("test1", scm::timer_event(scm::SYS_START));
+  timers.addEvent("test1", scm::SYS_START, "test1");
   WASTE_TIME(aVar);
-  timers.addEvent("test1", scm::timer_event(scm::SYS_END));
+  timers.addEvent("test1", scm::SYS_END, "test1");
   WASTE_TIME(aVar);
-  timers.addEvent("test2", scm::timer_event(scm::SYS_START));
+  timers.addEvent("test2", scm::SYS_START, "test2");
   WASTE_TIME(aVar);
-  timers.addEvent("test2", scm::timer_event(scm::SYS_START));
+  timers.addEvent("test2", scm::SYS_START, "test2");
 
   timers.dumpTimers();
   return 0;

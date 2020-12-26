@@ -1,4 +1,5 @@
 configure_file(matMul.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+configure_file(matMulUnrroli.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 
 set(BLA_VENDOR Intel10_64ilp_seq)
 find_package(BLAS)

@@ -21,7 +21,7 @@ uint32_t NDIM;
 uint32_t KDIM;
 #define REG_SIZE (64*2048)
 //A offset = sizeRegister*n_args (64 is the cacheline size) (6 args)
-#define A_offset (sizeof(uint64_t)*12)
+#define A_offset (sizeof(uint64_t)*15)
 //B offset = sizeRegister*TILES (64 is the cacheline size)
 #define B_offset (REG_SIZE*MDIM*KDIM+A_offset)
 //C offset = sizeRegister*TILES*2
@@ -49,6 +49,17 @@ void initMatrix (double * mat, int elements, int val = 0) {
     mat[i] = (i)*val;
 } 
 
+template<typename T>
+T changeEndiandness (T val) {
+  T res = 0;
+  uint8_t ptr[sizeof(T)]; 
+  for (int i = sizeof(T)-1; i >=0 ; i--) {
+    ptr[i] = val & 255;
+    val = val >> 8;
+  }
+  res = reinterpret_cast<T*>(ptr)[0];
+  return res;
+}
 // FUNCTION DEFINITIONS
 int SCMUlate();
 
@@ -68,11 +79,14 @@ int main (int argc, char * argv[]) {
   NDIM = program_options.NDIM_OPT;
   KDIM = program_options.KDIM_OPT;
 
-  double warmA[NumElements_A];
-  double warmB[NumElements_B];
-  double warmC[NumElements_C];
-  char* vars[3] = { reinterpret_cast<char*>(warmA), reinterpret_cast<char*>(warmB), reinterpret_cast<char*>(warmC)} ;
-
+  double * warmA = new double[NumElements_A];
+  double * warmB = new double[NumElements_B];
+  double * warmC = new double[NumElements_C];
+  
+  scm::codelet_params vars;
+  vars.getParamAs(0) = reinterpret_cast<unsigned char*>(warmA); // Getting register 1
+  vars.getParamAs(1) = reinterpret_cast<unsigned char*>(warmB); // Getting register 2
+  vars.getParamAs(2) = reinterpret_cast<unsigned char*>(warmC); // Getting register 3
 #ifdef DECLARE_VARIANT
   // OMP TARGET WARM UP
   int isDevice= -1;
@@ -112,17 +126,14 @@ int main (int argc, char * argv[]) {
   *M = MDIM;
   *N = NDIM;
   *K = KDIM;
-
   *Add_a = A_offset;
   *Add_b = B_offset;
   *Add_c = C_offset;
-
   *Off_cbi = TILE_DIM*sizeof(double);
   *Off_aj = KDIM*REG_SIZE;
   *Off_bk = NDIM*REG_SIZE;
   *Off_ak = TILE_DIM*sizeof(double);
   *Off_cj = NDIM*REG_SIZE;
-
   *Off_a = KDIM*TILE_DIM;
   *Off_b = NDIM*TILE_DIM;
   *Off_c = NDIM*TILE_DIM;
@@ -133,7 +144,21 @@ int main (int argc, char * argv[]) {
             << "KDIM = " << KDIM << std::endl
             << "A_OFFSET = " << A_offset << std::endl
             << "B_OFFSET = " << B_offset << std::endl
-            << "C_OFFSET = " << C_offset << std::endl;
+            << "C_OFFSET = " << C_offset << std::endl
+            << "*M = " << *M << std::endl
+            << "*N = " << *N << std::endl
+            << "*K = " << *K << std::endl
+            << "*Add_a = " << *Add_a << std::endl
+            << "*Add_b = " << *Add_b << std::endl
+            << "*Add_c = " << *Add_c << std::endl
+            << "*Off_cbi = " << *Off_cbi << std::endl
+            << "*Off_aj = " << *Off_aj << std::endl
+            << "*Off_bk = " << *Off_bk << std::endl
+            << "*Off_ak = " << *Off_ak << std::endl
+            << "*Off_cj = " << *Off_cj << std::endl
+            << "*Off_a = " << *Off_a << std::endl
+            << "*Off_b = " << *Off_b << std::endl
+            << "*Off_c = " << *Off_c << std::endl;
 
   double *A = reinterpret_cast<double*> (&memory[A_offset]); 
   double *B = reinterpret_cast<double*> (&memory[B_offset]); 
@@ -142,15 +167,30 @@ int main (int argc, char * argv[]) {
 
   initMatrix(A,NumElements_A,1);
   initMatrix(B,NumElements_B,1);
-  initMatrix(C,NumElements_C,0);
-  initMatrix(testC,NumElements_C,0);
+  initMatrix(C,NumElements_C,1);
+  initMatrix(testC,NumElements_C,1);
 
+
+  *M = changeEndiandness(*M) ;
+  *N = changeEndiandness(*N) ;
+  *K = changeEndiandness(*K) ;
+  *Add_a = changeEndiandness(*Add_a) ;
+  *Add_b = changeEndiandness(*Add_b) ;
+  *Add_c = changeEndiandness(*Add_c) ;
+  *Off_cbi = changeEndiandness(*Off_cbi) ;
+  *Off_aj = changeEndiandness(*Off_aj) ;
+  *Off_bk = changeEndiandness(*Off_bk) ;
+  *Off_ak = changeEndiandness(*Off_ak) ;
+  *Off_cj = changeEndiandness(*Off_cj) ;
+  *Off_a = changeEndiandness(*Off_a) ;
+  *Off_b = changeEndiandness(*Off_b) ;
+  *Off_c = changeEndiandness(*Off_c) ;
 
   // SCM MACHINE
   scm::scm_machine * myMachine;
   if (program_options.fileInput) {
     SCMULATE_INFOMSG(0, "Reading program file %s", program_options.fileName);
-    myMachine = new scm::scm_machine(program_options.fileName, memory, scm::SEQUENTIAL);
+    myMachine = new scm::scm_machine(program_options.fileName, memory, scm::SUPERSCALAR);
   } else {
     std::cout << "Need to give a file to read. use -i <filename>" << std::endl;
     return 1;
@@ -180,7 +220,7 @@ int main (int argc, char * argv[]) {
     if (C[i] != testC[i]) {
       success = false;
       SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %f  vs testC[i] = %f", i, C[i], testC[i]);
-      if (++errors > 256) break;
+      if (++errors > 1) break;
     }
   }
   if (success)

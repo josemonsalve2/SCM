@@ -25,19 +25,19 @@ namespace scm {
   class execution_slot {
     private:
       volatile executorState state;
-      decoded_instruction_t* executionInstruction;
+      instruction_state_pair* executionInstruction;
 
     public:
       // Constructor 
       execution_slot(): state(EMPTY), executionInstruction(NULL) {}; 
 
-      void assign(decoded_instruction_t *);
+      void assign(instruction_state_pair *);
       void empty_slot();
       void done_execution();
       inline bool is_busy() { return this->state == BUSY; }
       inline bool is_empty() { return this->state == EMPTY; }
       inline bool is_done() { return this->state == DONE; }
-      inline decoded_instruction_t * getHead() { return this->executionInstruction; }
+      inline instruction_state_pair * getHead() { return this->executionInstruction; }
   };
 
 

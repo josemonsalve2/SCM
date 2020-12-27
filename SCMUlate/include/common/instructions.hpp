@@ -54,6 +54,13 @@ namespace scm {
       decoded_instruction_t (instType type, std::string inst, std::string op1s, std::string op2s, std::string op3s) :
         type(type), instruction(inst), op1_s(op1s), op2_s(op2s), op3_s(op3s), op_in_out(OP_IO::NO_RD_WR), cod_exec(nullptr), op1(), op2(), op3()  {}
 
+      decoded_instruction_t (const decoded_instruction_t &other) :
+              type(other.type), instruction(other.instruction), op1_s(other.op1_s), op2_s(other.op2_s), op3_s(other.op3_s), op_in_out(other.op_in_out),cod_exec(nullptr), op1(other.op1), op2(other.op2), op3(other.op3) {
+                if (other.cod_exec != nullptr) {
+                  codelet_params newParams = other.cod_exec->getParams();
+                  this->cod_exec = codeletFactory::createCodelet(getInstruction(), newParams);
+                }
+              }
       // Getters and setters
       /** \brief get the instruction type
        *  \sa istType
@@ -118,12 +125,17 @@ namespace scm {
       ~decoded_instruction_t() {
         if (type == EXECUTE_INST) {
           // TODO depending on the type this to change the casting
-          unsigned char ** params = reinterpret_cast<unsigned char **> (cod_exec->getParams());
-          delete[] params;
           delete cod_exec;
         }
       }
   };
+
+  // helps the fetch decode determine if the instruction is ready or not for execution
+  // The ilp_controller helps the fetch-decode unit to change this state.
+  enum instruction_state {
+    WAITING, READY, EXECUTION_DONE, DECOMISION, STALL
+  };
+  typedef std::pair<decoded_instruction_t, instruction_state> instruction_state_pair; 
 
   class instructions {
     private:

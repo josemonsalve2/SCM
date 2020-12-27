@@ -1,7 +1,7 @@
 #include "control_store.hpp"
 
 void 
-scm::execution_slot::assign(scm::decoded_instruction_t *newInstruction) {
+scm::execution_slot::assign(scm::instruction_state_pair *newInstruction) {
   this->executionInstruction = newInstruction;
   #pragma omp atomic write
   this->state = BUSY;

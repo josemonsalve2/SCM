@@ -11,7 +11,10 @@ scm::fetch_decode_module::fetch_decode_module(inst_mem_module *const inst_mem,
                                               aliveSignal(aliveSig),
                                               PC(0),
                                               su_number(0), 
-                                              instructionLevelParallelism(ilp_mode)
+                                              instructionLevelParallelism(ilp_mode), 
+                                              stallingInstruction(nullptr), 
+                                              debugger(DEBUGER_MODE)
+                                              
 {
 }
 
@@ -24,109 +27,110 @@ int scm::fetch_decode_module::behavior()
 #pragma omp barrier
   while (*(this->aliveSignal))
   {
-    SCMULATE_INFOMSG(5, "Executing PC = %d", this->PC);
-    TIMERS_COUNTERS_GUARD(
-        this->time_cnt_m->addEvent(this->su_timer_name, FETCH_DECODE_INSTRUCTION););
-    scm::decoded_instruction_t *cur_inst = this->inst_mem_m->fetch(this->PC);
-    SCMULATE_ERROR_IF(0, !cur_inst, "Returned instruction is NULL. This should not happen");
-    if (!cur_inst)
+    // FETCHING PC
+    scm::decoded_instruction_t *new_inst = this->inst_mem_m->fetch(this->PC);
+    SCMULATE_ERROR_IF(0, !new_inst, "Returned instruction is NULL. This should not happen");
+    if (!new_inst)
     {
       *(this->aliveSignal) = false;
       continue;
     }
-    // Depending on the instruction do something
+    // Clear out instructions that are decomissioned
+    this->inst_buff_m.clean_out_queue();
+
+    // Insert new instruction
+    if (this->stallingInstruction == nullptr && this->inst_buff_m.add_instruction(*new_inst)) {
+      instructionLevelParallelism.checkMarkInstructionToSched(this->inst_buff_m.get_latest());
+      SCMULATE_INFOMSG(5, "Executing PC = %d", this->PC);
+      TIMERS_COUNTERS_GUARD(
+          this->time_cnt_m->addEvent(this->su_timer_name, FETCH_DECODE_INSTRUCTION););
+      // Mark instruction for scheduling
+    }
+
     TIMERS_COUNTERS_GUARD(
-        this->time_cnt_m->addEvent(this->su_timer_name, DISPATCH_INSTRUCTION, cur_inst->getInstruction()););
-    bool hasBeenSched = false;
-    bool canSchedule = false;
-    bool showOnlyOnce = false;
-    while (!hasBeenSched)
+        this->time_cnt_m->addEvent(this->su_timer_name, DISPATCH_INSTRUCTION, new_inst->getInstruction()););
+    // Iterate over the instruction buffer (window) looking for instructions to execute
+    for (auto it = this->inst_buff_m.get_buffer()->begin(); it != this->inst_buff_m.get_buffer()->end(); ++it)
     {
-      switch (cur_inst->getType())
-      {
-      case COMMIT:
-        if (!canSchedule) // If we have not been able to schedule, but we already pass the check, ignore the check
-          canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst, false);
-        if (canSchedule) {
-          SCMULATE_INFOMSG(4, "Scheduling and Exec a COMMIT");
-          SCMULATE_INFOMSG(1, "Turning off machine alive = false");
-          hasBeenSched = true;
-          #pragma omp atomic write
-          *(this->aliveSignal) = false;
+      switch (it->second) {
+      case instruction_state::STALL:
+        this->stallingInstruction = &(*it);
+        instructionLevelParallelism.checkMarkInstructionToSched(&(*it));
+        break;
+      case instruction_state::WAITING:
+        instructionLevelParallelism.checkMarkInstructionToSched(&(*it));
+        break;
+      case instruction_state::READY:
+        switch (it->first.getType()) {
+          case COMMIT:
+            // Check if there are other instructions in the buffer that need to be finished
+            if (this->inst_buff_m.get_buffer()->size() == 1) {
+              SCMULATE_INFOMSG(4, "Scheduling and Exec a COMMIT");
+              SCMULATE_INFOMSG(1, "Turning off machine alive = false");
+              #pragma omp atomic write
+              *(this->aliveSignal) = false;
+              it->second = instruction_state::EXECUTION_DONE;
+            }
+            break;
+          case CONTROL_INST:
+            SCMULATE_INFOMSG(4, "Scheduling a CONTROL_INST %s", it->first.getFullInstruction().c_str());
+            TIMERS_COUNTERS_GUARD(
+                this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_CONTROL_INSTRUCTION, it->first.getInstruction()););
+            executeControlInstruction(&it->first);
+            it->second = instruction_state::EXECUTION_DONE;
+            break;
+          case BASIC_ARITH_INST:
+            SCMULATE_INFOMSG(4, "Scheduling a BASIC_ARITH_INST %s", it->first.getFullInstruction().c_str());
+            TIMERS_COUNTERS_GUARD(
+                this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_ARITH_INSTRUCTION););
+            executeArithmeticInstructions(&it->first);
+            it->second = instruction_state::EXECUTION_DONE;
+            break;
+          case EXECUTE_INST:
+            SCMULATE_INFOMSG(4, "Scheduling an EXECUTE_INST %s", it->first.getFullInstruction().c_str());
+            attemptAssignExecuteInstruction(&(*it));
+            break;
+          case MEMORY_INST:
+            SCMULATE_INFOMSG(4, "Scheduling a MEMORY_INST %s", it->first.getFullInstruction().c_str());
+            attemptAssignExecuteInstruction(&(*it));
+            break;
+          default:
+            SCMULATE_ERROR(0, "Instruction not recognized");
+            #pragma omp atomic write
+            *(this->aliveSignal) = false;
+            break;
         }
         break;
-      case CONTROL_INST:
-        if (!canSchedule) // If we have not been able to schedule, but we already pass the check, ignore the check. Not enough resources
-          canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst, false);
-        if (canSchedule) {
-          SCMULATE_INFOMSG(4, "Scheduling a CONTROL_INST %s", cur_inst->getFullInstruction().c_str());
-          hasBeenSched = true;
-          TIMERS_COUNTERS_GUARD(
-              this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_CONTROL_INSTRUCTION, cur_inst->getInstruction()););
-          executeControlInstruction(cur_inst);
-          TIMERS_COUNTERS_GUARD(
-              this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
-          instructionLevelParallelism.instructionFinished(cur_inst);
-        }
-        break;
-      case BASIC_ARITH_INST:
-        if (!canSchedule) // If we have not been able to schedule, but we already pass the check, ignore the check. Not enough resources
-          canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst, false);
-        if (canSchedule) {
-          SCMULATE_INFOMSG(4, "Scheduling a BASIC_ARITH_INST %s", cur_inst->getFullInstruction().c_str());
-          hasBeenSched = true;
-          TIMERS_COUNTERS_GUARD(
-              this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_ARITH_INSTRUCTION););
-          executeArithmeticInstructions(cur_inst);
-          TIMERS_COUNTERS_GUARD(
-              this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
-          instructionLevelParallelism.instructionFinished(cur_inst);
-        }
-        break;
-      case EXECUTE_INST:
-        if (!canSchedule) // If we have not been able to schedule, but we already pass the check, ignore the check. Not enough resources
-          canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst);
-        if (canSchedule) {
-          SCMULATE_INFOMSG(4, "Scheduling an EXECUTE_INST %s", cur_inst->getFullInstruction().c_str());
-          hasBeenSched = attemptAssignExecuteInstruction(cur_inst);
-          TIMERS_COUNTERS_GUARD(
-              this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
-        }
-        break;
-      case MEMORY_INST:
-        if (!canSchedule) // If we have not been able to schedule, but we already pass the check, ignore the check. Not enough resources
-          canSchedule = instructionLevelParallelism.checkMarkInstructionToSched(cur_inst);
-        if (canSchedule) {
-          SCMULATE_INFOMSG(4, "Scheduling a MEMORY_INST %s", cur_inst->getFullInstruction().c_str());
-          hasBeenSched = attemptAssignExecuteInstruction(cur_inst);
-          TIMERS_COUNTERS_GUARD(
-              this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
-        }
+      
+      case instruction_state::EXECUTION_DONE:
+        // check if stalling instruction
+        if (this->stallingInstruction != nullptr && &(*it) == this->stallingInstruction)
+          this->stallingInstruction = nullptr;
+        instructionLevelParallelism.instructionFinished(&(*it));
+        it->second = instruction_state::DECOMISION;
         break;
       default:
-        SCMULATE_ERROR(0, "Instruction not recognized");
-        hasBeenSched = true;
-        #pragma omp atomic write
-        *(this->aliveSignal) = false;
         break;
       }
+      TIMERS_COUNTERS_GUARD(
+        this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
 
-      if (!canSchedule && !showOnlyOnce) {
-        SCMULATE_INFOMSG(4, "Instruction %s cannot be scheduled yet", cur_inst->getFullInstruction().c_str());
-        showOnlyOnce = true;
-        TIMERS_COUNTERS_GUARD(
-              this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
-      }
-      // Check if instructions have finished
+      // Check if any instructions have finished
       for (uint32_t i = 0; i < this->ctrl_st_m->numExecutors(); i++) {
         if (this->ctrl_st_m->get_executor(i)->is_done()) {
-          SCMULATE_INFOMSG(5, "Instruction %s has finished executing", this->ctrl_st_m->get_executor(i)->getHead()->getFullInstruction().c_str());
-          instructionLevelParallelism.instructionFinished(this->ctrl_st_m->get_executor(i)->getHead());
+          this->ctrl_st_m->get_executor(i)->getHead()->second = instruction_state::EXECUTION_DONE;
+          SCMULATE_INFOMSG(5, "Instruction %s has finished executing", this->ctrl_st_m->get_executor(i)->getHead()->first.getFullInstruction().c_str());
+
           this->ctrl_st_m->get_executor(i)->empty_slot();
         }
       }
+
     }
-    this->PC++;
+    // Progress PC, if not stalling
+    if (this->stallingInstruction == nullptr) {
+      printf ("incrementing PC \n");
+      this->PC++;
+    }
   }
   SCMULATE_INFOMSG(1, "Shutting down fetch decode unit");
   TIMERS_COUNTERS_GUARD(
@@ -465,7 +469,7 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
   }
 }
 
-bool scm::fetch_decode_module::attemptAssignExecuteInstruction(scm::decoded_instruction_t *inst)
+bool scm::fetch_decode_module::attemptAssignExecuteInstruction(scm::instruction_state_pair *inst)
 {
   // TODO: Jose this is the point where you can select scheduing policies
   static uint32_t curSched = 0;

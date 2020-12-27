@@ -6,4 +6,9 @@ namespace scm {
     enum ILP_MODES {SEQUENTIAL, SUPERSCALAR};
 }
 
+#define INSTRUCTIONS_BUFFER_SIZE 64
+#ifndef DEBUGER_MODE
+#define DEBUGER_MODE 0
+#endif
+
 #endif // __SCMULATE_SYS_CONFIG__

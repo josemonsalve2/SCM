@@ -128,7 +128,7 @@ int scm::fetch_decode_module::behavior()
     }
     // Progress PC, if not stalling
     if (this->stallingInstruction == nullptr) {
-      SCMULATE_INFOMSG(5"incrementing PC \n");
+      SCMULATE_INFOMSG(5, "incrementing PC");
       this->PC++;
     }
   }

@@ -43,13 +43,19 @@ namespace scm {
         // Check if we have reached the limit size
         if (this->instruction_buffer.size() >= INSTRUCTIONS_BUFFER_SIZE || (this->instruction_buffer.size() != 0  && this->instruction_buffer.back().second == STALL))
           return false;
-        this->instruction_buffer.emplace_back(instruction_state_pair(new_instruction, WAITING)); // Call constructor
+        instruction_state_pair newPair;
+        // Avoid calling copy constructor twice
+        newPair.first = new decoded_instruction_t(new_instruction);
+        newPair.second = WAITING;
+        
+        this->instruction_buffer.push_back(newPair); // Call constructor
         return true;
       }
 
       void clean_out_queue() {
         for (auto it = instruction_buffer.begin(); it != instruction_buffer.end() ;) {
           if (it->second == DECOMISION) {
+            delete it->first;
             it = instruction_buffer.erase(it);  
           } else {
             ++it;

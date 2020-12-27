@@ -154,9 +154,11 @@ namespace scm {
       * it will add the list of detected hazards to the tracking tables
       */
       bool inline checkMarkInstructionToSched(instruction_state_pair * inst_state) {
-        decoded_instruction_t * inst = &(inst_state->first);
-        if (inst->getType() == instType::COMMIT && (busyRegisters.size() != 0 || memCtrl.numberOfRanges() != 0))
+        decoded_instruction_t * inst = (inst_state->first);
+        if (inst->getType() == instType::COMMIT && (busyRegisters.size() != 0 || memCtrl.numberOfRanges() != 0)) {
+          inst_state->second = instruction_state::STALL;
           return false;
+        }
         // In memory instructions we need to figure out if there is a hazard in the memory
         if (inst->getType() == instType::MEMORY_INST) {
           // Check if the destination/source register is marked as busy
@@ -164,6 +166,7 @@ namespace scm {
           unsigned long base_addr = 0;
           unsigned long offset = 0;
           if (hazardExist(inst->getOp1().value.reg.reg_name, inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR))) {
+            inst_state->second = instruction_state::STALL;
             return false;
           } else if (inst->getInstruction() != "LDIMM") {
             // Check for the memory address
@@ -171,8 +174,10 @@ namespace scm {
               // Load address immediate value
               base_addr = inst->getOp2().value.immediate;
             } else if (inst->getOp2().type == operand_t::REGISTER) {
-              if (hazardExist(inst->getOp2().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR))>>2))
+              if (hazardExist(inst->getOp2().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR))>>2)) {
+                inst_state->second = instruction_state::STALL;
                 return false;
+              }
               // Load address register value
               decoded_reg_t reg = inst->getOp2().value.reg;
               unsigned char * reg_ptr = reg.reg_ptr;
@@ -194,8 +199,10 @@ namespace scm {
                 // Load address immediate value
                 offset = inst->getOp3().value.immediate;
               } else if (inst->getOp3().type == operand_t::REGISTER) {
-                if (hazardExist(inst->getOp3().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR))>>4))
+                if (hazardExist(inst->getOp3().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR))>>4)) {
+                  inst_state->second = instruction_state::STALL;
                   return false;
+                }
                 // Load address register value
                 decoded_reg_t reg = inst->getOp3().value.reg;
                 unsigned char * reg_ptr = reg.reg_ptr;
@@ -212,20 +219,28 @@ namespace scm {
               }
             }
             memory_location newRange (reinterpret_cast<l2_memory_t> (base_addr + offset), size_dest);
-            if (memCtrl.itOverlaps( newRange ))
+            if (memCtrl.itOverlaps( newRange )) {
+              inst_state->second = instruction_state::STALL;
               return false;
+            }
 
             // The instruction is ready to schedule
             memCtrl.addRange(newRange);
           }
 
         } else {
-          if (inst->getOp1().type == operand_t::REGISTER && hazardExist(inst->getOp1().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR))))
+          if (inst->getOp1().type == operand_t::REGISTER && hazardExist(inst->getOp1().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR)))) {
+            inst_state->second = instruction_state::STALL;
             return false;
-          if (inst->getOp2().type == operand_t::REGISTER && hazardExist(inst->getOp2().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR))>>2)) 
+          }
+          if (inst->getOp2().type == operand_t::REGISTER && hazardExist(inst->getOp2().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR))>>2)) {
+            inst_state->second = instruction_state::STALL;
             return false;
-          if (inst->getOp3().type == operand_t::REGISTER && hazardExist(inst->getOp3().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR))>>4)) 
+          }
+          if (inst->getOp3().type == operand_t::REGISTER && hazardExist(inst->getOp3().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR))>>4)) {
+            inst_state->second = instruction_state::STALL;
             return false;
+          }
         }
 
         // Mark the registers
@@ -247,11 +262,12 @@ namespace scm {
           register_reservation reserv(inst->getOp3().value.reg.reg_name, io);
           busyRegisters.insert(reserv);          
           }
+        inst_state->second = instruction_state::READY;
         return true;
       }
 
       void inline instructionFinished(instruction_state_pair * inst_state) {
-        decoded_instruction_t * inst = &inst_state->first;
+        decoded_instruction_t * inst = inst_state->first;
         // In memory instructions we need to figure out if there is a hazard in the memory
         if (inst->getType() == instType::MEMORY_INST) {
           int32_t size_dest = inst->getOp1().value.reg.reg_size_bytes;

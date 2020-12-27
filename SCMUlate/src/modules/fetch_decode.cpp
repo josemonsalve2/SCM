@@ -61,7 +61,7 @@ int scm::fetch_decode_module::behavior()
         instructionLevelParallelism.checkMarkInstructionToSched(&(*it));
         break;
       case instruction_state::READY:
-        switch (it->first.getType()) {
+        switch (it->first->getType()) {
           case COMMIT:
             // Check if there are other instructions in the buffer that need to be finished
             if (this->inst_buff_m.get_buffer()->size() == 1) {
@@ -73,25 +73,25 @@ int scm::fetch_decode_module::behavior()
             }
             break;
           case CONTROL_INST:
-            SCMULATE_INFOMSG(4, "Scheduling a CONTROL_INST %s", it->first.getFullInstruction().c_str());
+            SCMULATE_INFOMSG(4, "Scheduling a CONTROL_INST %s", it->first->getFullInstruction().c_str());
             TIMERS_COUNTERS_GUARD(
-                this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_CONTROL_INSTRUCTION, it->first.getInstruction()););
-            executeControlInstruction(&it->first);
+                this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_CONTROL_INSTRUCTION, it->first->getInstruction()););
+            executeControlInstruction(it->first);
             it->second = instruction_state::EXECUTION_DONE;
             break;
           case BASIC_ARITH_INST:
-            SCMULATE_INFOMSG(4, "Scheduling a BASIC_ARITH_INST %s", it->first.getFullInstruction().c_str());
+            SCMULATE_INFOMSG(4, "Scheduling a BASIC_ARITH_INST %s", it->first->getFullInstruction().c_str());
             TIMERS_COUNTERS_GUARD(
                 this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_ARITH_INSTRUCTION););
-            executeArithmeticInstructions(&it->first);
+            executeArithmeticInstructions(it->first);
             it->second = instruction_state::EXECUTION_DONE;
             break;
           case EXECUTE_INST:
-            SCMULATE_INFOMSG(4, "Scheduling an EXECUTE_INST %s", it->first.getFullInstruction().c_str());
+            SCMULATE_INFOMSG(4, "Scheduling an EXECUTE_INST %s", it->first->getFullInstruction().c_str());
             attemptAssignExecuteInstruction(&(*it));
             break;
           case MEMORY_INST:
-            SCMULATE_INFOMSG(4, "Scheduling a MEMORY_INST %s", it->first.getFullInstruction().c_str());
+            SCMULATE_INFOMSG(4, "Scheduling a MEMORY_INST %s", it->first->getFullInstruction().c_str());
             attemptAssignExecuteInstruction(&(*it));
             break;
           default:
@@ -119,7 +119,7 @@ int scm::fetch_decode_module::behavior()
       for (uint32_t i = 0; i < this->ctrl_st_m->numExecutors(); i++) {
         if (this->ctrl_st_m->get_executor(i)->is_done()) {
           this->ctrl_st_m->get_executor(i)->getHead()->second = instruction_state::EXECUTION_DONE;
-          SCMULATE_INFOMSG(5, "Instruction %s has finished executing", this->ctrl_st_m->get_executor(i)->getHead()->first.getFullInstruction().c_str());
+          SCMULATE_INFOMSG(5, "Instruction %s has finished executing", this->ctrl_st_m->get_executor(i)->getHead()->first->getFullInstruction().c_str());
 
           this->ctrl_st_m->get_executor(i)->empty_slot();
         }

@@ -135,7 +135,7 @@ namespace scm {
   enum instruction_state {
     WAITING, READY, EXECUTION_DONE, DECOMISION, STALL
   };
-  typedef std::pair<decoded_instruction_t, instruction_state> instruction_state_pair; 
+  typedef std::pair<decoded_instruction_t*, instruction_state> instruction_state_pair; 
 
   class instructions {
     private:

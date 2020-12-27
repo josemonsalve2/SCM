@@ -6,8 +6,8 @@
 IMPLEMENT_CODELET(vecAdd_2048L,
   // Obtaining the parameters
   unsigned char *reg1 = this->getParams().getParamAs(0); // Getting register 1
-  unsigned char *reg2 = this->getParams().getParamAs(0); // Getting register 2
-  unsigned char *reg3 = this->getParams().getParamAs(0); // Getting register 3
+  unsigned char *reg2 = this->getParams().getParamAs(1); // Getting register 2
+  unsigned char *reg3 = this->getParams().getParamAs(2); // Getting register 3
   double *A = reinterpret_cast<double*>(reg2);
   double *B = reinterpret_cast<double*>(reg3);
   double *C = reinterpret_cast<double*>(reg1);

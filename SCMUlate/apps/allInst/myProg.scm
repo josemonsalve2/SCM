@@ -17,7 +17,7 @@
     BLET R64B_1, R64B_2, 2;
     BLET R64B_1, R64B_2, 1; // Ignored
     ADD R64B_1, R64B_2, 100; 
-    COD print R64B_1, 8;
+    COD print R64B_1, 8; // PC = 16
     ADD R64B_1, R64B_1, 100; 
     ADD R64B_1, R64B_1, 100; 
     ADD R64B_2, R64B_1, R64B_1; 

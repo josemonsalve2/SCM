@@ -21,7 +21,7 @@ scm::cu_executor_module::behavior() {
   while (*(this->aliveSignal)) {
     if (myExecutor->is_busy()) {
       SCMULATE_INFOMSG(4, "  CUMEM[%d]: Executing instruction ", cu_executor_id);
-      scm::decoded_instruction_t * curInstruction = &myExecutor->getHead()->first;
+      scm::decoded_instruction_t * curInstruction = myExecutor->getHead()->first;
       if (curInstruction->getType() == scm::instType::MEMORY_INST) {
         TIMERS_COUNTERS_GUARD(
           #ifdef PAPI_COUNT
@@ -63,7 +63,7 @@ scm::cu_executor_module::behavior() {
  
 
 int scm::cu_executor_module::codeletExecutor() {
-    scm::decoded_instruction_t * curInstruction = &myExecutor->getHead()->first;
+    scm::decoded_instruction_t * curInstruction = myExecutor->getHead()->first;
     scm::codelet * curCodelet = curInstruction->getExecCodelet();
     curCodelet->setExecutor(this);
     curCodelet->implementation();

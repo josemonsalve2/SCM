@@ -1,4 +1,4 @@
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=skylake")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -march=skylake")
 # MAT_MUL CODELET
 set( mat_mul_cod_src MatMul.cpp )
 set( mat_mul_cod_inc

@@ -10,10 +10,9 @@
 
 IMPLEMENT_CODELET(LoadSqTileGPU_2048L,
   // Obtaining the parameters
-  unsigned char ** args = static_cast<unsigned char **>(this->getParams());
-  unsigned char *reg1 = args[0]; // Getting register 1
-  unsigned char *reg2 = args[1]; // Getting register 2
-  unsigned char *reg3 = args[2]; // Getting register 3
+  unsigned char *reg1 = this->getParams().getParamAs(0); // Getting register 1
+  unsigned char *reg2 = this->getParams().getParamAs(1); // Getting register 2
+  unsigned char *reg3 = this->getParams().getParamAs(2); // Getting register 3
   double *destReg = reinterpret_cast<double*>(reg1);
   uint64_t address = reinterpret_cast<uint8_t*>(reg2)[0];
   uint64_t ldistance = reinterpret_cast<uint64_t>(reg3);
@@ -29,10 +28,9 @@ IMPLEMENT_CODELET(LoadSqTileGPU_2048L,
 
 IMPLEMENT_CODELET(MatMultGPU_2048L,
   // Obtaining the parameters
-  unsigned char ** args = static_cast<unsigned char **>(this->getParams());
-  unsigned char *reg1 = args[0]; // Getting register 1
-  unsigned char *reg2 = args[1]; // Getting register 2
-  unsigned char *reg3 = args[2]; // Getting register 3
+  unsigned char *reg1 = this->getParams().getParamAs(0); // Getting register 1
+  unsigned char *reg2 = this->getParams().getParamAs(1); // Getting register 2
+  unsigned char *reg3 = this->getParams().getParamAs(2); // Getting register 3
   double *A = reinterpret_cast<double*>(reg2);
   double *B = reinterpret_cast<double*>(reg3);
   double *C = reinterpret_cast<double*>(reg1);
@@ -53,10 +51,9 @@ _Pragma("omp target variant dispatch use_device_ptr(A, B, C)")
 
 IMPLEMENT_CODELET(StoreSqTileGPU_2048L,
   // Obtaining the parameters
-  unsigned char ** args = static_cast<unsigned char **>(this->getParams());
-  unsigned char *reg1 = args[0]; // Getting register 1
-  unsigned char *reg2 = args[1]; // Getting register 2
-  unsigned char *reg3 = args[2]; // Getting register 3
+  unsigned char *reg1 = this->getParams().getParamAs(0); // Getting register 1
+  unsigned char *reg2 = this->getParams().getParamAs(1); // Getting register 2
+  unsigned char *reg3 = this->getParams().getParamAs(2); // Getting register 3
   double *sourceReg = reinterpret_cast<double*>(reg1);
   uint64_t address = reinterpret_cast<uint8_t*>(reg2)[0];
   uint64_t ldistance = reinterpret_cast<uint64_t>(reg3);

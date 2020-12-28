@@ -92,7 +92,22 @@ namespace scm {
       /** \brief set the op3
        */
       inline void setOp3(operand_t newOpVal) { op3 = newOpVal; }
-      /** \brief set the op1 
+      /** \brief get operand by number
+       * TODO: This is wrong in so many levels. We need to remove the limit
+       * on three operands. It should be a little bit more clever than this.
+       */
+      inline operand_t& getOp(int num) {
+        if (num < 1 || num > 3) {
+          SCMULATE_ERROR(0, "getOp(num) called with an incorrect operand number");
+          num = (num % 3) + 1;
+        } 
+        if (num == 1)
+          return getOp1();
+        else if (num == 2)
+          return getOp2();
+        return getOp3();
+      }
+      /** \brief get the op1 
        */
       inline operand_t& getOp1() { return op1; }
       /** \brief get the op2
@@ -121,6 +136,8 @@ namespace scm {
       inline void setOp3Str(std::string str) { op3_s = str; }
 
       bool decodeOperands(reg_file_module * const reg_file_m);
+
+      std::vector<memory_location> getMemoryRange(); 
 
       ~decoded_instruction_t() {
         if (type == EXECUTE_INST) {

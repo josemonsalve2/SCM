@@ -99,4 +99,61 @@ namespace scm {
       }
       return true;
     }
+
+    std::vector<memory_location>
+    decoded_instruction_t::getMemoryRange() {
+      std::vector<memory_location> ret_vector;
+      if (this->getType() == instType::MEMORY_INST) {
+        int32_t size_dest = this->getOp1().value.reg.reg_size_bytes;
+        unsigned long base_addr = 0;
+        unsigned long offset = 0;
+        if (this->getInstruction() != "LDIMM") {
+          // Check for the memory address
+          if (this->getOp2().type == operand_t::IMMEDIATE_VAL) {
+            // Load address immediate value
+            base_addr = this->getOp2().value.immediate;
+          } else if (this->getOp2().type == operand_t::REGISTER) {
+            // Load address register value
+            decoded_reg_t reg = this->getOp2().value.reg;
+            unsigned char *reg_ptr = reg.reg_ptr;
+            int32_t size_reg_bytes = reg.reg_size_bytes;
+            int32_t i, j;
+            for (i = size_reg_bytes - 1, j = 0; j < 8 || i >= 0; --i, ++j)
+            {
+              unsigned long temp = reg_ptr[i];
+              temp <<= j * 8;
+              base_addr += temp;
+            }
+          } else {
+            SCMULATE_ERROR(0, "Incorrect operand type");
+          }
+        }
+        // Check for offset only on the thisructions with such operand
+        if (this->getInstruction() == "LDOFF" || this->getInstruction() == "STOFF") {
+          if (this->getOp3().type == operand_t::IMMEDIATE_VAL) {
+            // Load address immediate value
+            offset = this->getOp3().value.immediate;
+          } else if (this->getOp3().type == operand_t::REGISTER) {
+            // Load address register value
+            decoded_reg_t reg = this->getOp3().value.reg;
+            unsigned char *reg_ptr = reg.reg_ptr;
+            int32_t size_reg_bytes = reg.reg_size_bytes;
+            int32_t i, j;
+            for (i = size_reg_bytes - 1, j = 0; j < 8 || i >= 0; --i, ++j)
+            {
+              unsigned long temp = reg_ptr[i];
+              temp <<= j * 8;
+              offset += temp;
+            }
+          } else {
+            SCMULATE_ERROR(0, "Incorrect operand type");
+          }
+        }
+        memory_location newRange(reinterpret_cast<l2_memory_t>(base_addr + offset), size_dest);
+        ret_vector.push_back(newRange);
+      } else if (this->getType() == instType::EXECUTE_INST && this->cod_exec->isMemoryCodelet()) {
+        ret_vector = this->cod_exec->getMemoryRange();
+      }
+      return ret_vector;
+    }
 }

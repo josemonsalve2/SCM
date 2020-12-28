@@ -73,6 +73,25 @@ namespace scm {
     std::uint_fast16_t op_in_out;
   };
 
+  struct memory_location
+  {
+    l2_memory_t memoryAddress;
+    uint32_t size;
+
+    memory_location() : memoryAddress(0), size(0) {}
+    memory_location(l2_memory_t memAddr, uint32_t nsize) : memoryAddress(memAddr), size(nsize) {}
+    memory_location(const memory_location &other) : memoryAddress(other.memoryAddress), size(other.size) {}
+    l2_memory_t upperLimit() const { return memoryAddress + size; }
+    inline bool operator<(const memory_location &other) const
+    {
+      return this->memoryAddress < other.memoryAddress;
+    }
+    inline bool operator==(const memory_location &other) const
+    {
+      return (this->memoryAddress == other.memoryAddress && this->size == other.size);
+    }
+  };
+
   // SCM specific insctructions
   const inst_def_t COMMIT_INST = DEF_INST(COMMIT, "[ ]*(COMMIT;).*", 0, OP_IO::NO_RD_WR);                                          /* COMMIT; */
   const inst_def_t LABEL_INST = DEF_INST(LABEL,   "[ ]*([a-zA-Z0-9_]+)[ ]*:.*", 0, OP_IO::NO_RD_WR);                                 /* myLabel: */
@@ -161,6 +180,10 @@ namespace scm {
       reg_number = other.reg_number;
       reg_ptr = other.reg_ptr;
     }
+
+    bool operator==(decoded_reg_t const & other) {
+      return other.reg_ptr == this->reg_ptr;
+    }
   };
 
   /** \brief Decoded operand structure
@@ -181,6 +204,7 @@ namespace scm {
     value_t value;
     bool read;
     bool write;
+    bool full_empty; // Used by ILP to determine if dependency is satisfied or not true=full and false=empty
 
     operand_t() {
       type = UNKNOWN;

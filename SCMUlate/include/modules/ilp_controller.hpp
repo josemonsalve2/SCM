@@ -65,24 +65,6 @@
 
 namespace scm {
   
-  struct memory_location
-  {
-    l2_memory_t memoryAddress;
-    uint32_t size;
-
-    memory_location() : memoryAddress(0), size(0) {}
-    memory_location(l2_memory_t memAddr, uint32_t nsize) : memoryAddress(memAddr), size(nsize) {}
-    memory_location(const memory_location &other) : memoryAddress(other.memoryAddress), size(other.size) {}
-    l2_memory_t upperLimit() const { return memoryAddress + size; }
-    inline bool operator<(const memory_location &other) const
-    {
-      return this->memoryAddress < other.memoryAddress;
-    }
-    inline bool operator==(const memory_location &other) const
-    {
-      return (this->memoryAddress == other.memoryAddress && this->size == other.size);
-    }
-  };
   struct register_reservation
   {
     std::string reg_name;
@@ -159,90 +141,35 @@ namespace scm {
           inst_state->second = instruction_state::STALL;
           return false;
         }
+
+        if (inst->getOp1().type == operand_t::REGISTER && hazardExist(inst->getOp1().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR)))) {
+          inst_state->second = instruction_state::STALL;
+          return false;
+        }
+        if (inst->getOp2().type == operand_t::REGISTER && hazardExist(inst->getOp2().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR))>>2)) {
+          inst_state->second = instruction_state::STALL;
+          return false;
+        }
+        if (inst->getOp3().type == operand_t::REGISTER && hazardExist(inst->getOp3().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR))>>4)) {
+          inst_state->second = instruction_state::STALL;
+          return false;
+        }
+
         // In memory instructions we need to figure out if there is a hazard in the memory
         if (inst->getType() == instType::MEMORY_INST) {
-          // Check if the destination/source register is marked as busy
-          int32_t size_dest = inst->getOp1().value.reg.reg_size_bytes;
-          unsigned long base_addr = 0;
-          unsigned long offset = 0;
-          if (hazardExist(inst->getOp1().value.reg.reg_name, inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR))) {
-            inst_state->second = instruction_state::STALL;
-            return false;
-          } else if (inst->getInstruction() != "LDIMM") {
-            // Check for the memory address
-            if (inst->getOp2().type == operand_t::IMMEDIATE_VAL) {
-              // Load address immediate value
-              base_addr = inst->getOp2().value.immediate;
-            } else if (inst->getOp2().type == operand_t::REGISTER) {
-              if (hazardExist(inst->getOp2().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR))>>2)) {
-                inst_state->second = instruction_state::STALL;
-                return false;
-              }
-              // Load address register value
-              decoded_reg_t reg = inst->getOp2().value.reg;
-              unsigned char * reg_ptr = reg.reg_ptr;
-              int32_t size_reg_bytes = reg.reg_size_bytes;
-              int32_t i, j;
-              for (i = size_reg_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
-                unsigned long temp = reg_ptr[i];
-                temp <<= j*8;
-                base_addr += temp;
-              }
-            } else {
-              SCMULATE_ERROR(0, "Incorrect operand type");
-              return false; // This may cause the system to get stuck
-            }
-
-            // Check for offset only on the instructions with such operand
-            if (inst->getInstruction() == "LDOFF" || inst->getInstruction() == "STOFF") {
-              if (inst->getOp3().type == operand_t::IMMEDIATE_VAL) {
-                // Load address immediate value
-                offset = inst->getOp3().value.immediate;
-              } else if (inst->getOp3().type == operand_t::REGISTER) {
-                if (hazardExist(inst->getOp3().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR))>>4)) {
-                  inst_state->second = instruction_state::STALL;
-                  return false;
-                }
-                // Load address register value
-                decoded_reg_t reg = inst->getOp3().value.reg;
-                unsigned char * reg_ptr = reg.reg_ptr;
-                int32_t size_reg_bytes = reg.reg_size_bytes;
-                int32_t i, j;
-                for (i = size_reg_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
-                  unsigned long temp = reg_ptr[i];
-                  temp <<= j*8;
-                  offset += temp;
-                }
-              } else {
-                SCMULATE_ERROR(0, "Incorrect operand type");
-                return false; // This may cause the system to get stuck
-              }
-            }
-            memory_location newRange (reinterpret_cast<l2_memory_t> (base_addr + offset), size_dest);
-            if (memCtrl.itOverlaps( newRange )) {
+          // Check all the ranges
+          std::vector <memory_location> ranges = inst->getMemoryRange();
+          for (auto it = ranges.begin(); it != ranges.end(); ++it) {
+            if (memCtrl.itOverlaps( *it )) {
               inst_state->second = instruction_state::STALL;
               return false;
             }
-
-            // The instruction is ready to schedule
-            memCtrl.addRange(newRange);
           }
 
-        } else {
-          if (inst->getOp1().type == operand_t::REGISTER && hazardExist(inst->getOp1().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR)))) {
-            inst_state->second = instruction_state::STALL;
-            return false;
-          }
-          if (inst->getOp2().type == operand_t::REGISTER && hazardExist(inst->getOp2().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR))>>2)) {
-            inst_state->second = instruction_state::STALL;
-            return false;
-          }
-          if (inst->getOp3().type == operand_t::REGISTER && hazardExist(inst->getOp3().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR))>>4)) {
-            inst_state->second = instruction_state::STALL;
-            return false;
-          }
-        }
-
+          // The instruction is ready to schedule, let's mark the ranges as busy
+          for (auto it = ranges.begin(); it != ranges.end(); ++it)
+            memCtrl.addRange( *it );
+        } 
         // Mark the registers
         if (inst->getOp1().type == operand_t::REGISTER) {
           uint_fast16_t io = inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR);
@@ -270,49 +197,10 @@ namespace scm {
         decoded_instruction_t * inst = inst_state->first;
         // In memory instructions we need to figure out if there is a hazard in the memory
         if (inst->getType() == instType::MEMORY_INST) {
-          int32_t size_dest = inst->getOp1().value.reg.reg_size_bytes;
-          unsigned long base_addr = 0;
-          unsigned long offset = 0;
-          if (inst->getInstruction() != "LDIMM") {
-            // Check for the memory address
-            if (inst->getOp2().type == operand_t::IMMEDIATE_VAL) {
-              // Load address immediate value
-              base_addr = inst->getOp2().value.immediate;
-            } else if (inst->getOp2().type == operand_t::REGISTER) {
-              // Load address register value
-              decoded_reg_t reg = inst->getOp2().value.reg;
-              unsigned char * reg_ptr = reg.reg_ptr;
-              int32_t size_reg_bytes = reg.reg_size_bytes;
-              int32_t i, j;
-              for (i = size_reg_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
-                unsigned long temp = reg_ptr[i];
-                temp <<= j*8;
-                base_addr += temp;
-              }
-            }
-
-            // Check for offset only on the instructions with such operand
-            if (inst->getInstruction() == "LDOFF" || inst->getInstruction() == "STOFF") {
-              if (inst->getOp3().type == operand_t::IMMEDIATE_VAL) {
-                // Load address immediate value
-                offset = inst->getOp3().value.immediate;
-              } else if (inst->getOp3().type == operand_t::REGISTER) {
-                // Load address register value
-                decoded_reg_t reg = inst->getOp3().value.reg;
-                unsigned char * reg_ptr = reg.reg_ptr;
-                int32_t size_reg_bytes = reg.reg_size_bytes;
-                int32_t i, j;
-                for (i = size_reg_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
-                  unsigned long temp = reg_ptr[i];
-                  temp <<= j*8;
-                  offset += temp;
-                }
-              }
-            }
-            memory_location newRange (reinterpret_cast<l2_memory_t> (base_addr + offset), size_dest);
-            memCtrl.removeRange( newRange );
-          }
-        }
+          std::vector <memory_location> ranges = inst->getMemoryRange();
+          for (auto it = ranges.begin(); it != ranges.end(); ++it)
+            memCtrl.removeRange( *it );
+        } 
 
         if (inst->getOp1().type == operand_t::REGISTER) {
           uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR));

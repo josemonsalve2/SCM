@@ -2,11 +2,13 @@
 #define __CODELET__
 
 #include <map>
+#include <vector>
 #include <iostream>
 #include "SCMUlate_tools.hpp"
 #include "instructions_def.hpp"
 
 #define MAX_NUM_PARAMS_CODELETS 3
+#define MAX_NUM_OPERANDS 3
 namespace scm {
   class cu_executor_module;
 
@@ -79,6 +81,8 @@ namespace scm {
       codelet (uint32_t nparms, codelet_params params, std::uint_fast16_t opIO) : numParams(nparms), params(params), op_in_out(opIO) {};
       codelet (const codelet &other) : numParams(other.numParams), params(other.params), op_in_out(other.op_in_out), myExecutor(other.myExecutor) {}
       virtual void implementation() = 0;
+      virtual bool isMemoryCodelet() { return false; }
+      virtual std::vector<memory_location> getMemoryRange() { return std::vector<memory_location>(); };
       inline codelet_params getParams() { return this->params; };
       inline std::uint_fast16_t& getOpIO() { return op_in_out; };
       inline void setExecutor (cu_executor_module * exec) {this->myExecutor = exec;}
@@ -127,6 +131,39 @@ namespace scm {
     }; \
     \
   }
+
+#define DEFINE_MEMORY_CODELET(name, nparms, opIO) \
+  namespace scm { \
+   class COD_CLASS_NAME(name) : public codelet { \
+    public: \
+      static bool hasBeenRegistered; \
+      /* Constructors */ \
+      static void codeletRegistrer() __attribute__((constructor)); \
+      COD_CLASS_NAME(name) (codelet_params parms) : codelet(nparms, parms, opIO) {} \
+      COD_CLASS_NAME(name) (const COD_CLASS_NAME(name) &other) : codelet(other) {} \
+      \
+      /* Helper functions */ \
+      static codelet* codeletCreator(codelet_params usedParams) ; \
+      static void registerCodelet() { \
+        creatorFnc thisFunc = codeletCreator; \
+        codeletFactory::registerCreator( #name, thisFunc); \
+      }\
+      \
+      /* Implementation function */ \
+      virtual void implementation(); \
+      virtual void isMemoryCodelet() { return true; } \
+      virtual std::vector<scm::memory_location> getMemoryRange(); \
+      \
+      /* destructor */ \
+      ~COD_CLASS_NAME(name)() {} \
+    }; \
+    \
+  }
+
+#define MEMRANGE_CODELET(name, code) \
+    std::vector<sc::memory_location> \
+    COD_CLASS_NAME(name)::getMemoryRange() { code; } 
+
 
 #define IMPLEMENT_CODELET(name,code) \
   namespace scm {\

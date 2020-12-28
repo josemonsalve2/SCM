@@ -49,24 +49,6 @@ int SCMUlate();
 int main (int argc, char * argv[]) {
   unsigned char * memory;
   
-  double warmA[NumElements_AB];
-  double warmB[NumElements_AB];
-  double warmC[NumElements_C];
-  scm::codelet_params vars;
-  vars.getParamAs(0) = reinterpret_cast<unsigned char*>(warmA); // Getting register 1
-  vars.getParamAs(1) = reinterpret_cast<unsigned char*>(warmB); // Getting register 2
-  vars.getParamAs(2) = reinterpret_cast<unsigned char*>(warmC); // Getting register 3
-#ifdef DECLARE_VARIANT
-  // OMP TARGET WARM UP
-  int isDevice= -1;
-#pragma omp target map(tofrom:isDevice)
-  isDevice = omp_is_initial_device();
-  printf("Is running in the %s\n", (isDevice? "Host": "Device"));
-  scm::_cod_MatMultGPU_2048L warmCodGPU(vars);
-  warmCodGPU.implementation();
-#endif
-  scm::_cod_MatMult_2048L warmCod(vars);
-  warmCod.implementation();
   parseProgramOptions(argc, argv);
   // TODO: Harcoding these for now, until we have a general 
   if (strcmp(program_options.fileName, "matMul1tile.scm") == 0 || strcmp(program_options.fileName, "matMul1tileGPU.scm") == 0) {
@@ -98,6 +80,25 @@ int main (int argc, char * argv[]) {
             << "KDIM = " << KDIM << std::endl
             << "B_OFFSET = " << B_offset << std::endl
             << "C_OFFSET = " << C_offset << std::endl;
+
+  double warmA[NumElements_AB];
+  double warmB[NumElements_AB];
+  double warmC[NumElements_C];
+  scm::codelet_params vars;
+  vars.getParamAs(0) = reinterpret_cast<unsigned char*>(warmA); // Getting register 1
+  vars.getParamAs(1) = reinterpret_cast<unsigned char*>(warmB); // Getting register 2
+  vars.getParamAs(2) = reinterpret_cast<unsigned char*>(warmC); // Getting register 3
+#ifdef DECLARE_VARIANT
+  // OMP TARGET WARM UP
+  int isDevice= -1;
+#pragma omp target map(tofrom:isDevice)
+  isDevice = omp_is_initial_device();
+  printf("Is running in the %s\n", (isDevice? "Host": "Device"));
+  scm::_cod_MatMultGPU_2048L warmCodGPU(vars);
+  warmCodGPU.implementation();
+#endif
+  scm::_cod_MatMult_2048L warmCod(vars);
+  warmCod.implementation();
 
   double *A = reinterpret_cast<double*> (memory); 
   double *B = reinterpret_cast<double*> (&memory[B_offset]); 

@@ -206,7 +206,7 @@ namespace scm {
     bool write;
     bool full_empty; // Used by ILP to determine if dependency is satisfied or not true=full and false=empty
 
-    operand_t() {
+    operand_t() : read(false), write(false), full_empty(false) {
       type = UNKNOWN;
     }
 

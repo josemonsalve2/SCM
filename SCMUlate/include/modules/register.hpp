@@ -65,6 +65,40 @@ namespace scm {
          SCMULATE_ERROR(0, "DECODED REGISTER DOES NOT EXIST!!!")
        return result;
      };
+     // Function used for renaming provides the next register but from the end of the register file
+     // This is to avoid coliding with nearby registers hopefully saving time in renaming process
+     // It modifies the num by reference. Resulting in the new register number
+     inline unsigned char * getNextRegister(std::string size, uint32_t & num) {
+       unsigned char * result = NULL;
+       if (size == "64B") {
+         num = (num + 1) % NUM_REG_64BITS;
+         result = REG_64B(num).data;
+       } else if (size == "1L") {
+         num = (num + 1) % NUM_REG_1LINE;
+         result = REG_1L(num).data;
+       } else if (size == "8L") {
+         num = (num + 1) % NUM_REG_8LINE;
+         result = REG_8L(num).data;
+       } else if (size == "16L") {
+         num = (num + 1) % NUM_REG_16LINE;
+         result = REG_16L(num).data;
+       } else if (size == "256L") {
+         num = (num + 1) % NUM_REG_256LINE;
+         result = REG_256L(num).data;
+       } else if (size == "512L") {
+         num = (num + 1) % NUM_REG_512LINE;
+         result = REG_512L(num).data;
+       } else if (size == "1024L") {
+         num = (num + 1) % NUM_REG_1024LINE;
+         result = REG_1024L(num).data;
+       } else if (size == "2048L") {
+         num = (num + 1) % NUM_REG_2048LINE;
+         result = REG_2048L(num).data;
+       } else
+         SCMULATE_ERROR(0, "DECODED REGISTER DOES NOT EXIST!!!")
+       return result;
+
+     }
      void dumpRegisterFile();
      void dumpRegister(std::string size, int num);
      ~reg_file_module();

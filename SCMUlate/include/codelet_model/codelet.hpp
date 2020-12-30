@@ -83,7 +83,7 @@ namespace scm {
       virtual void implementation() = 0;
       virtual bool isMemoryCodelet() { return false; }
       virtual std::vector<memory_location> getMemoryRange() { return std::vector<memory_location>(); };
-      inline codelet_params getParams() { return this->params; };
+      inline codelet_params& getParams() { return this->params; };
       inline std::uint_fast16_t& getOpIO() { return op_in_out; };
       inline void setExecutor (cu_executor_module * exec) {this->myExecutor = exec;}
       inline cu_executor_module * getExecutor() {return this->myExecutor;}

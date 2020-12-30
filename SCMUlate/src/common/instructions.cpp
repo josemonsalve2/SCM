@@ -155,4 +155,24 @@ namespace scm {
       }
       return ret_vector;
     }
+
+    void 
+    decoded_instruction_t::updateCodeletParams() {
+      // For codelets only
+      if (type == EXECUTE_INST) {
+        // TODO: To change the number oof arguments, wee should change this number
+        codelet_params& newArgs = cod_exec->getParams();
+        if (op1.type == operand_t::REGISTER) {
+          newArgs.getParamAs(0) = op1.value.reg.reg_ptr; 
+        }
+        
+        if (op2.type == operand_t::REGISTER) {
+          newArgs.getParamAs(1) = op2.value.reg.reg_ptr; 
+        }
+
+        if (op3.type == operand_t::REGISTER) {
+          newArgs.getParamAs(2) = op3.value.reg.reg_ptr; 
+        }
+      }
+    }
 }

@@ -432,6 +432,7 @@ namespace scm {
                     SCMULATE_INFOMSG(5, "Register %s was renamed to %s", thisOperand.value.reg.reg_name.c_str(), it_rename->second.reg_name.c_str());
                     // Renamig = X, then we rename operand and start process again
                     thisOperand.value.reg = it_rename->second;
+                    inst_operand_dir = getOperandsDirs(inst);
                     process_finished = false;
                     continue;
                   } else if(it_used != used.end() && it_used->second == reg_state::WRITE) {
@@ -527,6 +528,7 @@ namespace scm {
                       }
                     }
                     process_finished = false;
+                    inst_operand_dir = getOperandsDirs(inst);
                     continue;
                   } else if(it_used != used.end() && it_used->second == reg_state::WRITE) {
                     // It is already being used, let's rename but not allow scheduling
@@ -621,6 +623,9 @@ namespace scm {
           }
         }
 
+        // Of inst is a Codelet, we must update the values of the registers
+        inst_state->first->updateCodeletParams();
+
         // We have finished processing this instruction, if it was a hazzard, it is not a hazzard anymore
         hazzard_inst_state = nullptr;
 
@@ -659,19 +664,13 @@ namespace scm {
         reg_file_module * reg_file = this->inst_mem->getRegisterFileModule();
         decoded_reg_t newReg = otherReg;
 
-        bool newRegFound = false;
         // Iterate over a register is found that is not being used
-        while (!newRegFound) {
+        do {
           newReg.reg_ptr = reg_file->getNextRegister(newReg.reg_size, newReg.reg_number);
-          if (this->used.find(newReg) == this->used.end())
-            newRegFound = true;
-          // Worst case scenario, there are no more registers, we looked through all the registers
-          if (newReg == otherReg) {
-            SCMULATE_INFOMSG(4, "When trying to rename, we could not find another register that was free");
-            break;
-          }
-        }
-        return otherReg;
+        } while (this->used.find(newReg) != this->used.end() && !(newReg == otherReg));
+        SCMULATE_INFOMSG_IF(4, newReg == otherReg, "When trying to rename, we could not find another register that was free");
+        newReg.reg_name = newReg.reg_size + "_" + std::to_string(newReg.reg_number)+"_ren";
+        return newReg;
       }
 
       void inline instructionFinished(instruction_state_pair * inst_state) {

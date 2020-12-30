@@ -137,6 +137,16 @@ namespace scm {
 
       bool decodeOperands(reg_file_module * const reg_file_m);
 
+      /** brief Update codelet register references to connect with renaming
+       * 
+       * When a Codelet is created its params are defined from the interpreted arguments
+       * However, when we rename the operands, we neet ot then re-synchronize the params for the Codelet.
+       * 
+       * 
+       */
+      
+      void updateCodeletParams();
+
       std::vector<memory_location> getMemoryRange(); 
 
       ~decoded_instruction_t() {

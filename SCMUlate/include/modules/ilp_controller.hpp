@@ -386,17 +386,6 @@ namespace scm {
       */
       bool inline checkMarkInstructionToSched(instruction_state_pair * inst_state) {
 
-        std::set<int> already_processed_operands;
-        // If there is a structural hazzar, we must solve it first
-        if (hazzard_inst_state != nullptr) {
-          inst_state = hazzard_inst_state;
-          already_processed_operands = processed_operands_keep;
-        } else if (reservationTable.find(inst_state) != reservationTable.end()) {
-          // Check if we have already processed the instructions. If so, just return
-          return false;
-        } else {
-          reservationTable.insert(inst_state); 
-        }
         decoded_instruction_t * inst = (inst_state->first);
 
         if (inst->getType() == instType::COMMIT) {
@@ -408,6 +397,19 @@ namespace scm {
             return true;
           }
         }
+
+        std::set<int> already_processed_operands;
+        // If there is a structural hazzar, we must solve it first
+        if (hazzard_inst_state != nullptr) {
+          inst_state = hazzard_inst_state;
+          already_processed_operands = processed_operands_keep;
+        } else if (reservationTable.find(inst_state) != reservationTable.end()) {
+          // Check if we have already processed the instructions. If so, just return
+          return false;
+        } else {
+          reservationTable.insert(inst_state); 
+        }
+        
 
         SCMULATE_INFOMSG(5, "Starting dependency discovery and hazzard avoidance process");
         // Get directions for the current instruction. (Col 1)
@@ -496,12 +498,12 @@ namespace scm {
                   // Search for all the other operands of the same, and apply changes to avoid conflicts. Only add once
                   for (int other_op_num = 1; other_op_num <= MAX_NUM_OPERANDS; ++other_op_num) {
                     if (other_op_num != i && already_processed_operands.find(other_op_num) == already_processed_operands.end()) {
-                      operand_t other_op = inst->getOp(other_op_num);
-                      if (other_op.value.reg == original_reg) {
+                      operand_t& other_op = inst->getOp(other_op_num);
+                      if (other_op.type == operand_t::REGISTER && other_op.value.reg == original_reg) {
                         other_op.value.reg = thisOperand.value.reg;
                         other_op.full_empty = true;
+                        already_processed_operands.insert(other_op_num);
                       }
-                      already_processed_operands.insert(other_op_num);
                     }
                   }
                   SCMULATE_INFOMSG(5, "Register %s. Marking as WRITE and allowing sched", thisOperand.value.reg.reg_name.c_str());
@@ -518,8 +520,8 @@ namespace scm {
                     // Rename all of the same to apply the same operations to all the same operands
                     for (int other_op_num = 1; other_op_num <= MAX_NUM_OPERANDS; ++other_op_num) {
                       if (already_processed_operands.find(other_op_num) == already_processed_operands.end()) {
-                        operand_t other_op = inst->getOp(other_op_num);
-                        if (other_op.value.reg == original_reg) {
+                        operand_t& other_op = inst->getOp(other_op_num);
+                        if (other_op.type == operand_t::REGISTER && other_op.value.reg == original_reg) {
                           other_op.value.reg = it_rename->second;
                         }
                       }
@@ -546,16 +548,16 @@ namespace scm {
                     // Rename all of the same to apply the same operations to all the same operands
                     for (int other_op_num = 1; other_op_num <= MAX_NUM_OPERANDS; ++other_op_num) {
                       if (already_processed_operands.find(other_op_num) == already_processed_operands.end()) {
-                        operand_t other_op = inst->getOp(other_op_num);
-                        if (other_op.value.reg == original_reg) {
+                        operand_t& other_op = inst->getOp(other_op_num);
+                        if (other_op.type == operand_t::REGISTER && other_op.value.reg == original_reg) {
                           other_op.value.reg = newReg;
+                          // Insert it in used, and register to broadcasters 
+                          auto it_broadcast_insert = broadcasters.insert(
+                                                std::pair<decoded_reg_t, instruction_operand_ref_t >(
+                                                      thisOperand.value.reg, instruction_operand_ref_t() ));
+                          it_broadcast_insert.first->second.push_back(instruction_operand_pair_t(inst_state, other_op_num));
+                          already_processed_operands.insert(other_op_num);
                         }
-                        // Insert it in used, and register to broadcasters 
-                        auto it_broadcast_insert = broadcasters.insert(
-                                              std::pair<decoded_reg_t, instruction_operand_ref_t >(
-                                                    thisOperand.value.reg, instruction_operand_ref_t() ));
-                        it_broadcast_insert.first->second.push_back(instruction_operand_pair_t(inst_state, other_op_num));
-                        already_processed_operands.insert(other_op_num);
                       }
                     }
                     SCMULATE_INFOMSG(5, "Register %s. Marking as WRITE. Do not allow to schedule until broadcast happens", thisOperand.value.reg.reg_name.c_str());
@@ -581,12 +583,12 @@ namespace scm {
                     // Rename all of the same to apply the same operations to all the same operands
                     for (int other_op_num = 1; other_op_num <= MAX_NUM_OPERANDS; ++other_op_num) {
                       if (already_processed_operands.find(other_op_num) == already_processed_operands.end()) {
-                        operand_t other_op = inst->getOp(other_op_num);
-                        if (other_op.value.reg == original_reg) {
+                        operand_t& other_op = inst->getOp(other_op_num);
+                        if (other_op.type == operand_t::REGISTER && other_op.value.reg == original_reg) {
                           other_op.value.reg = newReg;
                           other_op.full_empty = true;
+                          already_processed_operands.insert(other_op_num);
                         }
-                        already_processed_operands.insert(other_op_num);
                       }
                     }
                     std::memcpy(newReg.reg_ptr, thisOperand.value.reg.reg_ptr, thisOperand.value.reg.reg_size_bytes);
@@ -597,11 +599,11 @@ namespace scm {
                     // Enable all operands with the same register
                     for (int other_op_num = 1; other_op_num <= MAX_NUM_OPERANDS; ++other_op_num) {
                       if (already_processed_operands.find(other_op_num) == already_processed_operands.end()) {
-                        operand_t other_op = inst->getOp(other_op_num);
-                        if (other_op.value.reg == original_reg) {
+                        operand_t& other_op = inst->getOp(other_op_num);
+                        if (other_op.type == operand_t::REGISTER && other_op.value.reg == original_reg) {
                           other_op.full_empty = true;
+                          already_processed_operands.insert(other_op_num);
                         }
-                        already_processed_operands.insert(other_op_num);
                       }
                     }
                     // Insert it in used, and register to subscribers
@@ -628,10 +630,13 @@ namespace scm {
 
         if (!inst_ready && (inst->getType() == instType::CONTROL_INST || inst->getType() ==  instType::MEMORY_INST) ) {
           inst_state->second = instruction_state::STALL;
+        }
+
+        if (!inst_ready) {
           return false;
         }
         // In memory instructions we need to figure out if there is a hazard in the memory
-        if (inst_ready && inst->getType() == instType::MEMORY_INST) {
+        if (inst->getType() == instType::MEMORY_INST) {
           // Check all the ranges
           std::vector <memory_location> ranges = inst->getMemoryRange();
           for (auto it = ranges.begin(); it != ranges.end(); ++it) {
@@ -682,7 +687,7 @@ namespace scm {
           for (auto it = ranges.begin(); it != ranges.end(); ++it)
             memCtrl.removeRange( *it );
         }
-
+        
         std::map<decoded_reg_t, reg_state> inst_operand_dir = getOperandsDirs(inst);
         // Depending on the operand direction, there is some book keeping that needs to happen, which 
         // also enables other instructions. See table 2 above
@@ -696,10 +701,13 @@ namespace scm {
                 auto subscribers_list_it = subscribers.find(it->first);
                 if (subscribers_list_it != subscribers.end()) {
                   // Remove subscription
-                  for (auto it_subs = subscribers_list_it->second.begin(); it_subs != subscribers_list_it->second.end(); it_subs++) {
-                    if (it_subs->first->first == inst)
+                  for (auto it_subs = subscribers_list_it->second.begin(); it_subs != subscribers_list_it->second.end();) {
+                    if (it_subs->first->first == inst) {
                       it_subs = subscribers_list_it->second.erase(it_subs);
                       SCMULATE_INFOMSG(5, "Removing subscription in register %s, for instruction %s, operand %d", it->first.reg_name.c_str(), inst->getFullInstruction().c_str(), it_subs->second);
+                    } else {
+                      it_subs++;
+                    }
                   }
                   // Move register to state NONE, if done
                   if (subscribers_list_it->second.size() == 0) {

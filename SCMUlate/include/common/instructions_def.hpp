@@ -137,8 +137,8 @@ namespace scm {
   DEF_INST( LDIMM, "[ ]*(LDIMM)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ")[ ]*;.*", 2, OP_IO::OP1_WR),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
   DEF_INST( LDADR, "[ ]*(LDADR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_WR | OP_IO::OP2_RD),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
   DEF_INST( LDOFF, "[ ]*(LDOFF)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_WR | OP_IO::OP2_RD | OP_IO::OP3_RD),  /* LDOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
-  DEF_INST( STADR, "[ ]*(STADR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_WR | OP_IO::OP2_RD),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
-  DEF_INST( STOFF, "[ ]*(STOFF)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_WR | OP_IO::OP2_RD | OP_IO::OP3_RD)};  /* LDOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
+  DEF_INST( STADR, "[ ]*(STADR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_RD| OP_IO::OP2_RD),                          /* STADR R1, R2; R2 can be a literal or the address in a the register*/
+  DEF_INST( STOFF, "[ ]*(STOFF)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD | OP_IO::OP3_RD)};  /* STOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
 
   /** \brief Definition of the instruction types 
    *
@@ -220,6 +220,9 @@ namespace scm {
         value.reg = other.value.reg;
       else if (type == IMMEDIATE_VAL)
         value.immediate = other.value.immediate;
+      read = other.read;
+      write = other.write;
+      full_empty = other.full_empty;
     }
 
     operand_t(operand_t && other) {
@@ -228,6 +231,9 @@ namespace scm {
         value.reg = other.value.reg;
       else if (type == IMMEDIATE_VAL)
         value.immediate = other.value.immediate;
+      read = other.read;
+      write = other.write;
+      full_empty = other.full_empty;
     }
 
     void operator=(operand_t const & other) {
@@ -236,6 +242,9 @@ namespace scm {
         value.reg = other.value.reg;
       else if (type == IMMEDIATE_VAL)
         value.immediate = other.value.immediate;
+      read = other.read;
+      write = other.write;
+      full_empty = other.full_empty;
     }
   };
 }

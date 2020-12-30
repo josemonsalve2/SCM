@@ -181,8 +181,12 @@ namespace scm {
       reg_ptr = other.reg_ptr;
     }
 
-    bool operator==(decoded_reg_t const & other) {
+    bool operator==(decoded_reg_t const & other) const {
       return other.reg_ptr == this->reg_ptr;
+    }
+
+    bool operator<(decoded_reg_t const & other) const {
+      return this->reg_ptr < other.reg_ptr ;
     }
   };
 

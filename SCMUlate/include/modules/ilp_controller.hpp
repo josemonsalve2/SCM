@@ -626,7 +626,7 @@ namespace scm {
         // The type of instruction plays an important role here. 
         bool inst_ready = isInstructionReady(inst);
 
-        if (!inst_ready && inst->getType() == instType::CONTROL_INST || instType::MEMORY_INST) {
+        if (!inst_ready && (inst->getType() == instType::CONTROL_INST || inst->getType() ==  instType::MEMORY_INST) ) {
           inst_state->second = instruction_state::STALL;
           return false;
         }
@@ -727,7 +727,7 @@ namespace scm {
                     std::memcpy(other_inst_state_pair->first->getOp(it_broadcast->second).value.reg.reg_ptr, it->first.reg_ptr, it->first.reg_size_bytes);
                     // Marking as ready
                     other_inst_state_pair->first->getOp(it_broadcast->second).full_empty = true;
-                    SCMULATE_INFOMSG(5, "Enabling operand %d with register %s, for instruction %s", i, it->first.reg_name.c_str(), other_inst_state_pair->first->getFullInstruction().c_str());
+                    SCMULATE_INFOMSG(5, "Enabling operand %d with register %s, for instruction %s", it_broadcast->second, it->first.reg_name.c_str(), other_inst_state_pair->first->getFullInstruction().c_str());
                     if (isInstructionReady(other_inst_state_pair->first)) {
                       other_inst_state_pair->second = instruction_state::READY;
                       SCMULATE_INFOMSG(5, "Marking instruction %s as READY", other_inst_state_pair->first->getFullInstruction().c_str());
@@ -789,9 +789,9 @@ namespace scm {
             reg_state &cur_state = it_insert.first->second;
 
             // We need to set the value of reg_state to read, write or readwrite
-            if (inst->getOp(i).read && inst->getOp(i).write ||
-                inst->getOp(i).read && cur_state == reg_state::WRITE ||
-                inst->getOp(i).write && cur_state == reg_state::READ)
+            if ( (inst->getOp(i).read && inst->getOp(i).write ) ||
+                 (inst->getOp(i).read && cur_state == reg_state::WRITE ) ||
+                 (inst->getOp(i).write && cur_state == reg_state::READ) ) 
               cur_state = reg_state::READWRITE;
             else if (inst->getOp(i).write && cur_state == reg_state::NONE)
               cur_state = reg_state::WRITE;
@@ -801,6 +801,7 @@ namespace scm {
             SCMULATE_INFOMSG(5, "In instruction %s Register %s set as %s", inst->getFullInstruction().c_str() , inst->getOp(i).value.reg.reg_name.c_str(), reg_state_str(cur_state));
         }
       }
+      return return_map;
     }
   };
 
@@ -842,6 +843,9 @@ namespace scm {
         else if (SCMULATE_ILP_MODE  == ILP_MODES::SUPERSCALAR) {
           return supscl_ctrl.checkMarkInstructionToSched(inst_pair);
         }
+        else if (SCMULATE_ILP_MODE == ILP_MODES::OOO) {
+          return ooo_ctrl.checkMarkInstructionToSched(inst_pair);
+        }
         else {
           SCMULATE_ERROR(0, "What are you doing here?");
         }
@@ -850,9 +854,10 @@ namespace scm {
       void inline instructionFinished(instruction_state_pair * inst) {
         if (SCMULATE_ILP_MODE == ILP_MODES::SEQUENTIAL) {
           seq_ctrl.instructionFinished();
-        }
-        else if (SCMULATE_ILP_MODE  == ILP_MODES::SUPERSCALAR) {
+        } else if (SCMULATE_ILP_MODE  == ILP_MODES::SUPERSCALAR) {
           supscl_ctrl.instructionFinished(inst);
+        } else if (SCMULATE_ILP_MODE == ILP_MODES::OOO) {
+          ooo_ctrl.instructionFinished(inst);
         }
         else {
           SCMULATE_ERROR(0, "What are you doing here?");

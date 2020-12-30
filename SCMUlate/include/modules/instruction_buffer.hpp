@@ -30,7 +30,7 @@ namespace scm {
 
   class instructions_buffer_module {
     private:
-      std::deque <instruction_state_pair> instruction_buffer;
+      std::deque <instruction_state_pair *> instruction_buffer;
     public: 
       // TODO: this may not be the best way of doing this. The position will change if the 
       // elements in the front of the queue change. Therefore it cannot be used as 
@@ -41,30 +41,30 @@ namespace scm {
 
       bool add_instruction(decoded_instruction_t & new_instruction) {
         // Check if we have reached the limit size
-        if (this->instruction_buffer.size() >= INSTRUCTIONS_BUFFER_SIZE || (this->instruction_buffer.size() != 0  && this->instruction_buffer.back().second == STALL))
+        if (this->instruction_buffer.size() >= INSTRUCTIONS_BUFFER_SIZE || (this->instruction_buffer.size() != 0  && this->instruction_buffer.back()->second == STALL))
           return false;
-        instruction_state_pair newPair;
+        instruction_state_pair * newPair = new instruction_state_pair(new decoded_instruction_t(new_instruction), WAITING);
         // Avoid calling copy constructor twice
-        newPair.first = new decoded_instruction_t(new_instruction);
-        newPair.second = WAITING;
-        
+        SCMULATE_INFOMSG(5, "Adding Instruction %s to buffer", newPair->first->getFullInstruction().c_str());
         this->instruction_buffer.push_back(newPair); // Call constructor
         return true;
       }
 
       void clean_out_queue() {
         for (auto it = instruction_buffer.begin(); it != instruction_buffer.end() ;) {
-          if (it->second == DECOMISION) {
-            delete it->first;
-            it = instruction_buffer.erase(it);  
+          if ((*it)->second == instruction_state::DECOMISION) {
+            SCMULATE_INFOMSG(5, "Deleting Instruction %s from buffer", (*it)->first->getFullInstruction().c_str());
+            delete (*it)->first;
+            delete *it;
+            it = instruction_buffer.erase(it);
           } else {
             ++it;
           }
         }
       }
 
-      std::deque <instruction_state_pair> * get_buffer() { return &this->instruction_buffer; }
-      instruction_state_pair* get_latest() { return &this->instruction_buffer.back(); }
+      std::deque <instruction_state_pair *> * get_buffer() { return &this->instruction_buffer; }
+      instruction_state_pair* get_latest() { return this->instruction_buffer.back(); }
   };
 }
 

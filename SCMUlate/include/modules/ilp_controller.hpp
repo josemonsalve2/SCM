@@ -357,7 +357,7 @@ namespace scm {
 #define reg_state_str(state) (state == reg_state::READ ? "reg_state::READ" : state == reg_state::WRITE ? "reg_state::WRITE" : state == reg_state::READWRITE ? "reg_state::READWRITE" : "reg_state::NONE")
   class ilp_OoO {
     private:
-      inst_mem_module * inst_mem;
+      reg_file_module hidden_register_file;
       enum reg_state { NONE, READ, WRITE, READWRITE };
 
       // We must maintain a reference to the operand and its specific operand. The operand is maintained
@@ -381,7 +381,7 @@ namespace scm {
 
 
     public:
-      ilp_OoO(inst_mem_module * inst_mem_m) : inst_mem(inst_mem_m), hazzard_inst_state(nullptr) { }
+      ilp_OoO() : hazzard_inst_state(nullptr) { }
       /** \brief check if instruction can be scheduled 
       * Returns true if the instruction could be scheduled according to
       * the current detected hazards. If it is possible to schedule it, then
@@ -633,15 +633,15 @@ namespace scm {
 
 
       decoded_reg_t inline getRenamedRegister(decoded_reg_t & otherReg) {
-        reg_file_module * reg_file = this->inst_mem->getRegisterFileModule();
         decoded_reg_t newReg = otherReg;
+        uint32_t attempts = 0;
 
-        // Iterate over a register is found that is not being used
+        // Iterate over the hidden register is found that is not being used
         do {
-          newReg.reg_ptr = reg_file->getNextRegister(newReg.reg_size, newReg.reg_number);
-        } while (this->used.find(newReg) != this->used.end() && !(newReg == otherReg));
-        SCMULATE_INFOMSG_IF(4, newReg == otherReg, "When trying to rename, we could not find another register that was free");
-        newReg.reg_name = newReg.reg_size + "_" + std::to_string(newReg.reg_number)+"_ren";
+          newReg.reg_ptr = hidden_register_file.getNextRegister(newReg.reg_size, newReg.reg_number);
+        } while (this->used.find(newReg) != this->used.end() && attempts != hidden_register_file.getNumRegForSize(newReg.reg_size));
+        SCMULATE_INFOMSG_IF(4, attempts== hidden_register_file.getNumRegForSize(newReg.reg_size), "When trying to rename, we could not find another register that was free");
+        newReg.reg_name = "R_ren_" + newReg.reg_size + "_" + std::to_string(newReg.reg_number);
         return newReg;
       }
 
@@ -804,12 +804,11 @@ namespace scm {
 
   class ilp_controller {
       ILP_MODES SCMULATE_ILP_MODE;
-      inst_mem_module * inst_memory;
       ilp_sequential seq_ctrl;
       ilp_superscalar supscl_ctrl;
       ilp_OoO ooo_ctrl;
     public:
-      ilp_controller (ILP_MODES ilp_mode, inst_mem_module * inst_mem_m) : SCMULATE_ILP_MODE(ilp_mode), inst_memory(inst_mem_m), ooo_ctrl(inst_memory) {
+      ilp_controller (ILP_MODES ilp_mode) : SCMULATE_ILP_MODE(ilp_mode) {
         SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::SEQUENTIAL, "Using %d ILP_MODES::SEQUENTIAL",SCMULATE_ILP_MODE );
         SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::SUPERSCALAR, "Using %d ILP_MODES::SUPERSCALAR", SCMULATE_ILP_MODE);
         SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::OOO, "Using %d ILP_MODES::OOO", SCMULATE_ILP_MODE);

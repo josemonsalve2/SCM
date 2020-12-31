@@ -11,7 +11,7 @@ scm::fetch_decode_module::fetch_decode_module(inst_mem_module *const inst_mem,
                                               aliveSignal(aliveSig),
                                               PC(0),
                                               su_number(0), 
-                                              instructionLevelParallelism(ilp_mode, inst_mem_m), 
+                                              instructionLevelParallelism(ilp_mode), 
                                               stallingInstruction(nullptr), 
                                               debugger(DEBUGER_MODE)
                                               

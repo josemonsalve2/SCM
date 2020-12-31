@@ -142,7 +142,6 @@ namespace scm {
        * When a Codelet is created its params are defined from the interpreted arguments
        * However, when we rename the operands, we neet ot then re-synchronize the params for the Codelet.
        * 
-       * 
        */
       
       void updateCodeletParams();

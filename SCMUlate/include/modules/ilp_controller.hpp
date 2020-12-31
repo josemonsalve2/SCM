@@ -246,7 +246,7 @@ namespace scm {
    * +-------------+---------------+-------------+----------------------------+------------------------+
    * | register is | used is       | rename is   | result                     | schedule?              |
    * +-------------+---------------+-------------+----------------------------+------------------------+
-   * | Read        | Any or None   | Set to X    | operand = X                | repeat process         |
+   * | Read        | Any or None   | Set to X    | operand = X                | Continue process       |
    * +-------------+---------------+-------------+----------------------------+------------------------+
    * | Read        | None          | None        | Used = Read                | Allow Scheduling       |
    * |             |               |             | subscribe += inst, operand |                        |
@@ -262,7 +262,10 @@ namespace scm {
    * |             |               |             | operand = other            |                        |
    * |             |               |             | used = write               |                        |
    * +-------------+---------------+-------------+----------------------------+------------------------+
-   * | ReadWrite   | Any or None   | Set to X    | Operand = x                | Repeat Process         |
+   * 
+   * 
+   * ////// FIX THIS BOTTOM TABLE. 
+   * | ReadWrite   | Any or None   | Set to X    | renamed = x                | Apply table to renamed |
    * +-------------+---------------+-------------+----------------------------+------------------------+
    * | ReadWrite   | None          | None        | Used = write               | Allow Scheduling       |
    * +-------------+---------------+-------------+----------------------------+------------------------+
@@ -414,210 +417,177 @@ namespace scm {
         SCMULATE_INFOMSG(5, "Starting dependency discovery and hazzard avoidance process");
         // Get directions for the current instruction. (Col 1)
         std::map<decoded_reg_t, reg_state> inst_operand_dir = getOperandsDirs(inst);
-        // Let's analyze each operand's dependency. Marking as allow sched or not. 
+        
+        // Let's analyze each operand's dependency. Marking as allow sched or not.
         for (int i = 1; i <= MAX_NUM_OPERANDS; ++i) {
           if (already_processed_operands.find(i) == already_processed_operands.end()) {
-            operand_t &thisOperand = inst->getOp(i);
-            if (thisOperand.type == operand_t::REGISTER) {
-              auto it_inst_dir = inst_operand_dir.find(thisOperand.value.reg);
+            operand_t *current_operand = &inst->getOp(i);
 
-              bool process_finished = false;
-              while (!process_finished) {
-                process_finished = true;
-                if (it_inst_dir->second == reg_state::READ) {
-                  auto it_rename = registerRenaming.find(thisOperand.value.reg);
-                  auto it_used = used.find(thisOperand.value.reg);
+            // Only apply this analysis to registers
+            if (current_operand->type == operand_t::REGISTER) {
+              auto it_inst_dir = inst_operand_dir.find(current_operand->value.reg);
 
-                  if (it_rename != registerRenaming.end()) {
-                    SCMULATE_INFOMSG(5, "Register %s was renamed to %s", thisOperand.value.reg.reg_name.c_str(), it_rename->second.reg_name.c_str());
-                    // Renamig = X, then we rename operand and start process again
-                    thisOperand.value.reg = it_rename->second;
-                    inst_operand_dir = getOperandsDirs(inst);
-                    process_finished = false;
-                    continue;
-                  } else if(it_used != used.end() && it_used->second == reg_state::WRITE) {
-                    // Attempt inserting if it does not exists already
-                    auto it_subs_insert = subscribers.insert(
-                                          std::pair<decoded_reg_t, instruction_operand_ref_t >(
-                                                thisOperand.value.reg, instruction_operand_ref_t() ));
-                    it_subs_insert.first->second.push_back(instruction_operand_pair_t(inst_state, i));
-                    SCMULATE_INFOMSG(5, "Register %s is currently on WRITE state. Will subscribe but not sched", thisOperand.value.reg.reg_name.c_str());
-                  } else if (it_used != used.end() && it_used->second == reg_state::READ) {
-                    // Attempt inserting if it does not exists already
-                    auto it_subs_insert = subscribers.insert(
-                                          std::pair<decoded_reg_t, instruction_operand_ref_t >(
-                                                thisOperand.value.reg, instruction_operand_ref_t() ));
-                    it_subs_insert.first->second.push_back(instruction_operand_pair_t(inst_state, i));
-                    // Operand ready for execution
-                    thisOperand.full_empty = true;
-                    SCMULATE_INFOMSG(5, "Register %s is currently on READ state. Subscribing and allowing sched", thisOperand.value.reg.reg_name.c_str());
-                  } else {
-                    // Insert it in used, and register to subscribers
-                    used.insert(std::pair<decoded_reg_t, reg_state> (thisOperand.value.reg, reg_state::READ));
-                    auto it_subs_insert = subscribers.insert(
-                                          std::pair<decoded_reg_t, instruction_operand_ref_t >(
-                                                thisOperand.value.reg, instruction_operand_ref_t() ));
-                    it_subs_insert.first->second.push_back(instruction_operand_pair_t(inst_state, i));
-                    SCMULATE_INFOMSG(5, "Register %s was not found in the 'used' registers map. Marking as READ, subscribing, and allowing sched", thisOperand.value.reg.reg_name.c_str());
-                    // Operand ready for execution
-                    thisOperand.full_empty = true;
-                  }
+              if (it_inst_dir->second == reg_state::READ) {
+                //////////////////////////////////////////////////////////////
+                ////////////////////////// CASE READ /////////////////////////
+                //////////////////////////////////////////////////////////////
 
-                } else if (it_inst_dir->second == reg_state::WRITE) {
-                  auto it_used = used.find(thisOperand.value.reg);
-                  decoded_reg_t original_reg = thisOperand.value.reg;
-
-                  if(it_used != used.end()) {
-                    // Register is in use. Let's rename it
-                    decoded_reg_t newReg = getRenamedRegister(thisOperand.value.reg);
-                    // Check if renaming was successful.
-                    if (newReg == thisOperand.value.reg) {
-                      SCMULATE_ERROR(0, "STRUCTURAL HAZZARD on operand %d. No new register was found for renaming. Leaving other operands for later SU iteration.", i);
-                      hazzard_inst_state = inst_state;
-                      processed_operands_keep = already_processed_operands;
-                      inst_state->second = instruction_state::STALL;
-                      return false;
-                    }
-
-                    auto it_rename = registerRenaming.insert(std::pair<decoded_reg_t, decoded_reg_t> (thisOperand.value.reg, newReg));
-                    SCMULATE_INFOMSG(5, "Register %s is being 'used'. Renaming it to %s", thisOperand.value.reg.reg_name.c_str(), newReg.reg_name.c_str());
-                    if (!it_rename.second) {
-                      SCMULATE_INFOMSG(5, "Register %s was renamed to %s now it is %s", thisOperand.value.reg.reg_name.c_str(), it_rename.first->second.reg_name.c_str(), newReg.reg_name.c_str());
-                      it_rename.first->second = newReg;
-                    }
-                                        
-                    thisOperand.value.reg = newReg;
-                    // Insert it in used, and register to subscribers
-                  } else {
-                    // Register not in used. Remove renaming for future references
-                    auto it_rename = registerRenaming.find(thisOperand.value.reg);
-                    if (it_rename != registerRenaming.end())
-                      registerRenaming.erase(it_rename);
-                    SCMULATE_INFOMSG(5, "Register %s register was not found in the 'used' registers map. If renamed is set, we cleared it", thisOperand.value.reg.reg_name.c_str());
-                  }
-
-                  // Search for all the other operands of the same, and apply changes to avoid conflicts. Only add once
-                  for (int other_op_num = 1; other_op_num <= MAX_NUM_OPERANDS; ++other_op_num) {
-                    if (other_op_num != i && already_processed_operands.find(other_op_num) == already_processed_operands.end()) {
-                      operand_t& other_op = inst->getOp(other_op_num);
-                      if (other_op.type == operand_t::REGISTER && other_op.value.reg == original_reg) {
-                        other_op.value.reg = thisOperand.value.reg;
-                        other_op.full_empty = true;
-                        already_processed_operands.insert(other_op_num);
-                      }
-                    }
-                  }
-                  SCMULATE_INFOMSG(5, "Register %s. Marking as WRITE and allowing sched", thisOperand.value.reg.reg_name.c_str());
-                  used.insert(std::pair<decoded_reg_t, reg_state> (thisOperand.value.reg, reg_state::WRITE));
-                  thisOperand.full_empty = true;
-
-                } else if (it_inst_dir->second == reg_state::READWRITE) {
-                  auto it_rename = registerRenaming.find(thisOperand.value.reg);
-                  auto it_used = used.find(thisOperand.value.reg);
-                  decoded_reg_t original_reg = thisOperand.value.reg;
-
-                  if (it_rename != registerRenaming.end()) {
-                    SCMULATE_INFOMSG(5, "Register %s was renamed to %s", thisOperand.value.reg.reg_name.c_str(), it_rename->second.reg_name.c_str());
-                    // Rename all of the same to apply the same operations to all the same operands
-                    for (int other_op_num = 1; other_op_num <= MAX_NUM_OPERANDS; ++other_op_num) {
-                      if (already_processed_operands.find(other_op_num) == already_processed_operands.end()) {
-                        operand_t& other_op = inst->getOp(other_op_num);
-                        if (other_op.type == operand_t::REGISTER && other_op.value.reg == original_reg) {
-                          other_op.value.reg = it_rename->second;
-                        }
-                      }
-                    }
-                    process_finished = false;
-                    inst_operand_dir = getOperandsDirs(inst);
-                    continue;
-                  } else if(it_used != used.end() && it_used->second == reg_state::WRITE) {
-                    // It is already being used, let's rename but not allow scheduling
-                    decoded_reg_t newReg = getRenamedRegister(thisOperand.value.reg);
-                    // Check if renaming was successful.
-                    if (newReg == thisOperand.value.reg) {
-                      SCMULATE_ERROR(0, "STRUCTURAL HAZZARD on operand %d. No new register was found for renaming. Leaving other operands for later SU iteration.", i);
-                      hazzard_inst_state = inst_state;
-                      processed_operands_keep = already_processed_operands;
-                      inst_state->second = instruction_state::STALL;
-                      return false;
-                    }
-                    auto it_rename = registerRenaming.insert(std::pair<decoded_reg_t, decoded_reg_t> (thisOperand.value.reg, newReg));
-                    SCMULATE_INFOMSG(5, "Register %s is being 'used'. Renaming it to %s", thisOperand.value.reg.reg_name.c_str(), newReg.reg_name.c_str());
-                    if (!it_rename.second) {
-                      SCMULATE_INFOMSG(5, "Register %s was renamed to %s now it is %s", thisOperand.value.reg.reg_name.c_str(), it_rename.first->second.reg_name.c_str(), newReg.reg_name.c_str());
-                      it_rename.first->second = newReg;
-                    }
-                    // Rename all of the same to apply the same operations to all the same operands
-                    for (int other_op_num = 1; other_op_num <= MAX_NUM_OPERANDS; ++other_op_num) {
-                      if (already_processed_operands.find(other_op_num) == already_processed_operands.end()) {
-                        operand_t& other_op = inst->getOp(other_op_num);
-                        if (other_op.type == operand_t::REGISTER && other_op.value.reg == original_reg) {
-                          other_op.value.reg = newReg;
-                          // Insert it in used, and register to broadcasters 
-                          auto it_broadcast_insert = broadcasters.insert(
-                                                std::pair<decoded_reg_t, instruction_operand_ref_t >(
-                                                      thisOperand.value.reg, instruction_operand_ref_t() ));
-                          it_broadcast_insert.first->second.push_back(instruction_operand_pair_t(inst_state, other_op_num));
-                          already_processed_operands.insert(other_op_num);
-                        }
-                      }
-                    }
-                    SCMULATE_INFOMSG(5, "Register %s. Marking as WRITE. Do not allow to schedule until broadcast happens", thisOperand.value.reg.reg_name.c_str());
-                    used.insert(std::pair<decoded_reg_t, reg_state> (thisOperand.value.reg, reg_state::WRITE));
-                    // Attempt inserting if it does not exists already
-                  } else if (it_used != used.end() && it_used->second == reg_state::READ) {
-                    // It is already being used, let's rename
-                    decoded_reg_t newReg = getRenamedRegister(thisOperand.value.reg);
-                    // Check if renaming was successful.
-                    if (newReg == thisOperand.value.reg) {
-                      SCMULATE_ERROR(0, "STRUCTURAL HAZZARD on operand %d. No new register was found for renaming. Leaving other operands for later SU iteration.", i);
-                      hazzard_inst_state = inst_state;
-                      processed_operands_keep = already_processed_operands;
-                      inst_state->second = instruction_state::STALL;
-                      return false;
-                    }
-                    auto it_rename = registerRenaming.insert(std::pair<decoded_reg_t, decoded_reg_t> (thisOperand.value.reg, newReg));
-                    SCMULATE_INFOMSG(5, "Register %s is being 'used'. Renaming it to %s", thisOperand.value.reg.reg_name.c_str(), newReg.reg_name.c_str());
-                    if (!it_rename.second) {
-                      SCMULATE_INFOMSG(5, "Register %s was renamed to %s now it is %s", thisOperand.value.reg.reg_name.c_str(), it_rename.first->second.reg_name.c_str(), newReg.reg_name.c_str());
-                      it_rename.first->second = newReg;
-                    }
-                    // Rename all of the same to apply the same operations to all the same operands
-                    for (int other_op_num = 1; other_op_num <= MAX_NUM_OPERANDS; ++other_op_num) {
-                      if (already_processed_operands.find(other_op_num) == already_processed_operands.end()) {
-                        operand_t& other_op = inst->getOp(other_op_num);
-                        if (other_op.type == operand_t::REGISTER && other_op.value.reg == original_reg) {
-                          other_op.value.reg = newReg;
-                          other_op.full_empty = true;
-                          already_processed_operands.insert(other_op_num);
-                        }
-                      }
-                    }
-                    std::memcpy(newReg.reg_ptr, thisOperand.value.reg.reg_ptr, thisOperand.value.reg.reg_size_bytes);
-                    // Insert it in used, and register to subscribers
-                    SCMULATE_INFOMSG(5, "Register %s. Marking as WRITE and allowing sched", thisOperand.value.reg.reg_name.c_str());
-                    used.insert(std::pair<decoded_reg_t, reg_state> (thisOperand.value.reg, reg_state::WRITE));
-                  } else {
-                    // Enable all operands with the same register
-                    for (int other_op_num = 1; other_op_num <= MAX_NUM_OPERANDS; ++other_op_num) {
-                      if (already_processed_operands.find(other_op_num) == already_processed_operands.end()) {
-                        operand_t& other_op = inst->getOp(other_op_num);
-                        if (other_op.type == operand_t::REGISTER && other_op.value.reg == original_reg) {
-                          other_op.full_empty = true;
-                          already_processed_operands.insert(other_op_num);
-                        }
-                      }
-                    }
-                    // Insert it in used, and register to subscribers
-                    used.insert(std::pair<decoded_reg_t, reg_state> (thisOperand.value.reg, reg_state::WRITE));
-                    SCMULATE_INFOMSG(5, "Register %s was not found in the 'used' registers map. Marking as WRITE and allowing sched", thisOperand.value.reg.reg_name.c_str());
-                  }
-
+                // Renamig = X, then we rename operand and start process again
+                auto it_rename = registerRenaming.find(current_operand->value.reg);
+                if (it_rename != registerRenaming.end()) {
+                  current_operand->value.reg = it_rename->second;
+                  SCMULATE_INFOMSG(5, "Register %s was previously renamed to %s", current_operand->value.reg.reg_name.c_str(), it_rename->second.reg_name.c_str());
                 }
+
+                auto it_used = used.find(current_operand->value.reg);
+                if(it_used != used.end() && it_used->second == reg_state::WRITE) {
+                  SCMULATE_INFOMSG(5, "Register %s is currently on WRITE state. Will subscribe but not sched", current_operand->value.reg.reg_name.c_str());
+                } else if (it_used != used.end() && it_used->second == reg_state::READ) {
+                  // Operand ready for execution
+                  current_operand->full_empty = true;
+                  SCMULATE_INFOMSG(5, "Register %s is currently on READ state. Subscribing and allowing sched", current_operand->value.reg.reg_name.c_str());
+                } else {
+                  // Insert it in used, and register to subscribers
+                  used.insert(std::pair<decoded_reg_t, reg_state> (current_operand->value.reg, reg_state::READ));
+                  // Operand ready for execution
+                  current_operand->full_empty = true;
+                  SCMULATE_INFOMSG(5, "Register %s was not found in the 'used' registers map. Marking as READ, subscribing, and allowing sched", current_operand->value.reg.reg_name.c_str());
+                }
+                // Attempt inserting if it does not exists already
+                auto it_subs_insert = subscribers.insert(
+                                      std::pair<decoded_reg_t, instruction_operand_ref_t >(
+                                            current_operand->value.reg, instruction_operand_ref_t() ));
+                it_subs_insert.first->second.push_back(instruction_operand_pair_t(inst_state, i));
+
+              } else if (it_inst_dir->second == reg_state::WRITE) {
+                //////////////////////////////////////////////////////////////
+                ////////////////////////// CASE WRITE ////////////////////////
+                //////////////////////////////////////////////////////////////
+
+                auto it_used = used.find(current_operand->value.reg);
+                decoded_reg_t original_reg = current_operand->value.reg;
+
+                if(it_used != used.end()) {
+                  // Register is in use. Let's rename it
+                  decoded_reg_t newReg = getRenamedRegister(current_operand->value.reg);
+                  // Check if renaming was successful.
+                  if (newReg == current_operand->value.reg) {
+                    SCMULATE_ERROR(0, "STRUCTURAL HAZZARD on operand %d. No new register was found for renaming. Leaving other operands for later SU iteration.", i);
+                    hazzard_inst_state = inst_state;
+                    processed_operands_keep = already_processed_operands;
+                    inst_state->second = instruction_state::STALL;
+                    return false;
+                  }
+
+                  auto it_rename = registerRenaming.insert(std::pair<decoded_reg_t, decoded_reg_t> (current_operand->value.reg, newReg));
+                  SCMULATE_INFOMSG(5, "Register %s is being 'used'. Renaming it to %s", current_operand->value.reg.reg_name.c_str(), newReg.reg_name.c_str());
+                  if (!it_rename.second) {
+                    SCMULATE_INFOMSG(5, "Register %s was already renamed to %s now it is changed to %s", current_operand->value.reg.reg_name.c_str(), it_rename.first->second.reg_name.c_str(), newReg.reg_name.c_str());
+                    it_rename.first->second = newReg;
+                  }
+                  current_operand->value.reg = newReg;
+                  // Insert it in used, and register to subscribers
+                } else {
+                  // Register not in used. Remove renaming for future references
+                  auto it_rename = registerRenaming.find(current_operand->value.reg);
+                  if (it_rename != registerRenaming.end())
+                    registerRenaming.erase(it_rename);
+                  SCMULATE_INFOMSG(5, "Register %s register was not found in the 'used' registers map. If renamed is set, we cleared it", current_operand->value.reg.reg_name.c_str());
+                }
+
+                // Search for all the other operands of the same, and apply changes to avoid conflicts. Only add once
+                for (int other_op_num = 1; other_op_num <= MAX_NUM_OPERANDS; ++other_op_num) {
+                  if (other_op_num != i && already_processed_operands.find(other_op_num) == already_processed_operands.end()) {
+                    operand_t& other_op = inst->getOp(other_op_num);
+                    if (other_op.type == operand_t::REGISTER && other_op.value.reg == original_reg) {
+                      // Apply renaming if any then enable operand
+                      other_op.value.reg = current_operand->value.reg;
+                      other_op.full_empty = true;
+                      already_processed_operands.insert(other_op_num);
+                    }
+                  }
+                }
+                SCMULATE_INFOMSG(5, "Register %s. Marking as WRITE and allowing sched", current_operand->value.reg.reg_name.c_str());
+                used.insert(std::pair<decoded_reg_t, reg_state> (current_operand->value.reg, reg_state::WRITE));
+                current_operand->full_empty = true;
+
+              } else if (it_inst_dir->second == reg_state::READWRITE) {
+                //////////////////////////////////////////////////////////////
+                ////////////////////////// CASE READWRITE ////////////////////
+                //////////////////////////////////////////////////////////////
+
+                decoded_reg_t original_op_reg = current_operand->value.reg;
+                decoded_reg_t original_renamed_reg = current_operand->value.reg;
+                decoded_reg_t new_renamed_reg = current_operand->value.reg;
+
+                // First check if operand was already renamed. Important for reading
+                auto it_rename = registerRenaming.find(original_op_reg);
+                if (it_rename != registerRenaming.end()) {
+                  original_renamed_reg = it_rename->second;
+                  SCMULATE_INFOMSG(5, "Register %s was previously renamed to %s", original_op_reg.reg_name.c_str(), original_renamed_reg.reg_name.c_str());
+                }
+
+                // Second check if the operand is currently being used. Important for writing
+                auto it_used = used.find(original_op_reg);
+                if(it_used != used.end()) {
+                  // It is already being used, let's rename
+                  new_renamed_reg = getRenamedRegister(original_op_reg);
+                  // Check if renaming was successful.
+                  if (new_renamed_reg == original_op_reg) {
+                    SCMULATE_ERROR(0, "STRUCTURAL HAZZARD on operand %d. No new register was found for renaming. Leaving other operands for later SU iteration.", i);
+                    hazzard_inst_state = inst_state;
+                    processed_operands_keep = already_processed_operands;
+                    inst_state->second = instruction_state::STALL;
+                    return false;
+                  }
+                  auto it_rename = registerRenaming.insert(std::pair<decoded_reg_t, decoded_reg_t> (original_op_reg, new_renamed_reg));
+                  SCMULATE_INFOMSG(5, "Register %s is being 'used'. Renaming it to %s", original_op_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
+                  SCMULATE_INFOMSG_IF(5, !it_rename.second, "Register %s was already renamed to %s now it is changed to %s", original_op_reg.reg_name.c_str(), original_renamed_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
+                } else {
+                  SCMULATE_INFOMSG(5, "Register %s was not found in the 'used' registers map. ", original_op_reg.reg_name.c_str());
+                }
+
+                // Third, check if current source (read) is available or not, to decide if broadcasting or subscription 
+                // Stores if the operand is available for reading in variable available
+                auto source_used = used.find(original_renamed_reg);
+                bool available = source_used == used.end() || source_used->second == reg_state::READ;
+
+                // Forth, if available make a copy into new register
+                if (available && !(original_renamed_reg == new_renamed_reg)) {
+                  SCMULATE_INFOMSG(5, "Copying register %s to register %s", original_renamed_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
+                  std::memcpy(original_renamed_reg.reg_ptr, new_renamed_reg.reg_ptr, original_renamed_reg.reg_size_bytes);
+                }
+
+                // Fith. Apply renaming, and subscribe if not available
+                for (int other_op_num = 1; other_op_num <= MAX_NUM_OPERANDS; ++other_op_num) {
+                  if (already_processed_operands.find(other_op_num) == already_processed_operands.end()) {
+                    operand_t& other_op = inst->getOp(other_op_num);
+                    if (other_op.type == operand_t::REGISTER && other_op.value.reg == original_op_reg) {
+                      // Apply register renaming
+                      other_op.value.reg = new_renamed_reg;
+                      // Decide scheduling or broadcasting
+                      if (available) {
+                        other_op.full_empty = true;
+                        SCMULATE_INFOMSG(5, "Register %s op %d. Marking as WRITE and allowing sched", new_renamed_reg.reg_name.c_str(), other_op_num);
+                      } else {
+                        // Insert it in used, and register to broadcasters 
+                        auto it_broadcast_insert = broadcasters.insert(
+                                              std::pair<decoded_reg_t, instruction_operand_ref_t >(
+                                                    original_renamed_reg, instruction_operand_ref_t() ));
+                        it_broadcast_insert.first->second.push_back(instruction_operand_pair_t(inst_state, other_op_num));
+                        SCMULATE_INFOMSG(5, "Register %s. Marking as WRITE. Do not allow to schedule until broadcast happens", new_renamed_reg.reg_name.c_str());
+                      }
+                      already_processed_operands.insert(other_op_num);
+                    }
+                  }
+                }
+
+                // Finally insert new_renamed_reg into used (remember that new_renamed_reg == original_op_reg if no renamed happened)
+                used.insert(std::pair<decoded_reg_t, reg_state> (new_renamed_reg, reg_state::WRITE));
               }
             } else {
               // Operand is ready by default (IMMEDIATE or UNKNOWN)
-              thisOperand.full_empty = true;
+              current_operand->full_empty = true;
             }
             already_processed_operands.insert(i);
           }
@@ -633,15 +603,15 @@ namespace scm {
         // The type of instruction plays an important role here. 
         bool inst_ready = isInstructionReady(inst);
 
-        if (!inst_ready && (inst->getType() == instType::CONTROL_INST || inst->getType() ==  instType::MEMORY_INST) ) {
+        if (!inst_ready && (inst->getType() == instType::CONTROL_INST ) ) {
           inst_state->second = instruction_state::STALL;
         }
 
         if (!inst_ready) {
           return false;
         }
-        // In memory instructions we need to figure out if there is a hazard in the memory
-        if (inst->getType() == instType::MEMORY_INST) {
+        // In memory instructions or memory codelets we need to figure out if there is a hazard in the memory
+        if (inst->getType() == instType::MEMORY_INST || inst->getType() == instType::EXECUTE_INST) {
           // Check all the ranges
           std::vector <memory_location> ranges = inst->getMemoryRange();
           for (auto it = ranges.begin(); it != ranges.end(); ++it) {
@@ -660,6 +630,8 @@ namespace scm {
         return true;
       }
 
+
+
       decoded_reg_t inline getRenamedRegister(decoded_reg_t & otherReg) {
         reg_file_module * reg_file = this->inst_mem->getRegisterFileModule();
         decoded_reg_t newReg = otherReg;
@@ -673,15 +645,13 @@ namespace scm {
         return newReg;
       }
 
+
+
       void inline instructionFinished(instruction_state_pair * inst_state) {
-
-        /// REMINDERS:
-        /// remove from reservation table
-
         decoded_instruction_t * inst = inst_state->first;
 
-        // In memory instructions we need to figure out if there is a hazard in the memory
-        if (inst->getType() == instType::MEMORY_INST) {
+        // In memory instructions we need to remove range from memory
+        if (inst->getType() == instType::MEMORY_INST || inst->getType() == instType::EXECUTE_INST) {
           std::vector <memory_location> ranges = inst->getMemoryRange();
           for (auto it = ranges.begin(); it != ranges.end(); ++it)
             memCtrl.removeRange( *it );
@@ -731,6 +701,7 @@ namespace scm {
                   for (auto it_broadcast = broadcaster_list_it->second.begin(); it_broadcast != broadcaster_list_it->second.end(); it_broadcast = broadcaster_list_it->second.erase(it_broadcast)) {
                     instruction_state_pair * other_inst_state_pair = it_broadcast->first;
                     // Broadcasting
+                    // TODO: REMINDER: This may result in multiple copies of the same value. We must change it accordingly
                     std::memcpy(other_inst_state_pair->first->getOp(it_broadcast->second).value.reg.reg_ptr, it->first.reg_ptr, it->first.reg_size_bytes);
                     // Marking as ready
                     other_inst_state_pair->first->getOp(it_broadcast->second).full_empty = true;

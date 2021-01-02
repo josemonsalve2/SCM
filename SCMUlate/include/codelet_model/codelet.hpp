@@ -24,11 +24,14 @@ namespace scm {
   class codelet_params {
     private: 
       unsigned char** params;
+      bool *isAddress;
       size_t size_params;
     public:
       codelet_params() {
         size_params = MAX_NUM_PARAMS_CODELETS * sizeof(unsigned char*);
         params = new unsigned char* [size_params];
+        isAddress = new bool [MAX_NUM_PARAMS_CODELETS];
+        std::memset(isAddress, 0, sizeof(bool)*MAX_NUM_PARAMS_CODELETS);
       }
       // Copy constructor
       codelet_params(const codelet_params &other) : size_params(other.size_params) {
@@ -38,6 +41,16 @@ namespace scm {
         } else {
           this->params = nullptr;
         }
+        isAddress = new bool [MAX_NUM_PARAMS_CODELETS];
+        std::memcpy(this->isAddress, other.isAddress, sizeof(bool)*MAX_NUM_PARAMS_CODELETS);
+      }
+
+      void inline setParamAsAddress(int op_num) {
+        isAddress[op_num] = true;
+      }
+
+      bool inline isParamAnAddress(int op_num) {
+        return isAddress[op_num];
       }
       // Get reference parameter
       template <class T = unsigned char *> 
@@ -62,7 +75,9 @@ namespace scm {
 
       void * getParams() { return this->params; }
       ~codelet_params() {
-        delete[] params;
+        if (this->params != nullptr)
+          delete[] params;
+        delete[] isAddress;
       }
   };
   
@@ -83,6 +98,7 @@ namespace scm {
       virtual void implementation() = 0;
       virtual bool isMemoryCodelet() { return false; }
       virtual std::vector<memory_location> getMemoryRange() { return std::vector<memory_location>(); };
+      bool isOpAnAddress(int op_num) { return params.isParamAnAddress(op_num); };
       inline codelet_params& getParams() { return this->params; };
       inline std::uint_fast16_t& getOpIO() { return op_in_out; };
       inline void setExecutor (cu_executor_module * exec) {this->myExecutor = exec;}
@@ -160,6 +176,7 @@ namespace scm {
     \
   }
 
+// Here the programmer should specify if one of the parameters is used as an address.
 #define MEMRANGE_CODELET(name, code) \
     std::vector<sc::memory_location> \
     COD_CLASS_NAME(name)::getMemoryRange() { code; } 

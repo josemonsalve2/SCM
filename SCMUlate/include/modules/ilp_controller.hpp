@@ -161,7 +161,7 @@ namespace scm {
         }
 
         // In memory instructions we need to figure out if there is a hazard in the memory
-        if (inst->getType() == instType::MEMORY_INST) {
+        if (inst->isMemoryInstruction()) {
           // Check all the ranges
           std::vector <memory_location> ranges = inst->getMemoryRange();
           for (auto it = ranges.begin(); it != ranges.end(); ++it) {
@@ -201,7 +201,7 @@ namespace scm {
       void inline instructionFinished(instruction_state_pair * inst_state) {
         decoded_instruction_t * inst = inst_state->first;
         // In memory instructions we need to figure out if there is a hazard in the memory
-        if (inst->getType() == instType::MEMORY_INST) {
+        if (inst->isMemoryInstruction()) {
           std::vector <memory_location> ranges = inst->getMemoryRange();
           for (auto it = ranges.begin(); it != ranges.end(); ++it)
             memCtrl.removeRange( *it );
@@ -395,6 +395,8 @@ namespace scm {
 
         decoded_instruction_t * inst = (inst_state->first);
 
+        // COMMIT INSTRUCTIONS they are handled differently. 
+        // No operands, but everything must have finished. Empty pipeline
         if (inst->getType() == instType::COMMIT) {
           if (used.size() != 0 || memCtrl.numberOfRanges() != 0) {
             inst_state->second = instruction_state::STALL;
@@ -403,6 +405,20 @@ namespace scm {
             inst_state->second = instruction_state::READY;
             return true;
           }
+        }
+
+        // MEMORY INSTRUCTIONS. If they are stalled, it is because they have an unsatisfied dependency
+        // that may be a missing memory address, or a conflict with a memory access from other insturction
+        // Therefore we must check if this is still the case
+        // In memory instructions or memory codelets we need to figure out if there is a hazard in the memory
+        if (inst->isMemoryInstruction() && inst_state->second == instruction_state::STALL) {
+          if (stallMemoryInstruction(inst))
+            return false;
+          if (isInstructionReady(inst)) {
+            inst_state->second = instruction_state::READY;
+            return true;
+          }
+          return false;
         }
 
         std::set<int> already_processed_operands;
@@ -544,7 +560,9 @@ namespace scm {
                     inst_state->second = instruction_state::STALL;
                     return false;
                   }
+                  #if VERBOSE_MODE >= 0
                   auto it_rename = registerRenaming.insert(std::pair<decoded_reg_t, decoded_reg_t> (original_op_reg, new_renamed_reg));
+                  #endif
                   SCMULATE_INFOMSG(5, "Register %s is being 'used'. Renaming it to %s", original_op_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
                   SCMULATE_INFOMSG_IF(5, !it_rename.second, "Register %s was already renamed to %s now it is changed to %s", original_op_reg.reg_name.c_str(), original_renamed_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
                 } else {
@@ -601,41 +619,26 @@ namespace scm {
 
         // Of inst is a Codelet, we must update the values of the registers
         inst_state->first->updateCodeletParams();
-
         // We have finished processing this instruction, if it was a hazzard, it is not a hazzard anymore
         hazzard_inst_state = nullptr;
 
-        // once each operand dependency is analyzed, we make a decision if waiting, ready or stall. 
-        // The type of instruction plays an important role here. 
-        bool inst_ready = isInstructionReady(inst);
-
-        if (!inst_ready && (inst->getType() == instType::CONTROL_INST ) ) {
+        // If an operand that requires memory instructions is not available, 
+        // then we cannot reslve the memoryRange. We must stall the pipeline
+        // If a memry region has another memory operation waiting for completioon, 
+        // then we cannot reslve the memoryRange. We must stall the pipeline
+        if(stallMemoryInstruction(inst)) {
           inst_state->second = instruction_state::STALL;
-        }
-
-        // In memory instructions or memory codelets we need to figure out if there is a hazard in the memory
-        if (inst->getType() == instType::MEMORY_INST || inst->getType() == instType::EXECUTE_INST) {
-          // Check all the ranges
-          bool overlap = false;
-          std::vector <memory_location> ranges = inst->getMemoryRange();
-          for (auto it = ranges.begin(); it != ranges.end(); ++it) {
-            if (memCtrl.itOverlaps( *it )) {
-              overlap = true;
-            }
-          }
-          // The instruction is ready to schedule, let's mark the ranges as busy
-          for (auto it = ranges.begin(); it != ranges.end(); ++it)
-            memCtrl.addRange( *it );
-          
-          if (overlap) {
-            inst_state->second = instruction_state::STALL;
-            return false;
-          }
-        }
-        
-        if (!inst_ready) {
           return false;
         }
+
+        // once each operand dependency is analyzed, we make a decision if waiting, ready or stall. 
+        // The type of instruction plays an important role here. 
+        if (!isInstructionReady(inst)) {
+          if (inst->getType() == instType::CONTROL_INST) 
+            inst_state->second = instruction_state::STALL;
+          return false;
+        }
+
         // Instruction ready for execution 
         inst_state->second = instruction_state::READY;
         return true;
@@ -663,7 +666,7 @@ namespace scm {
         
         SCMULATE_INFOMSG(5, "Instruction %s has finished. Starting clean up process", inst->getFullInstruction().c_str() );
         // In memory instructions we need to remove range from memory
-        if (inst->getType() == instType::MEMORY_INST || inst->getType() == instType::EXECUTE_INST) {
+        if (inst->isMemoryInstruction()) {
           std::vector <memory_location> ranges = inst->getMemoryRange();
           for (auto it = ranges.begin(); it != ranges.end(); ++it)
             memCtrl.removeRange( *it );
@@ -719,8 +722,10 @@ namespace scm {
                     other_inst_state_pair->first->getOp(it_broadcast->second).full_empty = true;
                     SCMULATE_INFOMSG(5, "Enabling operand %d with register %s, for instruction %s", it_broadcast->second, it->first.reg_name.c_str(), other_inst_state_pair->first->getFullInstruction().c_str());
                     if (isInstructionReady(other_inst_state_pair->first)) {
-                      other_inst_state_pair->second = instruction_state::READY;
-                      SCMULATE_INFOMSG(5, "Marking instruction %s as READY", other_inst_state_pair->first->getFullInstruction().c_str());
+                      if (!stallMemoryInstruction(other_inst_state_pair->first)) {
+                        other_inst_state_pair->second = instruction_state::READY;
+                        SCMULATE_INFOMSG(5, "Marking instruction %s as READY", other_inst_state_pair->first->getFullInstruction().c_str());
+                      }
                     }
                   }
                   broadcasters.erase(broadcaster_list_it);
@@ -733,8 +738,10 @@ namespace scm {
                     other_inst_state_pair->first->getOp(it_subs->second).full_empty = true;
                     SCMULATE_INFOMSG(5, "Enabling operand %d with register %s, for instruction %s", it_subs->second, it->first.reg_name.c_str(), other_inst_state_pair->first->getFullInstruction().c_str());
                     if (isInstructionReady(other_inst_state_pair->first)) {
-                      other_inst_state_pair->second = instruction_state::READY;
-                      SCMULATE_INFOMSG(5, "Marking instruction %s as READY", other_inst_state_pair->first->getFullInstruction().c_str());
+                      if (!stallMemoryInstruction(other_inst_state_pair->first)) {
+                        other_inst_state_pair->second = instruction_state::READY;
+                        SCMULATE_INFOMSG(5, "Marking instruction %s as READY", other_inst_state_pair->first->getFullInstruction().c_str());
+                      }
                     }
                   }
                   // Marking the register as read, ready to be consumed
@@ -758,15 +765,39 @@ namespace scm {
       }
 
       bool inline isInstructionReady(decoded_instruction_t * inst) {
-        bool is_ready = true;
         for (int i = 1; i <= MAX_NUM_OPERANDS; ++i) {
           operand_t &thisOperand = inst->getOp(i);
           if(!thisOperand.full_empty) {
-            is_ready = false;
-            break;
+            return false;
           }
         }
-        return is_ready;
+        return true;
+      }
+
+      bool inline stallMemoryInstruction(decoded_instruction_t * inst) {
+        // Check if the instruction or its range overlap
+        if (inst->isMemoryInstruction()) {
+          // Check if an address operand is not ready
+          for (int i = 1; i <= MAX_NUM_OPERANDS; ++i) {
+            operand_t &thisOperand = inst->getOp(i);
+            if(!thisOperand.full_empty && inst->isOpAnAddress(i)) {
+              return true;
+              break;
+            }
+          }
+          // Check if a memory region overlaps
+          std::vector <memory_location> ranges = inst->getMemoryRange();
+          for (auto it = ranges.begin(); it != ranges.end(); ++it) {
+            if (memCtrl.itOverlaps( *it )) {
+              return true;
+            }
+          }
+          // The instruction is ready to schedule, let's mark the ranges as busy
+          for (auto it = ranges.begin(); it != ranges.end(); ++it)
+            memCtrl.addRange( *it );
+        }
+        return false;
+
       }
 
       std::map<decoded_reg_t, reg_state> getOperandsDirs (decoded_instruction_t * inst) {

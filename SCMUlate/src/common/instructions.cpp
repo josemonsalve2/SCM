@@ -156,6 +156,20 @@ namespace scm {
       return ret_vector;
     }
 
+    bool
+    decoded_instruction_t::isOpAnAddress(int op_num) {
+      if (this->getType() == instType::MEMORY_INST && this->getInstruction() != "LDIMM") {
+        if (op_num != 1) {
+          // This is always the source/destination register;
+          return true;
+        }
+      } else if (this->getType() == instType::EXECUTE_INST && this->cod_exec->isMemoryCodelet()) {
+        this->cod_exec->isOpAnAddress(op_num);
+      }
+
+      return false;
+    }
+
     void 
     decoded_instruction_t::updateCodeletParams() {
       // For codelets only

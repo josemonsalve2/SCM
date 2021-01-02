@@ -144,7 +144,7 @@ namespace scm {
 
       bool decodeOperands(reg_file_module * const reg_file_m);
 
-      /** brief Update codelet register references to connect with renaming
+      /** \brief Update codelet register references to connect with renaming
        * 
        * When a Codelet is created its params are defined from the interpreted arguments
        * However, when we rename the operands, we neet ot then re-synchronize the params for the Codelet.
@@ -153,7 +153,25 @@ namespace scm {
       
       void updateCodeletParams();
 
+       /** \brief Get the set of memory addresses that concern this instruction or codelet
+       * 
+       * To avoid memory hazzards, it is important to respect the order of memory opoerations occur for a 
+       * single memory location. This method allows to return the memory values needed for the executin
+       * of this instruction. Allowing an in-order memory access.
+       * 
+       */
       std::vector<memory_location> getMemoryRange(); 
+
+      /** \brief Tells if a register represents an address value of a memory instruction or codelet
+       * 
+       * When an operand represents an address and this one has not been calculated, it is not 
+       * possible to avoid hazzards on memory operantions. It is then necessary to know if an address
+       * has not been yet calculated. This method allows to tell if an operand should onsider
+       * this restriction or not.
+       */
+      bool isOpAnAddress(int op_num); 
+
+      bool inline isMemoryInstruction() { return this->type == instType::MEMORY_INST ||  (this->type == instType::EXECUTE_INST && this->cod_exec->isMemoryCodelet()); }
 
       ~decoded_instruction_t() {
         if (type == EXECUTE_INST) {

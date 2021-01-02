@@ -70,7 +70,14 @@ namespace scm {
        */
       inline std::string getInstruction() { return instruction; }
 
-      inline std::string getFullInstruction() { return instruction+" "+op1_s+(op2_s.length() != 0?", "+op2_s:"") + (op3_s.length() != 0?", "+op3_s:""); }
+      inline std::string getFullInstruction() { 
+        std::string fullInstWithRename = "";
+        fullInstWithRename += instruction + " ";
+        fullInstWithRename += (op1.type == operand_t::REGISTER ? op1.value.reg.reg_name : op1_s) + (op2_s.length() != 0?", ": "");
+        fullInstWithRename += (op2.type == operand_t::REGISTER ? op2.value.reg.reg_name : op2_s) + (op3_s.length() != 0?", ": "");
+        fullInstWithRename += (op3.type == operand_t::REGISTER ? op3.value.reg.reg_name : op3_s);
+        return fullInstWithRename; 
+      }
       /** \brief get Codelet
        */
       inline codelet * getExecCodelet() { return cod_exec; }

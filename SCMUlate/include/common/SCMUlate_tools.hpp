@@ -10,6 +10,7 @@
 #include <cstdlib>
 #include <cstring>
 #include "system_config.hpp"
+#include "assert.h"
 
 typedef unsigned char * l2_memory_t;
 
@@ -34,11 +35,13 @@ typedef unsigned char * l2_memory_t;
   #define SCMULATE_ERROR(level, message, ...) { \
     if(VERBOSE_MODE >= level) {\
       fprintf(stderr, "[SCMULATE_ERROR: %s:%i] " message "\n", __FILENAME__, __LINE__, ##__VA_ARGS__); \
+      assert(0 && message); \
     } \
   }
   #define SCMULATE_ERROR_IF(level, condition, message, ...) { \
     if(VERBOSE_MODE >= level && condition) { \
       fprintf(stderr, "[SCMULATE_ERROR: %s:%i] " message "\n", __FILENAME__, __LINE__, ##__VA_ARGS__); \
+      assert(0 && message); \
     } \
   }
   

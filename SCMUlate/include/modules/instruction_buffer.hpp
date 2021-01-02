@@ -65,6 +65,15 @@ namespace scm {
 
       std::deque <instruction_state_pair *> * get_buffer() { return &this->instruction_buffer; }
       instruction_state_pair* get_latest() { return this->instruction_buffer.back(); }
+
+      ~instructions_buffer_module () {
+        for (auto it = instruction_buffer.begin(); it != instruction_buffer.end() ;) {
+          SCMULATE_INFOMSG(5, "Deleting Instruction %s from buffer", (*it)->first->getFullInstruction().c_str());
+          delete (*it)->first;
+          delete *it;
+          it = instruction_buffer.erase(it);
+        }
+      }
   };
 }
 

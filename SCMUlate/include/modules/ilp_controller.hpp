@@ -87,12 +87,16 @@ namespace scm {
       memory_queue_controller() { };
       uint32_t inline numberOfRanges () { return ranges.size(); }
       void inline addRange(memory_location& curLocation) {
-        SCMULATE_INFOMSG(0, "Adding range [%lu. %lu]",(unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size );
+        SCMULATE_INFOMSG(4, "Adding range [%lu, %lu, %lu]",(unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size, (unsigned long)curLocation.size );
         this->ranges.insert(curLocation);
       }
       void inline removeRange(memory_location& curLocation) {
-        SCMULATE_INFOMSG(0, "Adding range [%lu. %lu]",(unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size );
-        this->ranges.erase(curLocation);
+        SCMULATE_INFOMSG(4, "Removing range [%lu, %lu, %lu]",(unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size, (unsigned long)curLocation.size );
+        if (this->ranges.find(curLocation) != this->ranges.end()) {
+          this->ranges.erase(curLocation);
+        } else {
+          SCMULATE_ERROR(0, "The range [%lu, %lu, %lu], does not exist in the set of ranges.", (unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size, (unsigned long)curLocation.size)
+        }
       }
       bool inline itOverlaps(memory_location& curLocation) {
         // The start of the curLocation cannot be in between a beginning and end of the range
@@ -414,7 +418,7 @@ namespace scm {
         }
         
 
-        SCMULATE_INFOMSG(5, "Starting dependency discovery and hazzard avoidance process");
+        SCMULATE_INFOMSG(5, "Starting dependency discovery and hazzard avoidance process on instruction %s", inst->getFullInstruction().c_str());
         // Get directions for the current instruction. (Col 1)
         std::map<decoded_reg_t, reg_state> inst_operand_dir = getOperandsDirs(inst);
         
@@ -435,8 +439,8 @@ namespace scm {
                 // Renamig = X, then we rename operand and start process again
                 auto it_rename = registerRenaming.find(current_operand->value.reg);
                 if (it_rename != registerRenaming.end()) {
-                  current_operand->value.reg = it_rename->second;
                   SCMULATE_INFOMSG(5, "Register %s was previously renamed to %s", current_operand->value.reg.reg_name.c_str(), it_rename->second.reg_name.c_str());
+                  current_operand->value.reg = it_rename->second;
                 }
 
                 auto it_used = used.find(current_operand->value.reg);
@@ -544,7 +548,9 @@ namespace scm {
                   SCMULATE_INFOMSG(5, "Register %s is being 'used'. Renaming it to %s", original_op_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
                   SCMULATE_INFOMSG_IF(5, !it_rename.second, "Register %s was already renamed to %s now it is changed to %s", original_op_reg.reg_name.c_str(), original_renamed_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
                 } else {
-                  SCMULATE_INFOMSG(5, "Register %s was not found in the 'used' registers map. ", original_op_reg.reg_name.c_str());
+                  if (it_rename != registerRenaming.end())
+                    registerRenaming.erase(it_rename);
+                  SCMULATE_INFOMSG(5, "Register %s was not found in the 'used' registers map. If it was previously renamed, we removed it", original_op_reg.reg_name.c_str());
                 }
 
                 // Third, check if current source (read) is available or not, to decide if broadcasting or subscription 
@@ -555,7 +561,7 @@ namespace scm {
                 // Forth, if available make a copy into new register
                 if (available && !(original_renamed_reg == new_renamed_reg)) {
                   SCMULATE_INFOMSG(5, "Copying register %s to register %s", original_renamed_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
-                  std::memcpy(original_renamed_reg.reg_ptr, new_renamed_reg.reg_ptr, original_renamed_reg.reg_size_bytes);
+                  std::memcpy(new_renamed_reg.reg_ptr, original_renamed_reg.reg_ptr, original_renamed_reg.reg_size_bytes);
                 }
 
                 // Fith. Apply renaming, and subscribe if not available
@@ -607,23 +613,28 @@ namespace scm {
           inst_state->second = instruction_state::STALL;
         }
 
-        if (!inst_ready) {
-          return false;
-        }
         // In memory instructions or memory codelets we need to figure out if there is a hazard in the memory
         if (inst->getType() == instType::MEMORY_INST || inst->getType() == instType::EXECUTE_INST) {
           // Check all the ranges
+          bool overlap = false;
           std::vector <memory_location> ranges = inst->getMemoryRange();
           for (auto it = ranges.begin(); it != ranges.end(); ++it) {
             if (memCtrl.itOverlaps( *it )) {
-              inst_state->second = instruction_state::STALL;
-              return false;
+              overlap = true;
             }
           }
-
           // The instruction is ready to schedule, let's mark the ranges as busy
           for (auto it = ranges.begin(); it != ranges.end(); ++it)
             memCtrl.addRange( *it );
+          
+          if (overlap) {
+            inst_state->second = instruction_state::STALL;
+            return false;
+          }
+        }
+        
+        if (!inst_ready) {
+          return false;
         }
         // Instruction ready for execution 
         inst_state->second = instruction_state::READY;
@@ -649,7 +660,8 @@ namespace scm {
 
       void inline instructionFinished(instruction_state_pair * inst_state) {
         decoded_instruction_t * inst = inst_state->first;
-
+        
+        SCMULATE_INFOMSG(5, "Instruction %s has finished. Starting clean up process", inst->getFullInstruction().c_str() );
         // In memory instructions we need to remove range from memory
         if (inst->getType() == instType::MEMORY_INST || inst->getType() == instType::EXECUTE_INST) {
           std::vector <memory_location> ranges = inst->getMemoryRange();

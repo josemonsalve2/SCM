@@ -57,83 +57,86 @@ int scm::fetch_decode_module::behavior()
     {
       instruction_state_pair * current_pair = *it;
       switch (current_pair->second) {
-      case instruction_state::STALL:
-        instructionLevelParallelism.checkMarkInstructionToSched(current_pair);
-        if (current_pair->second == instruction_state::STALL)
-          this->stallingInstruction = current_pair;
-        break;
-      case instruction_state::WAITING:
-        instructionLevelParallelism.checkMarkInstructionToSched(current_pair);
-        if (current_pair->second == instruction_state::STALL)
-          this->stallingInstruction = current_pair;
-        break;
-      case instruction_state::READY:
-        switch (current_pair->first->getType()) {
-          case COMMIT:
-            // Check if there are other instructions in the buffer that need to be finished
-            if (this->inst_buff_m.get_buffer()->size() == 1) {
-              SCMULATE_INFOMSG(4, "Scheduling and Exec a COMMIT");
-              SCMULATE_INFOMSG(1, "Turning off machine alive = false");
+        case instruction_state::STALL:
+          instructionLevelParallelism.checkMarkInstructionToSched(current_pair);
+          if (current_pair->second == instruction_state::STALL)
+            this->stallingInstruction = current_pair;
+          break;
+        case instruction_state::WAITING:
+          instructionLevelParallelism.checkMarkInstructionToSched(current_pair);
+          if (current_pair->second == instruction_state::STALL)
+            this->stallingInstruction = current_pair;
+          break;
+        case instruction_state::READY:
+          current_pair->second = instruction_state::EXECUTING;
+          switch (current_pair->first->getType()) {
+            case COMMIT:
+              // Check if there are other instructions in the buffer that need to be finished
+              if (this->inst_buff_m.get_buffer()->size() == 1) {
+                SCMULATE_INFOMSG(4, "Scheduling and Exec a COMMIT");
+                SCMULATE_INFOMSG(1, "Turning off machine alive = false");
+                #pragma omp atomic write
+                *(this->aliveSignal) = false;
+                // Properly clear the COMMIT instruction
+                current_pair->second = instruction_state::DECOMISION;
+              }
+              break;
+            case CONTROL_INST:
+              SCMULATE_INFOMSG(4, "Scheduling a CONTROL_INST %s", current_pair->first->getFullInstruction().c_str());
+              TIMERS_COUNTERS_GUARD(
+                  this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_CONTROL_INSTRUCTION, current_pair->first->getInstruction()););
+              executeControlInstruction(current_pair->first);
+              current_pair->second = instruction_state::EXECUTION_DONE;
+              break;
+            case BASIC_ARITH_INST:
+              SCMULATE_INFOMSG(4, "Scheduling a BASIC_ARITH_INST %s", current_pair->first->getFullInstruction().c_str());
+              TIMERS_COUNTERS_GUARD(
+                  this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_ARITH_INSTRUCTION););
+              executeArithmeticInstructions(current_pair->first);
+              current_pair->second = instruction_state::EXECUTION_DONE;
+              break;
+            case EXECUTE_INST:
+              SCMULATE_INFOMSG(4, "Scheduling an EXECUTE_INST %s", current_pair->first->getFullInstruction().c_str());
+              attemptAssignExecuteInstruction(current_pair);
+              break;
+            case MEMORY_INST:
+              SCMULATE_INFOMSG(4, "Scheduling a MEMORY_INST %s", current_pair->first->getFullInstruction().c_str());
+              attemptAssignExecuteInstruction(current_pair);
+              break;
+            default:
+              SCMULATE_ERROR(0, "Instruction not recognized");
               #pragma omp atomic write
               *(this->aliveSignal) = false;
-              current_pair->second = instruction_state::EXECUTION_DONE;
-            }
-            break;
-          case CONTROL_INST:
-            SCMULATE_INFOMSG(4, "Scheduling a CONTROL_INST %s", current_pair->first->getFullInstruction().c_str());
-            TIMERS_COUNTERS_GUARD(
-                this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_CONTROL_INSTRUCTION, current_pair->first->getInstruction()););
-            executeControlInstruction(current_pair->first);
-            current_pair->second = instruction_state::EXECUTION_DONE;
-            break;
-          case BASIC_ARITH_INST:
-            SCMULATE_INFOMSG(4, "Scheduling a BASIC_ARITH_INST %s", current_pair->first->getFullInstruction().c_str());
-            TIMERS_COUNTERS_GUARD(
-                this->time_cnt_m->addEvent(this->su_timer_name, EXECUTE_ARITH_INSTRUCTION););
-            executeArithmeticInstructions(current_pair->first);
-            current_pair->second = instruction_state::EXECUTION_DONE;
-            break;
-          case EXECUTE_INST:
-            SCMULATE_INFOMSG(4, "Scheduling an EXECUTE_INST %s", current_pair->first->getFullInstruction().c_str());
-            attemptAssignExecuteInstruction(current_pair);
-            break;
-          case MEMORY_INST:
-            SCMULATE_INFOMSG(4, "Scheduling a MEMORY_INST %s", current_pair->first->getFullInstruction().c_str());
-            attemptAssignExecuteInstruction(current_pair);
-            break;
-          default:
-            SCMULATE_ERROR(0, "Instruction not recognized");
-            #pragma omp atomic write
-            *(this->aliveSignal) = false;
-            break;
-        }
-        break;
-      
-      case instruction_state::EXECUTION_DONE:
-        // check if stalling instruction
-        if (this->stallingInstruction != nullptr && this->stallingInstruction == current_pair)
-          this->stallingInstruction = nullptr;
-        instructionLevelParallelism.instructionFinished(current_pair);
-        SCMULATE_INFOMSG(5, "Marking instruction %s for decomision", current_pair->first->getFullInstruction().c_str());
-        current_pair->second = instruction_state::DECOMISION;
-        break;
-      default:
-        break;
+              break;
+          }
+          break;
+        
+        case instruction_state::EXECUTION_DONE:
+          // check if stalling instruction
+          if (this->stallingInstruction != nullptr && this->stallingInstruction == current_pair)
+            this->stallingInstruction = nullptr;
+          instructionLevelParallelism.instructionFinished(current_pair);
+          SCMULATE_INFOMSG(5, "Marking instruction %s for decomision", current_pair->first->getFullInstruction().c_str());
+          current_pair->second = instruction_state::DECOMISION;
+          break;
+        default:
+          break;
       }
       TIMERS_COUNTERS_GUARD(
         this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
 
-      // Check if any instructions have finished
-      for (uint32_t i = 0; i < this->ctrl_st_m->numExecutors(); i++) {
-        if (this->ctrl_st_m->get_executor(i)->is_done()) {
-          this->ctrl_st_m->get_executor(i)->getHead()->second = instruction_state::EXECUTION_DONE;
-          SCMULATE_INFOMSG(5, "Instruction %s has finished executing", this->ctrl_st_m->get_executor(i)->getHead()->first->getFullInstruction().c_str());
-
-          this->ctrl_st_m->get_executor(i)->empty_slot();
-        }
-      }
-
     }
+
+    // Check if any instructions have finished
+    for (uint32_t i = 0; i < this->ctrl_st_m->numExecutors(); i++) {
+      if (this->ctrl_st_m->get_executor(i)->is_done()) {
+        this->ctrl_st_m->get_executor(i)->getHead()->second = instruction_state::EXECUTION_DONE;
+        SCMULATE_INFOMSG(5, "Instruction %s has finished executing", this->ctrl_st_m->get_executor(i)->getHead()->first->getFullInstruction().c_str());
+
+        this->ctrl_st_m->get_executor(i)->empty_slot();
+      }
+    }
+
     // Progress PC, if not stalling
     if (this->stallingInstruction == nullptr) {
       SCMULATE_INFOMSG(5, "incrementing PC");

@@ -184,7 +184,7 @@ namespace scm {
   // helps the fetch decode determine if the instruction is ready or not for execution
   // The ilp_controller helps the fetch-decode unit to change this state.
   enum instruction_state {
-    WAITING, READY, EXECUTION_DONE, DECOMISION, STALL
+    WAITING, READY, EXECUTING, EXECUTION_DONE, DECOMISION, STALL
   };
   typedef std::pair<decoded_instruction_t*, instruction_state> instruction_state_pair; 
 

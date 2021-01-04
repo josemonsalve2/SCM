@@ -27,7 +27,7 @@ scm::cu_executor_module::behavior() {
           #ifdef PAPI_COUNT
           this->timer_cnt_m->startPAPIcounters(this->cu_timer_name);
           #endif
-          this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_EXECUTION_MEM, curInstruction->getInstruction());
+          this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_EXECUTION_MEM, curInstruction->getFullInstruction());
         );
         this->mem_interface_t->assignInstSlot(curInstruction);
         this->mem_interface_t->behavior();
@@ -36,7 +36,7 @@ scm::cu_executor_module::behavior() {
           #ifdef PAPI_COUNT
           this->timer_cnt_m->startPAPIcounters(this->cu_timer_name);
           #endif
-          this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_EXECUTION_COD, curInstruction->getInstruction());
+          this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_EXECUTION_COD, curInstruction->getFullInstruction());
         );
         codeletExecutor();
       } else {

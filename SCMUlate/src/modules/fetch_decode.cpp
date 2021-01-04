@@ -47,7 +47,7 @@ int scm::fetch_decode_module::behavior()
     }
 
     // Iterate over the instruction buffer (window) looking for instructions to execute
-    for (auto it = this->inst_buff_m.get_buffer()->rbegin(); it != this->inst_buff_m.get_buffer()->rend(); ++it) {
+    for (auto it = this->inst_buff_m.get_buffer()->begin(); it != this->inst_buff_m.get_buffer()->end(); ++it) {
       instruction_state_pair * current_pair = *it;
       switch (current_pair->second) {
         case instruction_state::STALL:

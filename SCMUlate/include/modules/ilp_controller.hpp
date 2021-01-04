@@ -662,16 +662,19 @@ namespace scm {
 
 
       decoded_reg_t inline getRenamedRegister(decoded_reg_t & otherReg) {
+        static uint32_t curRegNum = 0;
         decoded_reg_t newReg = otherReg;
+        curRegNum = (curRegNum+1) % hidden_register_file.getNumRegForSize(newReg.reg_size_bytes);
+        newReg.reg_number = curRegNum;
         uint32_t attempts = 0;
 
         // Iterate over the hidden register is found that is not being used
         do {
           newReg.reg_ptr = hidden_register_file.getNextRegister(newReg.reg_size_bytes, newReg.reg_number);
           attempts++;
-        } while ((this->used.find(newReg) != this->used.end() || this->renamedInUse.find(newReg) != this->renamedInUse.end()) && attempts != hidden_register_file.getNumRegForSize(newReg.reg_size));
-        if (attempts == hidden_register_file.getNumRegForSize(newReg.reg_size)) {
-          SCMULATE_INFOMSG(4, "When trying to rename, we could not find another register that was free out of %d", hidden_register_file.getNumRegForSize(newReg.reg_size));
+        } while ((this->used.find(newReg) != this->used.end() || this->renamedInUse.find(newReg) != this->renamedInUse.end()) && attempts != hidden_register_file.getNumRegForSize(newReg.reg_size_bytes));
+        if (attempts == hidden_register_file.getNumRegForSize(newReg.reg_size_bytes)) {
+          SCMULATE_INFOMSG(4, "When trying to rename, we could not find another register that was free out of %d", hidden_register_file.getNumRegForSize(newReg.reg_size_bytes));
           return otherReg;
         }
         newReg.reg_name = "R_ren_" + newReg.reg_size + "_" + std::to_string(newReg.reg_number);
@@ -868,12 +871,12 @@ namespace scm {
   };
 
   class ilp_controller {
-      ILP_MODES SCMULATE_ILP_MODE;
+      const ILP_MODES SCMULATE_ILP_MODE;
       ilp_sequential seq_ctrl;
       ilp_superscalar supscl_ctrl;
       ilp_OoO ooo_ctrl;
     public:
-      ilp_controller (ILP_MODES ilp_mode) : SCMULATE_ILP_MODE(ilp_mode) {
+      ilp_controller (const ILP_MODES ilp_mode) : SCMULATE_ILP_MODE(ilp_mode) {
         SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::SEQUENTIAL, "Using %d ILP_MODES::SEQUENTIAL",SCMULATE_ILP_MODE );
         SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::SUPERSCALAR, "Using %d ILP_MODES::SUPERSCALAR", SCMULATE_ILP_MODE);
         SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::OOO, "Using %d ILP_MODES::OOO", SCMULATE_ILP_MODE);

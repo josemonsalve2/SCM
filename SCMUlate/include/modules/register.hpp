@@ -43,7 +43,7 @@ namespace scm {
           SCMULATE_ERROR(0, "DECODED REGISTER DOES NOT EXIST!!!")
         return result;
       };
-      inline unsigned char * getRegisterByName(std::string size, int num) {
+      inline unsigned char * getRegisterByName(std::string size, int num) const {
         unsigned char * result = NULL;
         if (size == "64B")
           result = REG_64B(num).data;
@@ -108,22 +108,22 @@ namespace scm {
       }
 
       // Get the number of registers of a given size
-      inline uint32_t getNumRegForSize(std::string size) const {
-        if (size == "64B")
+      inline uint32_t getNumRegForSize(uint32_t size) const {
+        if (size == 8)
           return NUM_REG_64BITS;
-        else if (size == "1L")
+        else if (size == CACHE_LINE_SIZE)
           return NUM_REG_1LINE;
-        else if (size == "8L")
+        else if (size == CACHE_LINE_SIZE*8)
           return NUM_REG_8LINE;
-        else if (size == "16L")
+        else if (size == CACHE_LINE_SIZE*16)
           return NUM_REG_16LINE;
-        else if (size == "256L")
+        else if (size == CACHE_LINE_SIZE*256)
           return NUM_REG_256LINE;
-        else if (size == "512L")
+        else if (size == CACHE_LINE_SIZE*512)
           return NUM_REG_512LINE;
-        else if (size == "1024L")
+        else if (size == CACHE_LINE_SIZE*1024)
           return NUM_REG_1024LINE;
-        else if (size == "2048L")
+        else if (size == CACHE_LINE_SIZE*2048)
           return NUM_REG_2048LINE;
 
         SCMULATE_ERROR(0, "DECODED REGISTER DOES NOT EXIST!!!")

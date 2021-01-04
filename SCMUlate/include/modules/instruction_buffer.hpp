@@ -41,7 +41,7 @@ namespace scm {
 
       bool add_instruction(decoded_instruction_t & new_instruction) {
         // Check if we have reached the limit size
-        if (this->instruction_buffer.size() >= INSTRUCTIONS_BUFFER_SIZE || (this->instruction_buffer.size() != 0  && this->instruction_buffer.back()->second == STALL))
+        if (isBufferFull() || (this->instruction_buffer.size() != 0  && this->instruction_buffer.back()->second == STALL))
           return false;
         instruction_state_pair * newPair = new instruction_state_pair(new decoded_instruction_t(new_instruction), WAITING);
         // Avoid calling copy constructor twice
@@ -61,6 +61,10 @@ namespace scm {
             ++it;
           }
         }
+      }
+
+      bool isBufferFull() {
+        return this->instruction_buffer.size() >= INSTRUCTIONS_BUFFER_SIZE;
       }
 
       std::deque <instruction_state_pair *> * get_buffer() { return &this->instruction_buffer; }

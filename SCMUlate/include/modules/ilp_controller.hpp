@@ -358,7 +358,7 @@ namespace scm {
    * if there is a previous hazzard, and we ignore current instruction in favor of resolving the hazzard. 
    */
 
-#define reg_state_str(state) (state == reg_state::READ ? "reg_state::READ" : state == reg_state::WRITE ? "reg_state::WRITE" : state == reg_state::READWRITE ? "reg_state::READWRITE" : "reg_state::NONE")
+#define reg_state_str(state) (state == reg_state::READ ? std::string("reg_state::READ") : state == reg_state::WRITE ? std::string("reg_state::WRITE"): state == reg_state::READWRITE ? std::string("reg_state::READWRITE") :  std::string("reg_state::NONE"))
   class ilp_OoO {
     private:
       reg_file_module hidden_register_file;
@@ -382,8 +382,8 @@ namespace scm {
       // on the instruction and attempt to continue in the process. Control flow must be returned to caller
       // to try to liberate registers
       instruction_state_pair * hazzard_inst_state;
-      std::set<int> processed_operands_keep;
-
+      std::set<int> already_processed_operands;
+      std::map<decoded_reg_t, reg_state> inst_operand_dir;
 
     public:
       ilp_OoO() : hazzard_inst_state(nullptr) { }
@@ -400,7 +400,7 @@ namespace scm {
         // No operands, but everything must have finished. Empty pipeline
         if (inst->getType() == instType::COMMIT) {
           if (used.size() != 0 || memCtrl.numberOfRanges() != 0) {
-            //mprintf("hereeee\n");
+            SCMULATE_INFOMSG_IF(5, inst_state->second != instruction_state::STALL, "Stalling on instruction %s", inst->getFullInstruction().c_str());
             inst_state->second = instruction_state::STALL;
             return false;
           } else {
@@ -409,12 +409,10 @@ namespace scm {
           }
         }
 
-        std::set<int> already_processed_operands;
         // If there is a structural hazzar, we must solve it first
         if (hazzard_inst_state != nullptr) {
           inst_state = hazzard_inst_state;
           inst = inst_state->first;
-          already_processed_operands = processed_operands_keep;
           SCMULATE_INFOMSG(5, "Trying to scheudule instruction %s again", inst->getFullInstruction().c_str());
         } else if (inst->isMemoryInstruction() && inst_state->second == instruction_state::STALL) {
           // MEMORY INSTRUCTIONS. If they are stalled, it is because they have an unsatisfied dependency
@@ -432,18 +430,18 @@ namespace scm {
             return false;
           }
           return false;
-        }
-        else if (reservationTable.find(inst_state) != reservationTable.end()) {
+        } else if (reservationTable.find(inst_state) != reservationTable.end()) {
           // Check if we have already processed the instructions. If so, just return
           return false;
         } else {
+          already_processed_operands.clear();
           reservationTable.insert(inst_state); 
         }
         
 
         // SCMULATE_INFOMSG(3, "Dependency discovery and hazzard avoidance process on instruction (%lu) %s", (unsigned long) inst, inst->getFullInstruction().c_str());
         // Get directions for the current instruction. (Col 1)
-        std::map<decoded_reg_t, reg_state> inst_operand_dir = getOperandsDirs(inst);
+        getOperandsDirs(inst);
         
         // Let's analyze each operand's dependency. Marking as allow sched or not.
         for (int i = 1; i <= MAX_NUM_OPERANDS; ++i) {
@@ -501,7 +499,6 @@ namespace scm {
                   if (newReg == current_operand->value.reg) {
                     SCMULATE_INFOMSG(5, "STRUCTURAL HAZZARD on operand %d. No new register was found for renaming. Leaving other operands for later SU iteration.", i);
                     hazzard_inst_state = inst_state;
-                    processed_operands_keep = already_processed_operands;
                     inst_state->second = instruction_state::STALL;
                     return false;
                   }
@@ -566,7 +563,6 @@ namespace scm {
                   if (new_renamed_reg == original_op_reg) {
                     SCMULATE_INFOMSG(5, "STRUCTURAL HAZZARD on operand %d. No new register was found for renaming. Leaving other operands for later SU iteration.", i);
                     hazzard_inst_state = inst_state;
-                    processed_operands_keep = already_processed_operands;
                     inst_state->second = instruction_state::STALL;
                     return false;
                   }
@@ -644,14 +640,17 @@ namespace scm {
         // then we cannot reslve the memoryRange. We must stall the pipeline
         if(stallMemoryInstruction(inst)) {
           inst_state->second = instruction_state::STALL;
+          SCMULATE_INFOMSG(5, "Stalling on instruction %s", inst->getFullInstruction().c_str());
           return false;
         }
 
         // once each operand dependency is analyzed, we make a decision if waiting, ready or stall. 
         // The type of instruction plays an important role here. 
         if (!isInstructionReady(inst)) {
-          if (inst->getType() == instType::CONTROL_INST) 
+          if (inst->getType() == instType::CONTROL_INST) {
             inst_state->second = instruction_state::STALL;
+            SCMULATE_INFOMSG(5, "Stalling on instruction %s", inst->getFullInstruction().c_str());
+          }
           return false;
         }
 
@@ -668,7 +667,7 @@ namespace scm {
 
         // Iterate over the hidden register is found that is not being used
         do {
-          newReg.reg_ptr = hidden_register_file.getNextRegister(newReg.reg_size, newReg.reg_number);
+          newReg.reg_ptr = hidden_register_file.getNextRegister(newReg.reg_size_bytes, newReg.reg_number);
           attempts++;
         } while ((this->used.find(newReg) != this->used.end() || this->renamedInUse.find(newReg) != this->renamedInUse.end()) && attempts != hidden_register_file.getNumRegForSize(newReg.reg_size));
         if (attempts == hidden_register_file.getNumRegForSize(newReg.reg_size)) {
@@ -693,7 +692,7 @@ namespace scm {
             memCtrl.removeRange( *it );
         }
         
-        std::map<decoded_reg_t, reg_state> inst_operand_dir = getOperandsDirs(inst);
+        getOperandsDirs(inst);
         // Depending on the operand direction, there is some book keeping that needs to happen, which 
         // also enables other instructions. See table 2 above
         for (auto it = inst_operand_dir.begin(); it != inst_operand_dir.end(); ++it) {
@@ -724,7 +723,7 @@ namespace scm {
                   SCMULATE_ERROR(0, "A read register should be subscribed to something");
                 }
               } else {
-                  SCMULATE_ERROR(0, "A read direction operand, should be 'used' marked as READ and it is %s", reg_state_str(it_used->second));
+                  SCMULATE_ERROR(0, "A read direction operand, should be 'used' marked as READ and it is %s", reg_state_str(it_used->second).c_str());
               }
 
             } else if (it->second == reg_state::WRITE || it->second == reg_state::READWRITE) {
@@ -772,7 +771,7 @@ namespace scm {
                   SCMULATE_INFOMSG(5, "Register had no subscriptions. Move register %s to 'used' = NONE.", it->first.reg_name.c_str());
                 }
               } else {
-                  SCMULATE_ERROR(0, "A write direction operand, should be 'used' marked as WRITE and it is %s", reg_state_str(it_used->second));
+                  SCMULATE_ERROR(0, "A write direction operand, should be 'used' marked as WRITE and it is %s", reg_state_str(it_used->second).c_str());
               }
             } else {
               SCMULATE_ERROR(0, "What are you doing here???");
@@ -824,13 +823,13 @@ namespace scm {
 
       }
 
-      std::map<decoded_reg_t, reg_state> getOperandsDirs (decoded_instruction_t * inst) {
-        std::map<decoded_reg_t, reg_state> return_map;
+      void getOperandsDirs (decoded_instruction_t * inst) {
+        inst_operand_dir.clear();
         for (int i = 1; i <= MAX_NUM_OPERANDS; ++i) {
           if (inst->getOp(i).type == operand_t::REGISTER) {
             // Attempt to insert the register, if it is already there, the insert will return a pair with the iterator to the 
             // already inserted value.
-            auto it_insert = return_map.insert(std::pair<decoded_reg_t, reg_state>(inst->getOp(i).value.reg, reg_state::NONE));
+            auto it_insert = inst_operand_dir.insert(std::pair<decoded_reg_t, reg_state>(inst->getOp(i).value.reg, reg_state::NONE));
             reg_state &cur_state = it_insert.first->second;
 
             // We need to set the value of reg_state to read, write or readwrite
@@ -843,10 +842,9 @@ namespace scm {
             else if (inst->getOp(i).read && cur_state == reg_state::NONE)
               cur_state = reg_state::READ;
             
-            SCMULATE_INFOMSG(5, "In instruction %s Register %s set as %s", inst->getFullInstruction().c_str() , inst->getOp(i).value.reg.reg_name.c_str(), reg_state_str(cur_state));
+            SCMULATE_INFOMSG(5, "In instruction %s Register %s set as %s", inst->getFullInstruction().c_str() , inst->getOp(i).value.reg.reg_name.c_str(), reg_state_str(cur_state).c_str());
         }
       }
-      return return_map;
     }
   };
 

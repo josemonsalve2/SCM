@@ -148,8 +148,7 @@ namespace scm {
             SCMULATE_ERROR(0, "Incorrect operand type");
           }
         }
-        memory_location newRange(reinterpret_cast<l2_memory_t>(base_addr + offset), size_dest);
-        ret_vector.push_back(newRange);
+        ret_vector.emplace_back(reinterpret_cast<l2_memory_t>(base_addr + offset), size_dest);
       } else if (this->getType() == instType::EXECUTE_INST && this->cod_exec->isMemoryCodelet()) {
         ret_vector = this->cod_exec->getMemoryRange();
       }

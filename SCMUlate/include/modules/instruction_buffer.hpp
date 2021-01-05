@@ -67,6 +67,10 @@ namespace scm {
         return this->instruction_buffer.size() >= INSTRUCTIONS_BUFFER_SIZE;
       }
 
+      uint16_t inline getBufferSize() const {
+        return this->instruction_buffer.size();
+      }
+
       std::deque <instruction_state_pair *> * get_buffer() { return &this->instruction_buffer; }
       instruction_state_pair* get_latest() { return this->instruction_buffer.back(); }
 

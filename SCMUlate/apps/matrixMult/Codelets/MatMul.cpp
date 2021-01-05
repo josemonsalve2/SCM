@@ -9,21 +9,30 @@
 
 #define TILE_DIM 128
 
-IMPLEMENT_CODELET(LoadSqTile_2048L,
+MEMRANGE_CODELET(LoadSqTile_2048L, 
   // Obtaining the parameters
-  unsigned char *reg1 = this->getParams().getParamAs(0); // Getting register 1
   unsigned char *reg2 = this->getParams().getParamAs(1); // Getting register 2
   unsigned char *reg3 = this->getParams().getParamAs(2); // Getting register 3
-  double *destReg = reinterpret_cast<double*>(reg1);
   uint64_t address = reinterpret_cast<uint8_t*>(reg2)[0];
   uint64_t ldistance = reinterpret_cast<uint64_t>(reg3);
+  ldistance *= sizeof(double);
   for (int i = 1; i < 8; i++) {
     address <<= 8;
     address += static_cast<uint8_t>(reg2[i]);
   }
-  double *addressStart = reinterpret_cast<double *> (getAddress(address)); // Address L2 memory to a pointer of the runtime
+  // Add the ranges
   for (uint64_t i = 0; i < TILE_DIM; i++) {
-    std::memcpy(destReg+TILE_DIM*i, addressStart+ldistance*i, TILE_DIM*sizeof(double));
+    this->addMemRange(address+ldistance*i, TILE_DIM*sizeof(double));
+  }
+);
+
+IMPLEMENT_CODELET(LoadSqTile_2048L,
+  unsigned char *reg1 = this->getParams().getParamAs(0); // Getting register 1
+  double *destReg = reinterpret_cast<double*>(reg1);
+  int i = 0;
+  for (auto it = memoryRanges.begin(); it != memoryRanges.end(); it++) {
+    double *addressStart = reinterpret_cast<double *> (getAddress(it->memoryAddress)); // Address L2 memory to a pointer of the runtime
+    std::memcpy(destReg+TILE_DIM*i++, addressStart, it->size);
   }
 );
 
@@ -44,21 +53,30 @@ IMPLEMENT_CODELET(MatMult_2048L,
 
 );
 
-
-IMPLEMENT_CODELET(StoreSqTile_2048L,
+MEMRANGE_CODELET(StoreSqTile_2048L, 
   // Obtaining the parameters
-  unsigned char *reg1 = this->getParams().getParamAs(0); // Getting register 1
   unsigned char *reg2 = this->getParams().getParamAs(1); // Getting register 2
   unsigned char *reg3 = this->getParams().getParamAs(2); // Getting register 3
-  double *sourceReg = reinterpret_cast<double*>(reg1);
   uint64_t address = reinterpret_cast<uint8_t*>(reg2)[0];
   uint64_t ldistance = reinterpret_cast<uint64_t>(reg3);
+  ldistance *= sizeof(double);
   for (int i = 1; i < 8; i++) {
     address <<= 8;
     address += static_cast<uint8_t>(reg2[i]);
   }
-  double *addressStart = reinterpret_cast<double *> (getAddress(address)); // Address L2 memory to a pointer of the runtime
   for (uint64_t i = 0; i < TILE_DIM; i++) {
-    std::memcpy(addressStart+ldistance*i, sourceReg+TILE_DIM*i, TILE_DIM*sizeof(double));
+    this->addMemRange(address+ldistance*i, TILE_DIM*sizeof(double));
+  }
+);
+
+IMPLEMENT_CODELET(StoreSqTile_2048L,
+  // Obtaining the parameters
+  unsigned char *reg1 = this->getParams().getParamAs(0); // Getting register 1
+  double *sourceReg = reinterpret_cast<double*>(reg1);
+
+  int i = 0;
+  for (auto it = memoryRanges.begin(); it != memoryRanges.end(); it++) {
+    double *addressStart = reinterpret_cast<double *> (getAddress(it->memoryAddress)); // Address L2 memory to a pointer of the runtime
+    std::memcpy(addressStart, sourceReg+TILE_DIM*i++, it->size);
   }
 );

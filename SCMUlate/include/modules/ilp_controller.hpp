@@ -13,6 +13,8 @@
 #include "instructions.hpp"
 #include "instruction_mem.hpp"
 #include <set>
+#include <unordered_set>
+#include <unordered_map>
 #include <string>
 #include <queue>
 #include <limits>
@@ -81,7 +83,7 @@ namespace scm {
 
   class memory_queue_controller {
     private:
-      // Ranges are exclusive on begining and end
+      // Ranges are inclusive on begining and exclusive on end
       std::set<memory_location> ranges;
     public:
       memory_queue_controller() { };
@@ -101,21 +103,18 @@ namespace scm {
       bool inline itOverlaps(memory_location& curLocation) {
         // The start of the curLocation cannot be in between a beginning and end of the range
         // The end of the curLocation cannot be between a beginning and end
-        auto itRange = ranges.begin();
-        bool res = false;
-        for (; itRange != ranges.end(); itRange++) {
-          if (itRange->memoryAddress < curLocation.memoryAddress && itRange->upperLimit() > curLocation.memoryAddress) {
-            res = true;
-            break;
+        for (auto itRange = ranges.begin(); itRange != ranges.end(); itRange++) {
+          if (itRange->memoryAddress <= curLocation.memoryAddress && itRange->upperLimit() > curLocation.memoryAddress) {
+            return true;
           }
           if (itRange->memoryAddress < curLocation.upperLimit() && itRange->upperLimit() > curLocation.upperLimit()) {
-            res = true;
-            break;
+            return true;
           }
-          if (itRange->memoryAddress > curLocation.upperLimit() && itRange->upperLimit() > curLocation.upperLimit())
-            break;
+          if (curLocation.memoryAddress <= itRange->memoryAddress && curLocation.upperLimit() >= itRange->upperLimit() ) {
+            return true;
+          }
         }
-        return res;
+        return false;
       }
   };
 
@@ -370,9 +369,9 @@ namespace scm {
       typedef std::vector< instruction_operand_pair_t > instruction_operand_ref_t;
 
       memory_queue_controller memCtrl;
-      std::map<decoded_reg_t, reg_state> used;
-      std::map<decoded_reg_t, decoded_reg_t> registerRenaming;
-      std::set<decoded_reg_t> renamedInUse;
+      std::unordered_map<decoded_reg_t, reg_state> used;
+      std::unordered_map<decoded_reg_t, decoded_reg_t> registerRenaming;
+      std::unordered_set<decoded_reg_t> renamedInUse;
       std::map<decoded_reg_t, instruction_operand_ref_t> subscribers;
       std::map<decoded_reg_t, instruction_operand_ref_t> broadcasters;
       std::set<memory_location> memoryLocations;
@@ -439,7 +438,7 @@ namespace scm {
         }
         
 
-        // SCMULATE_INFOMSG(3, "Dependency discovery and hazzard avoidance process on instruction (%lu) %s", (unsigned long) inst, inst->getFullInstruction().c_str());
+        SCMULATE_INFOMSG(3, "Dependency discovery and hazzard avoidance process on instruction (%lu) %s", (unsigned long) inst, inst->getFullInstruction().c_str());
         // Get directions for the current instruction. (Col 1)
         getOperandsDirs(inst);
         
@@ -627,7 +626,7 @@ namespace scm {
             already_processed_operands.insert(i);
           }
         }
-        SCMULATE_INFOMSG(3, "Dependency discovery and hazzard avoidance process on instruction (%lu) %s", (unsigned long) inst, inst->getFullInstruction().c_str());
+        SCMULATE_INFOMSG(3, "Resulting Inst after analisys (%lu) %s", (unsigned long) inst, inst->getFullInstruction().c_str());
 
         // Of inst is a Codelet, we must update the values of the registers
         inst_state->first->updateCodeletParams();

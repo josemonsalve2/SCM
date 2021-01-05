@@ -45,7 +45,17 @@ namespace scm {
         std::memcpy(this->isAddress, other.isAddress, sizeof(bool)*MAX_NUM_PARAMS_CODELETS);
       }
 
-      void inline setParamAsAddress(int op_num) {
+      void inline setParamAsAddress(uint32_t bitmapParams) {
+        int curParam = 0;
+        while (bitmapParams != 0) {
+          if (bitmapParams & 1)
+            setOneParamAsAddress(curParam);
+          curParam++;
+          bitmapParams >>= 1;
+        }
+      }
+
+      void inline setOneParamAsAddress(int op_num) {
         isAddress[op_num] = true;
       }
 
@@ -104,6 +114,7 @@ namespace scm {
       inline void setExecutor (cu_executor_module * exec) {this->myExecutor = exec;}
       inline cu_executor_module * getExecutor() {return this->myExecutor;}
       l2_memory_t getAddress(uint64_t addr);
+      l2_memory_t getAddress(l2_memory_t addr);
       virtual ~codelet() { }
   };
 
@@ -148,14 +159,17 @@ namespace scm {
     \
   }
 
-#define DEFINE_MEMORY_CODELET(name, nparms, opIO) \
+#define DEFINE_MEMORY_CODELET(name, nparms, opIO, opAddr) \
   namespace scm { \
    class COD_CLASS_NAME(name) : public codelet { \
+      std::vector<scm::memory_location> memoryRanges; \
     public: \
       static bool hasBeenRegistered; \
       /* Constructors */ \
       static void codeletRegistrer() __attribute__((constructor)); \
-      COD_CLASS_NAME(name) (codelet_params parms) : codelet(nparms, parms, opIO) {} \
+      COD_CLASS_NAME(name) (codelet_params parms) : codelet(nparms, parms, opIO) { \
+        params.setParamAsAddress(opAddr); \
+      } \
       COD_CLASS_NAME(name) (const COD_CLASS_NAME(name) &other) : codelet(other) {} \
       \
       /* Helper functions */ \
@@ -164,10 +178,13 @@ namespace scm {
         creatorFnc thisFunc = codeletCreator; \
         codeletFactory::registerCreator( #name, thisFunc); \
       }\
+      void inline addMemRange(uint64_t start, uint32_t size) { \
+        memoryRanges.emplace_back(reinterpret_cast<l2_memory_t>(start), size); \
+      } \
       \
       /* Implementation function */ \
       virtual void implementation(); \
-      virtual void isMemoryCodelet() { return true; } \
+      virtual bool isMemoryCodelet() { return true; } \
       virtual std::vector<scm::memory_location> getMemoryRange(); \
       \
       /* destructor */ \
@@ -178,8 +195,12 @@ namespace scm {
 
 // Here the programmer should specify if one of the parameters is used as an address.
 #define MEMRANGE_CODELET(name, code) \
-    std::vector<sc::memory_location> \
-    COD_CLASS_NAME(name)::getMemoryRange() { code; } 
+    std::vector<scm::memory_location> \
+    scm::COD_CLASS_NAME(name)::getMemoryRange() {  \
+      this->memoryRanges.clear(); \
+      code; \
+      return this->memoryRanges;\
+      } 
 
 
 #define IMPLEMENT_CODELET(name,code) \

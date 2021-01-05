@@ -24,7 +24,7 @@ namespace scm {
   typedef enum {EMPTY, BUSY, DONE} executorState;
   class execution_slot {
     private:
-      volatile executorState state;
+      executorState state;
       instruction_state_pair* executionInstruction;
 
     public:
@@ -37,7 +37,7 @@ namespace scm {
       inline bool is_busy() { return this->state == BUSY; }
       inline bool is_empty() { return this->state == EMPTY; }
       inline bool is_done() { return this->state == DONE; }
-      inline instruction_state_pair * getHead() { return this->executionInstruction; }
+      inline instruction_state_pair * getHead() const { return this->executionInstruction; }
   };
 
 
@@ -56,7 +56,7 @@ namespace scm {
      control_store_module() = delete;
      control_store_module(const int numExecUnits);
 
-     inline execution_slot* get_executor(const int exec) { return this->execution_slots[exec]; }
+     inline execution_slot* get_executor(const int exec) const { return this->execution_slots[exec]; }
      inline uint32_t numExecutors() { return execution_slots.size(); }
 
      ~control_store_module();

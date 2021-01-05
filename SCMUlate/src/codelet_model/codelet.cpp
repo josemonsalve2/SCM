@@ -11,6 +11,10 @@ l2_memory_t
   codelet::getAddress(uint64_t addr) {
    return this->getExecutor()->get_mem_interface()->getAddress(addr);
 }
+l2_memory_t 
+  codelet::getAddress(l2_memory_t addr) {
+   return this->getExecutor()->get_mem_interface()->getAddress(addr);
+}
 
 codelet* 
   codeletFactory::createCodelet(std::string name, codelet_params usedParams) {

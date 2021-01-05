@@ -58,6 +58,20 @@ namespace scm {
       static constexpr std::uint_fast16_t OP8_WR { 0b1000'0000'0000'0000 }; // represents bit 16
   };
 
+  class OP_ADDRESS {
+    public:
+      static constexpr std::uint_fast16_t NO_ADDRESS  { 0b0000'0000'0000'0000 }; // represents bit 0
+      static constexpr std::uint_fast16_t OP1_IS_ADDRESS  { 0b0000'0000'0000'0001 }; // represents bit 1
+      static constexpr std::uint_fast16_t OP2_IS_ADDRESS { 0b0000'0000'0000'0010 }; // represents bit 2
+      static constexpr std::uint_fast16_t OP3_IS_ADDRESS  { 0b0000'0000'0000'0100 }; // represents bit 3
+      static constexpr std::uint_fast16_t OP4_IS_ADDRESS { 0b0000'0000'0000'1000 }; // represents bit 4
+      static constexpr std::uint_fast16_t OP5_IS_ADDRESS  { 0b0000'0000'0001'0000 }; // represents bit 5
+      static constexpr std::uint_fast16_t OP6_IS_ADDRESS { 0b0000'0000'0010'0000 }; // represents bit 6
+      static constexpr std::uint_fast16_t OP7_IS_ADDRESS  { 0b0000'0000'0100'0000 }; // represents bit 7
+      static constexpr std::uint_fast16_t OP8_IS_ADDRESS { 0b0000'0000'1000'0000 }; // represents bit 8
+
+  };
+
   /** \brief Instruction definition
    *
    *  This struct contains all the information needed for the definition of a instruction 
@@ -248,6 +262,17 @@ namespace scm {
     }
   };
 }
+
+namespace std {
+    template <>
+        class hash<scm::decoded_reg_t>{
+        public :
+            size_t operator()(const scm::decoded_reg_t &reg ) const
+            {
+                return hash<unsigned char *>()(reg.reg_ptr);
+            }
+    };
+};
 
 
 #endif

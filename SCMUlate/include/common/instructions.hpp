@@ -68,7 +68,7 @@ namespace scm {
       inline instType& getType() { return type; }
       /** \brief get the instruction name
        */
-      inline std::string getInstruction() { return instruction; }
+      inline std::string& getInstruction() { return instruction; }
 
       inline std::string getFullInstruction() { 
         std::string fullInstWithRename = "";

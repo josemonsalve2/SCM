@@ -3,6 +3,12 @@ configure_file(matMul1tileGPU.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 configure_file(matMul128x1280.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 configure_file(matMul128x1280gpu.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CLANG_CXX_FAMILY}" STREQUAL "icpx")
+set(PREVIOUS "${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-Wall -Wextra -fiopenmp -fstack-protector-all -fstack-protector -march=skylake -fiopenmp -fopenmp-targets=spir64 -DDECLARE_VARIANT=1")
+endif()
+
 set(BLA_VENDOR Intel10_64ilp_seq)
 find_package(BLAS)
 if (NOT BLAS_FOUND)
@@ -31,4 +37,8 @@ if (DECLARE_VARIANT_ENABLED)
 else ()
   target_link_libraries (MatMul scm_machine mat_mul_cod scm_system_codelets ${BLAS_LIBRARIES})
 endif()
-    
+
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CLANG_CXX_FAMILY}" STREQUAL "icpx")
+set(CMAKE_CXX_FLAGS "${PREVIOUS}")
+set(CMAKE_CXX_LINK_FLAGS "")
+endif()

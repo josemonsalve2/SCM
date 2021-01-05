@@ -163,7 +163,8 @@ namespace scm {
           return true;
         }
       } else if (this->getType() == instType::EXECUTE_INST && this->cod_exec->isMemoryCodelet()) {
-        this->cod_exec->isOpAnAddress(op_num);
+        if (this->cod_exec->isOpAnAddress(op_num))
+          return true;
       }
 
       return false;

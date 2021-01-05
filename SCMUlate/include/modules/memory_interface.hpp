@@ -30,6 +30,7 @@ namespace scm {
       mem_interface_module() = delete;
       mem_interface_module(unsigned char * const memory);
       inline l2_memory_t getAddress(uint64_t address) { return this->memorySpace + address; }
+      inline l2_memory_t getAddress(l2_memory_t address) { return this->memorySpace + reinterpret_cast<uint64_t> (address); }
 
       inline bool isInstSlotEmpty() {
           return myInstructionSlot == NULL;

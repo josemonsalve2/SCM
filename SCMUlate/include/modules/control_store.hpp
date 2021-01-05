@@ -34,9 +34,21 @@ namespace scm {
       void assign(instruction_state_pair *);
       void empty_slot();
       void done_execution();
-      inline bool is_busy() { return this->state == BUSY; }
-      inline bool is_empty() { return this->state == EMPTY; }
-      inline bool is_done() { return this->state == DONE; }
+      inline bool is_busy() {
+        executorState ret;
+        #pragma omp atomic read
+          ret = this->state;
+        return ret == BUSY; }
+      inline bool is_empty() {
+        executorState ret;
+        #pragma omp atomic read
+          ret = this->state;
+        return ret == EMPTY; }
+      inline bool is_done() { 
+        executorState ret;
+        #pragma omp atomic read
+          ret = this->state;
+        return ret == DONE; }
       inline instruction_state_pair * getHead() const { return this->executionInstruction; }
   };
 

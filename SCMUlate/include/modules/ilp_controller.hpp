@@ -70,14 +70,14 @@ namespace scm {
   
   struct register_reservation
   {
-    std::string reg_name;
+    unsigned char * reg_name_ptr;
     std::uint_fast16_t reg_direction;
-    register_reservation() : reg_name(""), reg_direction(OP_IO::NO_RD_WR) {}
-    register_reservation(const register_reservation &other) : reg_name(other.reg_name), reg_direction(other.reg_direction) {}
-    register_reservation(std::string name, std::uint_fast16_t mask) : reg_name(name), reg_direction(mask) {}
+    register_reservation() : reg_name_ptr(nullptr), reg_direction(OP_IO::NO_RD_WR) {}
+    register_reservation(const register_reservation &other) : reg_name_ptr(other.reg_name_ptr), reg_direction(other.reg_direction) {}
+    register_reservation(unsigned char * name, std::uint_fast16_t mask) : reg_name_ptr(name), reg_direction(mask) {}
     inline bool operator<(const register_reservation &other) const
     {
-      return this->reg_name < other.reg_name;
+      return this->reg_name_ptr < other.reg_name_ptr;
     }
   };
 
@@ -146,15 +146,15 @@ namespace scm {
           return false;
         }
 
-        if (inst->getOp1().type == operand_t::REGISTER && hazardExist(inst->getOp1().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR)))) {
+        if (inst->getOp1().type == operand_t::REGISTER && hazardExist(inst->getOp1().value.reg.reg_ptr, (inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR)))) {
           inst_state->second = instruction_state::STALL;
           return false;
         }
-        if (inst->getOp2().type == operand_t::REGISTER && hazardExist(inst->getOp2().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR))>>2)) {
+        if (inst->getOp2().type == operand_t::REGISTER && hazardExist(inst->getOp2().value.reg.reg_ptr, (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR))>>2)) {
           inst_state->second = instruction_state::STALL;
           return false;
         }
-        if (inst->getOp3().type == operand_t::REGISTER && hazardExist(inst->getOp3().value.reg.reg_name, (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR))>>4)) {
+        if (inst->getOp3().type == operand_t::REGISTER && hazardExist(inst->getOp3().value.reg.reg_ptr, (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR))>>4)) {
           inst_state->second = instruction_state::STALL;
           return false;
         }
@@ -178,19 +178,19 @@ namespace scm {
         if (inst->getOp1().type == operand_t::REGISTER) {
           uint_fast16_t io = inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR);
           SCMULATE_INFOMSG(5, "Mariking register %s as busy with IO %lX", inst->getOp1().value.reg.reg_name.c_str(), io);
-          register_reservation reserv(inst->getOp1().value.reg.reg_name, io);
+          register_reservation reserv(inst->getOp1().value.reg.reg_ptr, io);
           busyRegisters.insert(reserv);
         }
         if (inst->getOp2().type == operand_t::REGISTER) {
           uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR)) >> 2;
           SCMULATE_INFOMSG(5, "Mariking register %s as busy with IO %lX", inst->getOp2().value.reg.reg_name.c_str(), io);
-          register_reservation reserv(inst->getOp2().value.reg.reg_name, io);
+          register_reservation reserv(inst->getOp2().value.reg.reg_ptr, io);
           busyRegisters.insert(reserv);          
           }
         if (inst->getOp3().type == operand_t::REGISTER) {
           uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR)) >> 4;
           SCMULATE_INFOMSG(5, "Mariking register %s as busy with IO %lX", inst->getOp3().value.reg.reg_name.c_str(), io);
-          register_reservation reserv(inst->getOp3().value.reg.reg_name, io);
+          register_reservation reserv(inst->getOp3().value.reg.reg_ptr, io);
           busyRegisters.insert(reserv);          
           }
         inst_state->second = instruction_state::READY;
@@ -209,22 +209,22 @@ namespace scm {
         if (inst->getOp1().type == operand_t::REGISTER) {
           uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR));
           SCMULATE_INFOMSG(5, "Unmariking register %s as busy with IO %lX", inst->getOp1().value.reg.reg_name.c_str(), io );
-          eraseReg(inst->getOp1().value.reg.reg_name, io);
+          eraseReg(inst->getOp1().value.reg.reg_ptr, io);
         }
         if (inst->getOp2().type == operand_t::REGISTER) {
           uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR)) >> 2;
           SCMULATE_INFOMSG(5, "Unmariking register %s as busy with IO %lX",inst->getOp2().value.reg.reg_name.c_str(), io );
-          eraseReg(inst->getOp2().value.reg.reg_name, io);
+          eraseReg(inst->getOp2().value.reg.reg_ptr, io);
         }
         if (inst->getOp3().type == operand_t::REGISTER) {
           uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR)) >> 4;
           SCMULATE_INFOMSG(5, "Unmariking register %s as busy with IO %lX",inst->getOp3().value.reg.reg_name.c_str(), io);
-          eraseReg(inst->getOp3().value.reg.reg_name, io);
+          eraseReg(inst->getOp3().value.reg.reg_ptr, io);
         }
         SCMULATE_INFOMSG(5, "The number of busy regs is %lu", this->busyRegisters.size());
       }
 
-      bool inline hazardExist(std::string& regName, uint_fast16_t io_dir) { 
+      bool inline hazardExist(unsigned char * regName, uint_fast16_t io_dir) { 
         auto foundReg = busyRegisters.find(register_reservation(regName, io_dir));
         bool isFound = busyRegisters.find(register_reservation(regName, io_dir)) != busyRegisters.end();
         SCMULATE_INFOMSG_IF(5, isFound, "Hazard detected");
@@ -232,7 +232,7 @@ namespace scm {
         if ((foundReg->reg_direction & OP_IO::OP1_WR) | (io_dir & OP_IO::OP1_WR)) return true; // WAW or RAW or WAR
         return false;
       }
-      void inline eraseReg(std::string& regName, uint_fast16_t io_dir) { 
+      void inline eraseReg(unsigned char * regName, uint_fast16_t io_dir) { 
        busyRegisters.erase(register_reservation(regName, io_dir));
       }
   };

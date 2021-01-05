@@ -20,6 +20,7 @@ scm::fetch_decode_module::fetch_decode_module(inst_mem_module *const inst_mem,
 
 int scm::fetch_decode_module::behavior()
 {
+  uint64_t stall = 0, waiting = 0, ready = 0, execution_done = 0, executing = 0, decomision = 0;
   TIMERS_COUNTERS_GUARD(
       this->time_cnt_m->addEvent(this->su_timer_name, SU_START););
   SCMULATE_INFOMSG(1, "Initializing the SU");
@@ -45,17 +46,19 @@ int scm::fetch_decode_module::behavior()
         this->time_cnt_m->addEvent(this->su_timer_name, FETCH_DECODE_INSTRUCTION, std::string("PC = ") + std::to_string(PC) + std::string(" ") + new_inst->getFullInstruction()););
       // Mark instruction for scheduling
     }
-
+    stall = 0; waiting = 0; ready = 0; execution_done = 0; executing = 0; decomision = 0;
     // Iterate over the instruction buffer (window) looking for instructions to execute
     for (auto it = this->inst_buff_m.get_buffer()->begin(); it != this->inst_buff_m.get_buffer()->end(); ++it) {
       instruction_state_pair * current_pair = *it;
       switch (current_pair->second) {
         case instruction_state::STALL:
+          stall++;
           instructionLevelParallelism.checkMarkInstructionToSched(current_pair);
           if (current_pair->second == instruction_state::STALL)
             this->stallingInstruction = current_pair;
           break;
         case instruction_state::WAITING:
+          waiting++;
           // TIMERS_COUNTERS_GUARD(
           //   this->time_cnt_m->addEvent(this->su_timer_name, FETCH_DECODE_INSTRUCTION, current_pair->first->getFullInstruction()););
           instructionLevelParallelism.checkMarkInstructionToSched(current_pair);
@@ -65,6 +68,7 @@ int scm::fetch_decode_module::behavior()
           //   this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
           break;
         case instruction_state::READY:
+          ready ++;
           current_pair->second = instruction_state::EXECUTING;
           switch (current_pair->first->getType()) {
             case COMMIT:
@@ -115,6 +119,7 @@ int scm::fetch_decode_module::behavior()
           break;
         
         case instruction_state::EXECUTION_DONE:
+          execution_done ++;
           // TIMERS_COUNTERS_GUARD(
           //   this->time_cnt_m->addEvent(this->su_timer_name, DISPATCH_INSTRUCTION, current_pair->first->getFullInstruction()););
           // check if stalling instruction
@@ -126,6 +131,11 @@ int scm::fetch_decode_module::behavior()
           // TIMERS_COUNTERS_GUARD(
           //   this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE, current_pair->first->getFullInstruction()););
           break;
+        case instruction_state::EXECUTING:
+          executing++;
+          break;
+        case instruction_state::DECOMISION:
+          decomision++;
         default:
           break;
       }
@@ -133,8 +143,10 @@ int scm::fetch_decode_module::behavior()
     }
 
     // Check if any instructions have finished
+    uint64_t finish_exec=0;
     for (uint32_t i = 0; i < this->ctrl_st_m->numExecutors(); i++) {
       if (this->ctrl_st_m->get_executor(i)->is_done()) {
+        finish_exec++;
         this->ctrl_st_m->get_executor(i)->getHead()->second = instruction_state::EXECUTION_DONE;
         SCMULATE_INFOMSG(5, "Instruction %s has finished executing", this->ctrl_st_m->get_executor(i)->getHead()->first->getFullInstruction().c_str());
 
@@ -142,6 +154,7 @@ int scm::fetch_decode_module::behavior()
       }
     }
 
+    //printf("%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", stall, waiting, ready, execution_done, executing, decomision, finish_exec, this->inst_buff_m.getBufferSize());
     // Clear out instructions that are decomissioned
     this->inst_buff_m.clean_out_queue();
 

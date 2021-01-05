@@ -515,8 +515,8 @@ namespace scm {
                   // Register not in used. Remove renaming for future references
                   auto it_rename = registerRenaming.find(current_operand->value.reg);
                   if (it_rename != registerRenaming.end()) {
-                    registerRenaming.erase(it_rename);
                     renamedInUse.erase(it_rename->second);
+                    registerRenaming.erase(it_rename);
                   }
                   SCMULATE_INFOMSG(5, "Register %s register was not found in the 'used' registers map. If renamed is set, we cleared it", current_operand->value.reg.reg_name.c_str());
                 }
@@ -575,8 +575,8 @@ namespace scm {
                   }
                 } else {
                   if (it_rename != registerRenaming.end()) {
-                    registerRenaming.erase(it_rename);
                     renamedInUse.erase(it_rename->second);
+                    registerRenaming.erase(it_rename);
                   }
                   SCMULATE_INFOMSG(5, "Register %s was not found in the 'used' registers map. If it was previously renamed, we removed it", original_op_reg.reg_name.c_str());
                 }

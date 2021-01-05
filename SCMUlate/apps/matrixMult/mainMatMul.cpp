@@ -152,6 +152,7 @@ int main (int argc, char * argv[]) {
     printf("SUCCESS!!!\n");
   delete myMachine;
   delete [] memory;
+  delete [] testC;
   return 0;
 }
 

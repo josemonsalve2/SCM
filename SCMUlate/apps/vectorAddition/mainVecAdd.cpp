@@ -76,6 +76,7 @@ int main (int argc, char * argv[]) {
   if (success)
     printf("SUCCESS!!!\n");
   delete myMachine;
+  delete[] memory;
   return 0;
 }
 

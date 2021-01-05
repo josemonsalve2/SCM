@@ -676,7 +676,7 @@ namespace scm {
           SCMULATE_INFOMSG(4, "When trying to rename, we could not find another register that was free out of %d", hidden_register_file.getNumRegForSize(newReg.reg_size_bytes));
           return otherReg;
         }
-        newReg.reg_name = "R_ren_" + newReg.reg_size + "_" + std::to_string(newReg.reg_number);
+        newReg.reg_name = std::string("R_ren_") + newReg.reg_size + std::string("_") + std::to_string(newReg.reg_number);
         SCMULATE_INFOMSG(4, "Register %s mapped to %s with renaming", otherReg.reg_name.c_str(), newReg.reg_name.c_str());
         return newReg;
       }

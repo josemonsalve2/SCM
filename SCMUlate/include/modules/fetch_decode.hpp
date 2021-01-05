@@ -107,7 +107,7 @@ namespace scm {
       TIMERS_COUNTERS_GUARD(
         void setTimerCounter(timers_counters * newTC) { 
           this->time_cnt_m = newTC; 
-          this->su_timer_name = "SU_" + std::to_string(this->su_number);
+          this->su_timer_name = std::string("SU_") + std::to_string(this->su_number);
           this->time_cnt_m->addTimer(this->su_timer_name, SU_TIMER);
         }
       );

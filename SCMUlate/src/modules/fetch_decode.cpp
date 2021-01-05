@@ -179,7 +179,7 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE JMPLBL INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getInstruction() == "JMPLBL")
+  if (inst->getInstruction() == std::string("JMPLBL"))
   {
     int newPC = this->inst_mem_m->getMemoryLabel(inst->getOp1Str()) - 1;
     SCMULATE_ERROR_IF(0, newPC == -1, "Incorrect label translation");
@@ -189,7 +189,7 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE JMPPC INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getInstruction() == "JMPPC")
+  if (inst->getInstruction() == std::string("JMPPC"))
   {
     int offset = inst->getOp1().value.immediate;
     int target = offset + PC - 1;
@@ -200,7 +200,7 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE BREQ INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getInstruction() == "BREQ")
+  if (inst->getInstruction() == std::string("BREQ"))
   {
     decoded_reg_t reg1 = inst->getOp1().value.reg;
     decoded_reg_t reg2 = inst->getOp2().value.reg;
@@ -229,7 +229,7 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE BGT INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getInstruction() == "BGT")
+  if (inst->getInstruction() == std::string("BGT"))
   {
     decoded_reg_t reg1 = inst->getOp1().value.reg;
     decoded_reg_t reg2 = inst->getOp2().value.reg;
@@ -259,7 +259,7 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE BGET INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getInstruction() == "BGET")
+  if (inst->getInstruction() == std::string("BGET"))
   {
     decoded_reg_t reg1 = inst->getOp1().value.reg;
     decoded_reg_t reg2 = inst->getOp2().value.reg;
@@ -293,7 +293,7 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE BLT INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getInstruction() == "BLT")
+  if (inst->getInstruction() == std::string("BLT"))
   {
     decoded_reg_t reg1 = inst->getOp1().value.reg;
     decoded_reg_t reg2 = inst->getOp2().value.reg;
@@ -323,7 +323,7 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE BLET INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getInstruction() == "BLET")
+  if (inst->getInstruction() == std::string("BLET"))
   {
     decoded_reg_t reg1 = inst->getOp1().value.reg;
     decoded_reg_t reg2 = inst->getOp2().value.reg;
@@ -360,7 +360,7 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
   /////////////////////////////////////////////////////
   ///// ARITHMETIC LOGIC FOR THE ADD INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getInstruction() == "ADD")
+  if (inst->getInstruction() == std::string("ADD"))
   {
     decoded_reg_t reg1 = inst->getOp1().value.reg;
     decoded_reg_t reg2 = inst->getOp2().value.reg;
@@ -415,7 +415,7 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
   /////////////////////////////////////////////////////
   ///// ARITHMETIC LOGIC FOR THE SUB INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getInstruction() == "SUB")
+  if (inst->getInstruction() == std::string("SUB"))
   {
     decoded_reg_t reg1 = inst->getOp1().value.reg;
     decoded_reg_t reg2 = inst->getOp2().value.reg;
@@ -486,7 +486,7 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
   /////////////////////////////////////////////////////
   ///// ARITHMETIC LOGIC FOR THE SHFL INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getInstruction() == "SHFL")
+  if (inst->getInstruction() == std::string("SHFL"))
   {
     SCMULATE_ERROR(0, "THE SHFL OPERATION HAS NOT BEEN IMPLEMENTED. KILLING THIS")
 #pragma omp atomic write
@@ -496,7 +496,7 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
   /////////////////////////////////////////////////////
   ///// ARITHMETIC LOGIC FOR THE SHFR INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getInstruction() == "SHFR")
+  if (inst->getInstruction() == std::string("SHFR"))
   {
     SCMULATE_ERROR(0, "THE SHFR OPERATION HAS NOT BEEN IMPLEMENTED. KILLING THIS")
 #pragma omp atomic write

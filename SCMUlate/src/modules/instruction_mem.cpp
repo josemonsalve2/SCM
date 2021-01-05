@@ -51,7 +51,7 @@ scm::inst_mem_module::inst_mem_module(char * filename, reg_file_module * const r
   if (strlen(filename) != 0) {
     this->is_valid = this->loader(filename);
   } else {
-    while ((cin >> line) && line != "-")
+    while ((cin >> line) && line != std::string("-"))
       this->memory.push_back(scm::instructions::findInstType(line));
   }
 }

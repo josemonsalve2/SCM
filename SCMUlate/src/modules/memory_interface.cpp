@@ -21,7 +21,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
   ///// Operand 1 is where to load the instructions
   ///// Operand 2 the inmediate value to be used
   /////////////////////////////////////////////////////
-  if (this->myInstructionSlot->getInstruction() == "LDIMM") {
+  if (this->myInstructionSlot->getInstruction() == std::string("LDIMM")) {
     // Obtain destination register
     decoded_reg_t reg1 = myInstructionSlot->getOp1().value.reg;
     unsigned char * reg1_ptr = reg1.reg_ptr;
@@ -50,7 +50,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
   ///// Operand 1 is where to load the instructions
   ///// Operand 2 is the memory address either a register or immediate value. Only consider 64 bits
   /////////////////////////////////////////////////////
-  if (this->myInstructionSlot->getInstruction() == "LDADDR") {
+  if (this->myInstructionSlot->getInstruction() == std::string("LDADDR")) {
     // Obtain destination register
     decoded_reg_t reg1 = myInstructionSlot->getOp1().value.reg;
     unsigned char * reg1_ptr = reg1.reg_ptr;
@@ -86,7 +86,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
   ///// Operand 2 is the memory address either a register or inmediate value. Only consider 64 bits
   ///// Operand 3 is the offset from the address memoery. Either register or inmediate value. Only consider 64 bits
   /////////////////////////////////////////////////////
-  if (this->myInstructionSlot->getInstruction() == "LDOFF") {
+  if (this->myInstructionSlot->getInstruction() == std::string("LDOFF")) {
     // Destination register
     decoded_reg_t reg1 = myInstructionSlot->getOp1().value.reg;
     unsigned char * reg1_ptr = reg1.reg_ptr;
@@ -138,7 +138,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
   /////////////////////////////////////////////////////
   ///// LOGIC FOR THE STADDR INSTRUCTION
   /////////////////////////////////////////////////////
-  if (this->myInstructionSlot->getInstruction() == "STADR") {
+  if (this->myInstructionSlot->getInstruction() == std::string("STADR")) {
     // Obtain destination register
     decoded_reg_t reg1 = myInstructionSlot->getOp1().value.reg;
     unsigned char * reg1_ptr = reg1.reg_ptr;
@@ -171,7 +171,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
   /////////////////////////////////////////////////////
   ///// LOGIC FOR THE STOFF INSTRUCTION
   /////////////////////////////////////////////////////
-  if (this->myInstructionSlot->getInstruction() == "STOFF") {
+  if (this->myInstructionSlot->getInstruction() == std::string("STOFF")) {
     // Destination register
     decoded_reg_t reg1 = myInstructionSlot->getOp1().value.reg;
     unsigned char * reg1_ptr = reg1.reg_ptr;

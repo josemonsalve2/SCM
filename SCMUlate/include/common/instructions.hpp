@@ -71,10 +71,10 @@ namespace scm {
       inline std::string& getInstruction() { return instruction; }
 
       inline std::string getFullInstruction() { 
-        std::string fullInstWithRename = "";
-        fullInstWithRename += instruction + " ";
-        fullInstWithRename += (op1.type == operand_t::REGISTER ? op1.value.reg.reg_name : op1_s) + (op2_s.length() != 0?", ": "");
-        fullInstWithRename += (op2.type == operand_t::REGISTER ? op2.value.reg.reg_name : op2_s) + (op3_s.length() != 0?", ": "");
+        std::string fullInstWithRename("");
+        fullInstWithRename += instruction + std::string(" ");
+        fullInstWithRename += (op1.type == operand_t::REGISTER ? op1.value.reg.reg_name : op1_s) + (op2_s.length() != 0? std::string(", "): std::string(""));
+        fullInstWithRename += (op2.type == operand_t::REGISTER ? op2.value.reg.reg_name : op2_s) + (op3_s.length() != 0? std::string(", "): std::string(""));
         fullInstWithRename += (op3.type == operand_t::REGISTER ? op3.value.reg.reg_name : op3_s);
         return fullInstWithRename; 
       }
@@ -404,7 +404,7 @@ namespace scm {
       std::smatch matches;
       if (std::regex_search(inst.begin(), inst.end(), matches, search_exp)) {
         std::string operands = matches[2];
-        std::string delimiter = ",";
+        std::string delimiter(",");
         size_t pos = 0;
         size_t opNum = 0;
         std::string token;

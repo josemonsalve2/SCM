@@ -23,21 +23,21 @@ namespace scm {
       bool checkRegisterConfig();
       static inline uint32_t getRegisterSizeInBytes(std::string size) {
         uint32_t result = 0;
-        if (size == "64B")
+        if (size == std::string("64B"))
           result = 8;
-        else if (size == "1L")
+        else if (size == std::string("1L"))
           result = CACHE_LINE_SIZE;
-        else if (size == "8L")
+        else if (size == std::string("8L"))
           result = CACHE_LINE_SIZE*8;
-        else if (size == "16L")
+        else if (size == std::string("16L"))
           result = CACHE_LINE_SIZE*16;
-        else if (size == "256L")
+        else if (size == std::string("256L"))
           result = CACHE_LINE_SIZE*256;
-        else if (size == "512L")
+        else if (size == std::string("512L"))
           result = CACHE_LINE_SIZE*512;
-        else if (size == "1024L")
+        else if (size == std::string("1024L"))
           result = CACHE_LINE_SIZE*1024;
-        else if (size == "2048L")
+        else if (size == std::string("2048L"))
           result = CACHE_LINE_SIZE*2048;
         else
           SCMULATE_ERROR(0, "DECODED REGISTER DOES NOT EXIST!!!")
@@ -45,21 +45,21 @@ namespace scm {
       };
       inline unsigned char * getRegisterByName(std::string size, int num) const {
         unsigned char * result = NULL;
-        if (size == "64B")
+        if (size == std::string("64B"))
           result = REG_64B(num).data;
-        else if (size == "1L")
+        else if (size == std::string("1L"))
           result = REG_1L(num).data;
-        else if (size == "8L")
+        else if (size == std::string("8L"))
           result = REG_8L(num).data;
-        else if (size == "16L")
+        else if (size == std::string("16L"))
           result = REG_16L(num).data;
-        else if (size == "256L")
+        else if (size == std::string("256L"))
           result = REG_256L(num).data;
-        else if (size == "512L")
+        else if (size == std::string("512L"))
           result = REG_512L(num).data;
-        else if (size == "1024L")
+        else if (size == std::string("1024L"))
           result = REG_1024L(num).data;
-        else if (size == "2048L")
+        else if (size == std::string("2048L"))
           result = REG_2048L(num).data;
         else
           SCMULATE_ERROR(0, "DECODED REGISTER DOES NOT EXIST!!!")

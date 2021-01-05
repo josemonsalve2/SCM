@@ -32,7 +32,7 @@ namespace scm {
       TIMERS_COUNTERS_GUARD(
         inline void setTimerCnt(timers_counters * tmc) { 
           this->timer_cnt_m = tmc;
-          this->cu_timer_name = "CUMEM_" + std::to_string(this->cu_executor_id);
+          this->cu_timer_name = std::string("CUMEM_") + std::to_string(this->cu_executor_id);
           this->timer_cnt_m->addTimer(this->cu_timer_name, CUMEM_TIMER);
         }
       )

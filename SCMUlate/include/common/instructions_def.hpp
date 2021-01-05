@@ -174,7 +174,7 @@ namespace scm {
     unsigned char * reg_ptr;
     
     decoded_reg_t():
-      reg_name(""),reg_size(""), reg_size_bytes(0), reg_number(0), reg_ptr(nullptr) { };
+      reg_name(std::string("")),reg_size(std::string("")), reg_size_bytes(0), reg_number(0), reg_ptr(nullptr) { };
 
     decoded_reg_t(std::string regName, std::string sizeStr, uint32_t sizeBytes, uint32_t regNum, unsigned char * ptr):
       reg_name(regName), reg_size(sizeStr), reg_size_bytes(sizeBytes), reg_number(regNum), reg_ptr(ptr) { };

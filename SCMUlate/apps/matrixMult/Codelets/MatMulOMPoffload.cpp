@@ -31,7 +31,7 @@ IMPLEMENT_CODELET(LoadSqTileGPU_2048L,
   unsigned char *reg1 = this->getParams().getParamAs(0); // Getting register 1
   double *destReg = reinterpret_cast<double*>(reg1);
   int i = 0;
-for (auto it = memoryRanges.begin(); it != memoryRanges.end(); it++) {
+for (auto it = memoryRanges->begin(); it != memoryRanges->end(); it++) {
     double *addressStart = reinterpret_cast<double *> (getAddress(it->memoryAddress)); // Address L2 memory to a pointer of the runtime
     std::memcpy(destReg+TILE_DIM*i++, addressStart, it->size);
   }
@@ -81,7 +81,7 @@ IMPLEMENT_CODELET(StoreSqTileGPU_2048L,
   double *sourceReg = reinterpret_cast<double*>(reg1);
 
   int i = 0;
-  for (auto it = memoryRanges.begin(); it != memoryRanges.end(); it++) {
+  for (auto it = memoryRanges->begin(); it != memoryRanges->end(); it++) {
     double *addressStart = reinterpret_cast<double *> (getAddress(it->memoryAddress)); // Address L2 memory to a pointer of the runtime
     std::memcpy(addressStart, sourceReg+TILE_DIM*i++, it->size);
   }

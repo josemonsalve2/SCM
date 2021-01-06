@@ -88,32 +88,48 @@ namespace scm {
     public:
       memory_queue_controller() { };
       uint32_t inline numberOfRanges () { return ranges.size(); }
-      void inline addRange( const memory_location& curLocation) {
-        SCMULATE_INFOMSG(4, "Adding range [%lu, %lu, %lu]",(unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size, (unsigned long)curLocation.size );
-        this->ranges.insert(curLocation);
+      void inline addRange( std::set<memory_location> * in_ranges) {
+        SCMULATE_INFOMSG(4, "Adding ranges");
+        this->ranges.insert(in_ranges->begin(), in_ranges->end());
       }
-      void inline removeRange(const memory_location& curLocation) {
-        SCMULATE_INFOMSG(4, "Removing range [%lu, %lu, %lu]",(unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size, (unsigned long)curLocation.size );
-        if (this->ranges.find(curLocation) != this->ranges.end()) {
-          this->ranges.erase(curLocation);
-        } else {
-          SCMULATE_ERROR(0, "The range [%lu, %lu, %lu], does not exist in the set of ranges.", (unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size, (unsigned long)curLocation.size)
-        }
+      void inline removeRange(std::set<memory_location> * out_ranges) {
+        SCMULATE_INFOMSG(4, "Removing ranges");
+         std::set<memory_location> res_ranges;
+         std::set_difference( std::make_move_iterator(this->ranges.begin()), 
+                              std::make_move_iterator(this->ranges.end()), 
+                              std::make_move_iterator(out_ranges->begin()), std::make_move_iterator(out_ranges->end()),
+                              std::inserter(res_ranges, res_ranges.begin()));
+        ranges.swap(res_ranges);
+
       }
-      bool inline itOverlaps(const memory_location& curLocation) {
+      bool inline itOverlaps(std::set<memory_location> * in_ranges) {
         // The start of the curLocation cannot be in between a beginning and end of the range
         // The end of the curLocation cannot be between a beginning and end
-        for (auto itRange = ranges.begin(); itRange != ranges.end(); itRange++) {
-          if (itRange->memoryAddress <= curLocation.memoryAddress && itRange->upperLimit() > curLocation.memoryAddress) {
+        for (const auto& incoming_range : *in_ranges) {
+          // Case ranges is empty, no possible overlap
+          if (ranges.size() == 0) return false;
+
+          // get the lower_bound ( next closest element or equal) 
+          // and the upper_bound (next closest element or end)
+          auto it_ranges = ranges.equal_range(incoming_range);
+          auto next_element = it_ranges.second;
+          auto prev_eq_element = it_ranges.first;
+
+          // Case I only have one element, or the incoming range is lower than
+          // the minimum element
+          if (prev_eq_element != ranges.begin())
+            prev_eq_element = std::prev(prev_eq_element);
+          else if (incoming_range < *prev_eq_element)
+            prev_eq_element = ranges.end();
+
+          if (prev_eq_element != ranges.end() && (*prev_eq_element == incoming_range || prev_eq_element->upperLimit() > incoming_range.memoryAddress)) {
             return true;
           }
-          if (itRange->memoryAddress < curLocation.upperLimit() && itRange->upperLimit() > curLocation.upperLimit()) {
-            return true;
-          }
-          if (curLocation.memoryAddress <= itRange->memoryAddress && curLocation.upperLimit() >= itRange->upperLimit() ) {
+          if (next_element != ranges.end() && next_element->memoryAddress < incoming_range.upperLimit()) {
             return true;
           }
         }
+
         return false;
       }
   };
@@ -162,17 +178,15 @@ namespace scm {
         // In memory instructions we need to figure out if there is a hazard in the memory
         if (inst->isMemoryInstruction()) {
           // Check all the ranges
-          std::set <memory_location> ranges = inst->getMemoryRange();
-          for (auto it = ranges.begin(); it != ranges.end(); ++it) {
-            if (memCtrl.itOverlaps( *it )) {
-              inst_state->second = instruction_state::STALL;
-              return false;
-            }
+          inst->calculateMemRanges();
+          std::set <memory_location> * ranges = inst->getMemoryRange();
+          if (memCtrl.itOverlaps( ranges )) {
+            inst_state->second = instruction_state::STALL;
+            return false;
           }
 
           // The instruction is ready to schedule, let's mark the ranges as busy
-          for (auto it = ranges.begin(); it != ranges.end(); ++it)
-            memCtrl.addRange( *it );
+          memCtrl.addRange( ranges );
         }
         // Mark the registers
         if (inst->getOp1().type == operand_t::REGISTER) {
@@ -201,9 +215,8 @@ namespace scm {
         decoded_instruction_t * inst = inst_state->first;
         // In memory instructions we need to figure out if there is a hazard in the memory
         if (inst->isMemoryInstruction()) {
-          std::set <memory_location> ranges = inst->getMemoryRange();
-          for (auto it = ranges.begin(); it != ranges.end(); ++it)
-            memCtrl.removeRange( *it );
+          std::set <memory_location> * ranges = inst->getMemoryRange();
+          memCtrl.removeRange( ranges );
         } 
 
         if (inst->getOp1().type == operand_t::REGISTER) {
@@ -689,9 +702,8 @@ namespace scm {
         SCMULATE_INFOMSG(3, "Instruction (%lu) %s has finished. Starting clean up process", (unsigned long) inst,  inst->getFullInstruction().c_str() );
         // In memory instructions we need to remove range from memory
         if (inst->isMemoryInstruction()) {
-          std::set <memory_location> ranges = inst->getMemoryRange();
-          for (auto it = ranges.begin(); it != ranges.end(); ++it)
-            memCtrl.removeRange( *it );
+          std::set <memory_location> * ranges = inst->getMemoryRange();
+          memCtrl.removeRange( ranges );
         }
         
         getOperandsDirs(inst);
@@ -811,15 +823,13 @@ namespace scm {
             }
           }
           // Check if a memory region overlaps
-          std::set <memory_location> ranges = inst->getMemoryRange();
-          for (auto it = ranges.begin(); it != ranges.end(); ++it) {
-            if (memCtrl.itOverlaps( *it )) {
-              return true;
-            }
+          inst->calculateMemRanges();
+          std::set <memory_location> * ranges = inst->getMemoryRange();
+          if (memCtrl.itOverlaps( ranges )) {
+            return true;
           }
           // The instruction is ready to schedule, let's mark the ranges as busy
-          for (auto it = ranges.begin(); it != ranges.end(); ++it)
-            memCtrl.addRange( *it );
+          memCtrl.addRange( ranges );
         }
         return false;
 
@@ -853,15 +863,11 @@ namespace scm {
   class ilp_sequential {
     private:
       bool sequential_sw;
-      memory_queue_controller memCtrl;
     public:
       ilp_sequential() : sequential_sw(true) {}
       bool inline checkMarkInstructionToSched(instruction_state_pair * inst_pair) {
         if (inst_pair->first->isMemoryInstruction()){
-          // The instruction is ready to schedule, let's mark the ranges as busy
-          std::set <memory_location> ranges = inst_pair->first->getMemoryRange();
-          for (auto it = ranges.begin(); it != ranges.end(); ++it)
-            memCtrl.addRange( *it );
+          inst_pair->first->calculateMemRanges();
         }
         if (sequential_sw) {
           sequential_sw = false;
@@ -871,13 +877,7 @@ namespace scm {
         inst_pair->second = instruction_state::STALL;
         return false;
       }
-      void inline instructionFinished(instruction_state_pair * inst_pair) {
-        if (inst_pair->first->isMemoryInstruction()){
-          // The instruction is ready to schedule, let's mark the ranges as busy
-          std::set <memory_location> ranges = inst_pair->first->getMemoryRange();
-          for (auto it = ranges.begin(); it != ranges.end(); ++it)
-            memCtrl.removeRange( *it );
-        }
+      void inline instructionFinished() {
         sequential_sw = true;
       }
   };
@@ -910,7 +910,7 @@ namespace scm {
       }
       void inline instructionFinished(instruction_state_pair * inst) {
         if (SCMULATE_ILP_MODE == ILP_MODES::SEQUENTIAL) {
-          seq_ctrl.instructionFinished(inst);
+          seq_ctrl.instructionFinished();
         } else if (SCMULATE_ILP_MODE  == ILP_MODES::SUPERSCALAR) {
           supscl_ctrl.instructionFinished(inst);
         } else if (SCMULATE_ILP_MODE == ILP_MODES::OOO) {

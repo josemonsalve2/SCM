@@ -46,19 +46,21 @@ namespace scm {
       operand_t op1;
       operand_t op2;
       operand_t op3;
+      std::set<memory_location> memRanges;
 
    public:
       // Constructors
       decoded_instruction_t (instType type) :
         type(type), instruction(""), op1_s(""), op2_s(""), op3_s(""), op_in_out(OP_IO::NO_RD_WR), cod_exec(nullptr), op1(), op2(), op3() {}
-      decoded_instruction_t (instType type, std::string inst, std::string op1s, std::string op2s, std::string op3s) :
+      decoded_instruction_t (instType type, std::string inst, std::string op1s = std::string(), std::string op2s = std::string(), std::string op3s = std::string()) :
         type(type), instruction(inst), op1_s(op1s), op2_s(op2s), op3_s(op3s), op_in_out(OP_IO::NO_RD_WR), cod_exec(nullptr), op1(), op2(), op3()  {}
 
       decoded_instruction_t (const decoded_instruction_t &other) :
-              type(other.type), instruction(other.instruction), op1_s(other.op1_s), op2_s(other.op2_s), op3_s(other.op3_s), op_in_out(other.op_in_out),cod_exec(nullptr), op1(other.op1), op2(other.op2), op3(other.op3) {
+              type(other.type), instruction(other.instruction), op1_s(other.op1_s), op2_s(other.op2_s), op3_s(other.op3_s), op_in_out(other.op_in_out),cod_exec(nullptr), op1(other.op1), op2(other.op2), op3(other.op3), memRanges(other.memRanges) {
                 if (other.cod_exec != nullptr) {
                   codelet_params newParams = other.cod_exec->getParams();
                   this->cod_exec = codeletFactory::createCodelet(getInstruction(), newParams);
+                  this->cod_exec->setMemoryRange(&memRanges);
                 }
               }
       // Getters and setters
@@ -160,7 +162,8 @@ namespace scm {
        * of this instruction. Allowing an in-order memory access.
        * 
        */
-      std::set<memory_location> getMemoryRange(); 
+      std::set<memory_location>* getMemoryRange() { return &this->memRanges; }
+      void calculateMemRanges();
 
       /** \brief Tells if a register represents an address value of a memory instruction or codelet
        * 
@@ -295,7 +298,7 @@ namespace scm {
       std::regex search_exp(COMMIT_INST.inst_regex, std::regex_constants::ECMAScript);
       std::smatch matches;
       if (std::regex_search(inst.begin(), inst.end(), matches, search_exp)) {
-        *decInst = new decoded_instruction_t(COMMIT);
+        *decInst = new decoded_instruction_t(COMMIT, matches[1]);
         return true;
       }
       decInst = NULL;

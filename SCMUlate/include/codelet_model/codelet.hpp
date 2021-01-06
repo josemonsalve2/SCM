@@ -94,6 +94,7 @@ namespace scm {
   class codelet {
     protected:
       uint32_t numParams;
+      std::set<scm::memory_location> * memoryRanges;
       // we use codelet_params because eventually we want this to be the interface for a compiler
       // generated code (e.g. pthreads equivalent). Also because we would like to provide
       // support for different parameters packing according to immediate vs register values. 
@@ -103,11 +104,13 @@ namespace scm {
       cu_executor_module * myExecutor;
     public:
       codelet () {};
-      codelet (uint32_t nparms, codelet_params params, std::uint_fast16_t opIO) : numParams(nparms), params(params), op_in_out(opIO) {};
-      codelet (const codelet &other) : numParams(other.numParams), params(other.params), op_in_out(other.op_in_out), myExecutor(other.myExecutor) {}
+      codelet (uint32_t nparms, codelet_params params, std::uint_fast16_t opIO) : numParams(nparms), memoryRanges(nullptr), params(params), op_in_out(opIO) {};
+      codelet (const codelet &other) : numParams(other.numParams), memoryRanges(nullptr), params(other.params), op_in_out(other.op_in_out), myExecutor(other.myExecutor) {}
       virtual void implementation() = 0;
       virtual bool isMemoryCodelet() { return false; }
-      virtual std::set<memory_location> getMemoryRange() { return std::set<memory_location>(); };
+      virtual void calculateMemRanges() { };
+      void setMemoryRange( std::set<scm::memory_location> * memRange ) { this->memoryRanges = memRange; };
+      std::set<memory_location> * getMemoryRange() { return memoryRanges; };
       bool isOpAnAddress(int op_num) { return params.isParamAnAddress(op_num); };
       inline codelet_params& getParams() { return this->params; };
       inline std::uint_fast16_t& getOpIO() { return op_in_out; };
@@ -162,7 +165,6 @@ namespace scm {
 #define DEFINE_MEMORY_CODELET(name, nparms, opIO, opAddr) \
   namespace scm { \
    class COD_CLASS_NAME(name) : public codelet { \
-      std::set<scm::memory_location> memoryRanges; \
     public: \
       static bool hasBeenRegistered; \
       /* Constructors */ \
@@ -179,13 +181,13 @@ namespace scm {
         codeletFactory::registerCreator( #name, thisFunc); \
       }\
       void inline addMemRange(uint64_t start, uint32_t size) { \
-        memoryRanges.emplace(reinterpret_cast<l2_memory_t>(start), size); \
+        memoryRanges->emplace(reinterpret_cast<l2_memory_t>(start), size); \
       } \
       \
       /* Implementation function */ \
       virtual void implementation(); \
       virtual bool isMemoryCodelet() { return true; } \
-      virtual std::set<scm::memory_location> getMemoryRange(); \
+      virtual void calculateMemRanges(); \
       \
       /* destructor */ \
       ~COD_CLASS_NAME(name)() {} \
@@ -195,11 +197,9 @@ namespace scm {
 
 // Here the programmer should specify if one of the parameters is used as an address.
 #define MEMRANGE_CODELET(name, code) \
-    std::set<scm::memory_location> \
-    scm::COD_CLASS_NAME(name)::getMemoryRange() {  \
-      this->memoryRanges.clear(); \
+    void \
+    scm::COD_CLASS_NAME(name)::calculateMemRanges() {  \
       code; \
-      return this->memoryRanges;\
       } 
 
 

@@ -100,9 +100,9 @@ namespace scm {
       return true;
     }
 
-    std::vector<memory_location>
+    std::set<memory_location>
     decoded_instruction_t::getMemoryRange() {
-      std::vector<memory_location> ret_vector;
+      std::set<memory_location> ret_vector;
       if (this->getType() == instType::MEMORY_INST && this->getInstruction() != std::string("LDIMM")) {
         int32_t size_dest = this->getOp1().value.reg.reg_size_bytes;
         unsigned long base_addr = 0;
@@ -148,7 +148,7 @@ namespace scm {
             SCMULATE_ERROR(0, "Incorrect operand type");
           }
         }
-        ret_vector.emplace_back(reinterpret_cast<l2_memory_t>(base_addr + offset), size_dest);
+        ret_vector.emplace(reinterpret_cast<l2_memory_t>(base_addr + offset), size_dest);
       } else if (this->getType() == instType::EXECUTE_INST && this->cod_exec->isMemoryCodelet()) {
         ret_vector = this->cod_exec->getMemoryRange();
       }

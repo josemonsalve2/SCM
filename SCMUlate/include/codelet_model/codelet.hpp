@@ -2,7 +2,7 @@
 #define __CODELET__
 
 #include <map>
-#include <vector>
+#include <set>
 #include <iostream>
 #include "SCMUlate_tools.hpp"
 #include "instructions_def.hpp"
@@ -107,7 +107,7 @@ namespace scm {
       codelet (const codelet &other) : numParams(other.numParams), params(other.params), op_in_out(other.op_in_out), myExecutor(other.myExecutor) {}
       virtual void implementation() = 0;
       virtual bool isMemoryCodelet() { return false; }
-      virtual std::vector<memory_location> getMemoryRange() { return std::vector<memory_location>(); };
+      virtual std::set<memory_location> getMemoryRange() { return std::set<memory_location>(); };
       bool isOpAnAddress(int op_num) { return params.isParamAnAddress(op_num); };
       inline codelet_params& getParams() { return this->params; };
       inline std::uint_fast16_t& getOpIO() { return op_in_out; };
@@ -162,7 +162,7 @@ namespace scm {
 #define DEFINE_MEMORY_CODELET(name, nparms, opIO, opAddr) \
   namespace scm { \
    class COD_CLASS_NAME(name) : public codelet { \
-      std::vector<scm::memory_location> memoryRanges; \
+      std::set<scm::memory_location> memoryRanges; \
     public: \
       static bool hasBeenRegistered; \
       /* Constructors */ \
@@ -179,13 +179,13 @@ namespace scm {
         codeletFactory::registerCreator( #name, thisFunc); \
       }\
       void inline addMemRange(uint64_t start, uint32_t size) { \
-        memoryRanges.emplace_back(reinterpret_cast<l2_memory_t>(start), size); \
+        memoryRanges.emplace(reinterpret_cast<l2_memory_t>(start), size); \
       } \
       \
       /* Implementation function */ \
       virtual void implementation(); \
       virtual bool isMemoryCodelet() { return true; } \
-      virtual std::vector<scm::memory_location> getMemoryRange(); \
+      virtual std::set<scm::memory_location> getMemoryRange(); \
       \
       /* destructor */ \
       ~COD_CLASS_NAME(name)() {} \
@@ -195,7 +195,7 @@ namespace scm {
 
 // Here the programmer should specify if one of the parameters is used as an address.
 #define MEMRANGE_CODELET(name, code) \
-    std::vector<scm::memory_location> \
+    std::set<scm::memory_location> \
     scm::COD_CLASS_NAME(name)::getMemoryRange() {  \
       this->memoryRanges.clear(); \
       code; \

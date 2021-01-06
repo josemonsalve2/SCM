@@ -160,7 +160,7 @@ namespace scm {
        * of this instruction. Allowing an in-order memory access.
        * 
        */
-      std::vector<memory_location> getMemoryRange(); 
+      std::set<memory_location> getMemoryRange(); 
 
       /** \brief Tells if a register represents an address value of a memory instruction or codelet
        * 

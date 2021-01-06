@@ -25,7 +25,6 @@ MEMRANGE_CODELET(LoadSqTile_2048L,
     this->addMemRange(address+ldistance*i, TILE_DIM*sizeof(double));
   }
 );
-
 IMPLEMENT_CODELET(LoadSqTile_2048L,
   unsigned char *reg1 = this->getParams().getParamAs(0); // Getting register 1
   double *destReg = reinterpret_cast<double*>(reg1);
@@ -49,7 +48,8 @@ IMPLEMENT_CODELET(MatMult_2048L,
   //   for (int j = 0; j < TILE_DIM; j++)
   //     for (int k = 0; k < TILE_DIM; k++)
         // C[i + j*TILE_DIM] = A[i + k*TILE_DIM]*B[j*TILE_DIM + k]; 
-  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM, 1, A, TILE_DIM, B, TILE_DIM, 1, C, TILE_DIM);
+  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM, 
+              1, A, TILE_DIM, B, TILE_DIM, 1, C, TILE_DIM);
 
 );
 

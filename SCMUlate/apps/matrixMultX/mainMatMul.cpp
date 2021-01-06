@@ -227,6 +227,10 @@ int main (int argc, char * argv[]) {
     printf("SUCCESS!!!\n");
   delete myMachine;
   delete [] memory;
+  delete [] testC;
+  delete [] warmA;
+  delete [] warmB;
+  delete [] warmC;
   return 0;
 }
 

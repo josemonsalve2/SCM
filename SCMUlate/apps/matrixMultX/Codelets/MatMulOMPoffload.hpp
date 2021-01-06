@@ -3,15 +3,19 @@
 
 #include "codelet.hpp"
 
+#ifdef MKL
+
 // [Rx_2048L, address, padding] = Load from addr 128x128 elements to register with offset padding  
 // Loads tile of 128x128 
-DEFINE_CODELET(LoadSqTileGPU_2048L, 3, scm::OP_IO::OP1_WR | scm::OP_IO::OP2_RD | scm::OP_IO::OP3_RD); 
+DEFINE_MEMORY_CODELET(LoadSqTileGPU_2048L, 3, scm::OP_IO::OP1_WR | scm::OP_IO::OP2_RD | scm::OP_IO::OP3_RD, scm::OP_ADDRESS::OP2_IS_ADDRESS | scm::OP_ADDRESS::OP3_IS_ADDRESS); 
 
 // C += AxB Where A, B, and C are 128x128 square matrices.
 DEFINE_CODELET(MatMultGPU_2048L, 3, scm::OP_IO::OP1_WR | scm::OP_IO::OP1_RD | scm::OP_IO::OP2_RD | scm::OP_IO::OP3_RD); 
 
 // [Rx_2048L, address, padding] = Store to addr 128x128 elements from register with offset padding  
 // Loads tile of 128x128 
-DEFINE_CODELET(StoreSqTileGPU_2048L, 3, scm::OP_IO::OP1_WR | scm::OP_IO::OP2_RD | scm::OP_IO::OP3_RD); 
+DEFINE_MEMORY_CODELET(StoreSqTileGPU_2048L, 3, scm::OP_IO::OP1_RD | scm::OP_IO::OP2_RD | scm::OP_IO::OP3_RD, scm::OP_ADDRESS::OP2_IS_ADDRESS | scm::OP_ADDRESS::OP3_IS_ADDRESS); 
+
+#endif // MKL
 
 #endif

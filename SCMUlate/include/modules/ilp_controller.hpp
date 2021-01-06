@@ -88,11 +88,11 @@ namespace scm {
     public:
       memory_queue_controller() { };
       uint32_t inline numberOfRanges () { return ranges.size(); }
-      void inline addRange(memory_location& curLocation) {
+      void inline addRange( const memory_location& curLocation) {
         SCMULATE_INFOMSG(4, "Adding range [%lu, %lu, %lu]",(unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size, (unsigned long)curLocation.size );
         this->ranges.insert(curLocation);
       }
-      void inline removeRange(memory_location& curLocation) {
+      void inline removeRange(const memory_location& curLocation) {
         SCMULATE_INFOMSG(4, "Removing range [%lu, %lu, %lu]",(unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size, (unsigned long)curLocation.size );
         if (this->ranges.find(curLocation) != this->ranges.end()) {
           this->ranges.erase(curLocation);
@@ -100,7 +100,7 @@ namespace scm {
           SCMULATE_ERROR(0, "The range [%lu, %lu, %lu], does not exist in the set of ranges.", (unsigned long)curLocation.memoryAddress, (unsigned long)curLocation.memoryAddress+curLocation.size, (unsigned long)curLocation.size)
         }
       }
-      bool inline itOverlaps(memory_location& curLocation) {
+      bool inline itOverlaps(const memory_location& curLocation) {
         // The start of the curLocation cannot be in between a beginning and end of the range
         // The end of the curLocation cannot be between a beginning and end
         for (auto itRange = ranges.begin(); itRange != ranges.end(); itRange++) {
@@ -162,7 +162,7 @@ namespace scm {
         // In memory instructions we need to figure out if there is a hazard in the memory
         if (inst->isMemoryInstruction()) {
           // Check all the ranges
-          std::vector <memory_location> ranges = inst->getMemoryRange();
+          std::set <memory_location> ranges = inst->getMemoryRange();
           for (auto it = ranges.begin(); it != ranges.end(); ++it) {
             if (memCtrl.itOverlaps( *it )) {
               inst_state->second = instruction_state::STALL;
@@ -173,7 +173,7 @@ namespace scm {
           // The instruction is ready to schedule, let's mark the ranges as busy
           for (auto it = ranges.begin(); it != ranges.end(); ++it)
             memCtrl.addRange( *it );
-        } 
+        }
         // Mark the registers
         if (inst->getOp1().type == operand_t::REGISTER) {
           uint_fast16_t io = inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR);
@@ -201,7 +201,7 @@ namespace scm {
         decoded_instruction_t * inst = inst_state->first;
         // In memory instructions we need to figure out if there is a hazard in the memory
         if (inst->isMemoryInstruction()) {
-          std::vector <memory_location> ranges = inst->getMemoryRange();
+          std::set <memory_location> ranges = inst->getMemoryRange();
           for (auto it = ranges.begin(); it != ranges.end(); ++it)
             memCtrl.removeRange( *it );
         } 
@@ -689,7 +689,7 @@ namespace scm {
         SCMULATE_INFOMSG(3, "Instruction (%lu) %s has finished. Starting clean up process", (unsigned long) inst,  inst->getFullInstruction().c_str() );
         // In memory instructions we need to remove range from memory
         if (inst->isMemoryInstruction()) {
-          std::vector <memory_location> ranges = inst->getMemoryRange();
+          std::set <memory_location> ranges = inst->getMemoryRange();
           for (auto it = ranges.begin(); it != ranges.end(); ++it)
             memCtrl.removeRange( *it );
         }
@@ -811,7 +811,7 @@ namespace scm {
             }
           }
           // Check if a memory region overlaps
-          std::vector <memory_location> ranges = inst->getMemoryRange();
+          std::set <memory_location> ranges = inst->getMemoryRange();
           for (auto it = ranges.begin(); it != ranges.end(); ++it) {
             if (memCtrl.itOverlaps( *it )) {
               return true;
@@ -853,9 +853,16 @@ namespace scm {
   class ilp_sequential {
     private:
       bool sequential_sw;
+      memory_queue_controller memCtrl;
     public:
       ilp_sequential() : sequential_sw(true) {}
       bool inline checkMarkInstructionToSched(instruction_state_pair * inst_pair) {
+        if (inst_pair->first->isMemoryInstruction()){
+          // The instruction is ready to schedule, let's mark the ranges as busy
+          std::set <memory_location> ranges = inst_pair->first->getMemoryRange();
+          for (auto it = ranges.begin(); it != ranges.end(); ++it)
+            memCtrl.addRange( *it );
+        }
         if (sequential_sw) {
           sequential_sw = false;
           inst_pair->second = instruction_state::READY;
@@ -864,7 +871,13 @@ namespace scm {
         inst_pair->second = instruction_state::STALL;
         return false;
       }
-      void inline instructionFinished() {
+      void inline instructionFinished(instruction_state_pair * inst_pair) {
+        if (inst_pair->first->isMemoryInstruction()){
+          // The instruction is ready to schedule, let's mark the ranges as busy
+          std::set <memory_location> ranges = inst_pair->first->getMemoryRange();
+          for (auto it = ranges.begin(); it != ranges.end(); ++it)
+            memCtrl.removeRange( *it );
+        }
         sequential_sw = true;
       }
   };
@@ -897,7 +910,7 @@ namespace scm {
       }
       void inline instructionFinished(instruction_state_pair * inst) {
         if (SCMULATE_ILP_MODE == ILP_MODES::SEQUENTIAL) {
-          seq_ctrl.instructionFinished();
+          seq_ctrl.instructionFinished(inst);
         } else if (SCMULATE_ILP_MODE  == ILP_MODES::SUPERSCALAR) {
           supscl_ctrl.instructionFinished(inst);
         } else if (SCMULATE_ILP_MODE == ILP_MODES::OOO) {

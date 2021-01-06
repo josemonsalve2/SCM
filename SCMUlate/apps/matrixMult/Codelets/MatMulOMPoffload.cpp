@@ -46,18 +46,18 @@ IMPLEMENT_CODELET(MatMultGPU_2048L,
   double *B = reinterpret_cast<double*>(reg3);
   double *C = reinterpret_cast<double*>(reg1);
 
-    
 _Pragma("omp target data map(to:A[0:TILE_DIM*TILE_DIM],B[0:TILE_DIM*TILE_DIM]) map(tofrom:C[0:TILE_DIM*TILE_DIM])")
     {
-
         // run gemm on gpu, use standard oneMKL interface within a variant dispatch construct
 _Pragma("omp target variant dispatch use_device_ptr(A, B, C)")
         {
-          cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM, 1, A, TILE_DIM, B, TILE_DIM, 1, C, TILE_DIM);
+          cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM,
+                       1, A, TILE_DIM, B, TILE_DIM, 1, C, TILE_DIM);
         }
     }
 
 );
+
 
 MEMRANGE_CODELET(StoreSqTileGPU_2048L, 
   // Obtaining the parameters

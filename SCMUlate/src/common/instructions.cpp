@@ -5,7 +5,7 @@ namespace scm {
     decoded_instruction_t::decodeOperands(reg_file_module * const reg_file_m) {
         // TODO: JMPLBL cannot be decoded because the potential of labels that have not been
         // parsed yet. Probably need to find a solution for this. 
-        if (this->instruction != std::string("JMPLBL")) { 
+        if (this->opcode != JMPLBL_INST.opcode) { 
           if (op1_s.size() != 0 && op1.type == operand_t::UNKNOWN) {
             // Check for imm or regisiter
             if (!instructions::isRegister(op1_s)) {
@@ -104,7 +104,7 @@ namespace scm {
     void
     decoded_instruction_t::calculateMemRanges() {
       memRanges.clear();
-      if (this->getType() == instType::MEMORY_INST && this->getInstruction() != std::string("LDIMM")) {
+      if (this->getType() == instType::MEMORY_INST && this->getOpcode() != LDIMM_INST.opcode) {
         int32_t size_dest = this->getOp1().value.reg.reg_size_bytes;
         unsigned long base_addr = 0;
         unsigned long offset = 0;
@@ -129,7 +129,7 @@ namespace scm {
           SCMULATE_ERROR(0, "Incorrect operand type");
         }
         // Check for offset only on the thisructions with such operand
-        if (this->getInstruction() == std::string("LDOFF") || this->getInstruction() == std::string("STOFF")) {
+        if (this->getOpcode() == LDOFF_INST.opcode || this->getOpcode() == STOFF_INST.opcode) {
           if (this->getOp3().type == operand_t::IMMEDIATE_VAL) {
             // Load address immediate value
             offset = this->getOp3().value.immediate;
@@ -157,7 +157,7 @@ namespace scm {
 
     bool
     decoded_instruction_t::isOpAnAddress(int op_num) {
-      if (this->getType() == instType::MEMORY_INST && this->getInstruction() != std::string("LDIMM")) {
+      if (this->getType() == instType::MEMORY_INST && this->getOpcode() != LDIMM_INST.opcode) {
         if (op_num != 1) {
           // This is always the source/destination register;
           return true;

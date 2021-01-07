@@ -26,7 +26,7 @@
 #define LABEL_REGEX "([a-zA-Z0-9_]+)"
 #define COMMENT_REGEX "([ ]*//.*)"
 
-#define DEF_INST(name, regExp, numOp, opInOut) {#name, regExp, numOp, opInOut}
+#define DEF_INST(opcode, name, regExp, numOp, opInOut) {opcode, #name, regExp, numOp, opInOut}
 #define NUM_OF_INST(a) sizeof(a)/sizeof(inst_def_t)
 
 namespace scm {
@@ -72,6 +72,8 @@ namespace scm {
 
   };
 
+  typedef uint32_t opcode_t;
+
   /** \brief Instruction definition
    *
    *  This struct contains all the information needed for the definition of a instruction 
@@ -79,8 +81,20 @@ namespace scm {
    *
    *  To add an instruction you must create it with DEF_INST() and then add it to the vector for 
    *  the corresponding group
+   * 
+   *  OPCODE:
+   *  0b 0000 0000 
+   *     GRP   ID
+   *  Where group is:
+   *  0x0_ -> SCM Specific Instructions
+   *  0x1_ -> SCM Codelet Specific Instructions
+   *  0x2_ -> Control instructions
+   *  0x3_ -> Arithmetic instructions
+   *  0x4_ -> Memory instructions
+   *  0xFF -> INVALID INSTRUCTION
    */
   struct inst_def_t {
+    const opcode_t opcode; // 1 bytes. msb => type, lsb =>ID
     std::string inst_name;
     std::string inst_regex;
     int num_op;
@@ -107,9 +121,9 @@ namespace scm {
   };
 
   // SCM specific insctructions
-  const inst_def_t COMMIT_INST = DEF_INST(COMMIT, "[ ]*(COMMIT;).*", 0, OP_IO::NO_RD_WR);                                          /* COMMIT; */
-  const inst_def_t LABEL_INST = DEF_INST(LABEL,   "[ ]*([a-zA-Z0-9_]+)[ ]*:.*", 0, OP_IO::NO_RD_WR);                                 /* myLabel: */
-  const inst_def_t CODELET_INST = DEF_INST(CODELET, "[ ]*COD[ ]+([a-zA-Z0-9_]+)[ ]+([a-zA-Z0-9_, ]*);.*", 0, OP_IO::NO_RD_WR);      /* COD codelet_name arg1, arg2, arg3; */
+  const inst_def_t COMMIT_INST = DEF_INST(0x00, COMMIT, "[ ]*(COMMIT;).*", 0, OP_IO::NO_RD_WR);                                          /* COMMIT; */
+  const inst_def_t LABEL_INST = DEF_INST(0x01, LABEL,   "[ ]*([a-zA-Z0-9_]+)[ ]*:.*", 0, OP_IO::NO_RD_WR);                                 /* myLabel: */
+  const inst_def_t CODELET_INST = DEF_INST(0x10, CODELET, "[ ]*COD[ ]+([a-zA-Z0-9_]+)[ ]+([a-zA-Z0-9_, ]*);.*", 0, OP_IO::NO_RD_WR);      /* COD codelet_name arg1, arg2, arg3; */
   
   // CONTROL FLOW INSTRUCTIONS
   /** \brief All the control instructions
@@ -119,13 +133,21 @@ namespace scm {
    * or to obtain the parameters
    */
   static inst_def_t const controlInsts[] = {
-    DEF_INST( JMPLBL,  "[ ]*(JMPLBL)[ ]+(" LABEL_REGEX ");.*", 1, OP_IO::NO_RD_WR),                                                   /* JMPLBL destination;*/
-    DEF_INST( JMPPC,   "[ ]*(JMPPC)[ ]+(" INMIDIATE_REGEX ");.*", 1, OP_IO::NO_RD_WR),                                                      /* JMPPC -100;*/
-    DEF_INST( BREQ,    "[ ]*(BREQ)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),            /* BREQ R1, R2, -100; */
-    DEF_INST( BGT,     "[ ]*(BGT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),             /* BGT R1, R2, -100; */
-    DEF_INST( BGET,    "[ ]*(BGET)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),            /* BGET R1, R2, -100; */
-    DEF_INST( BLT,     "[ ]*(BLT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),             /* BLT R1, R2, -100; */
-    DEF_INST( BLET,    "[ ]*(BLET)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD)};            /* BLET R1, R2, -100; */
+    DEF_INST(0x20, JMPLBL,  "[ ]*(JMPLBL)[ ]+(" LABEL_REGEX ");.*", 1, OP_IO::NO_RD_WR),                                                   /* JMPLBL destination;*/
+    DEF_INST(0x21, JMPPC,   "[ ]*(JMPPC)[ ]+(" INMIDIATE_REGEX ");.*", 1, OP_IO::NO_RD_WR),                                                      /* JMPPC -100;*/
+    DEF_INST(0x22, BREQ,    "[ ]*(BREQ)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),            /* BREQ R1, R2, -100; */
+    DEF_INST(0x23, BGT,     "[ ]*(BGT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),             /* BGT R1, R2, -100; */
+    DEF_INST(0x24, BGET,    "[ ]*(BGET)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),            /* BGET R1, R2, -100; */
+    DEF_INST(0x25, BLT,     "[ ]*(BLT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),             /* BLT R1, R2, -100; */
+    DEF_INST(0x26, BLET,    "[ ]*(BLET)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD)};            /* BLET R1, R2, -100; */
+
+  #define JMPLBL_INST controlInsts[0]
+  #define JMPPC_INST controlInsts[1]
+  #define BREQ_INST controlInsts[2]
+  #define BGT_INST controlInsts[3]
+  #define BGET_INST controlInsts[4]
+  #define BLT_INST controlInsts[5]
+  #define BLET_INST controlInsts[6]
 
   //BASIC ARITHMETIC INSTRUCTIONS
   /** \brief All the basic arithmetic instructions
@@ -135,10 +157,15 @@ namespace scm {
    * or to obtain the parameters
    */
   static inst_def_t const basicArithInsts[] = {
-  DEF_INST( ADD,  "[ ]*(ADD)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_WR | OP_IO::OP2_RD | OP_IO::OP3_RD),     /* ADD R1, R2, R3; R2 and R3 can be literals*/
-  DEF_INST( SUB,  "[ ]*(SUB)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_WR | OP_IO::OP2_RD | OP_IO::OP3_RD),     /* SUB R1, R2, R3; R2 and R3 can be literals*/
-  DEF_INST( SHFL, "[ ]*(SHFL)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_RD | OP_IO::OP1_WR | OP_IO::OP2_RD),                            /* SHFL R1, R2; R2 can be a literal representing how many positions to shift*/
-  DEF_INST( SHFR, "[ ]*(SHFR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_RD | OP_IO::OP1_WR | OP_IO::OP2_RD)};                            /* SHFR R1, R2; R2 can be a literal representing how many positions to shift*/
+  DEF_INST(0x30, ADD,  "[ ]*(ADD)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_WR | OP_IO::OP2_RD | OP_IO::OP3_RD),     /* ADD R1, R2, R3; R2 and R3 can be literals*/
+  DEF_INST(0x31, SUB,  "[ ]*(SUB)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_WR | OP_IO::OP2_RD | OP_IO::OP3_RD),     /* SUB R1, R2, R3; R2 and R3 can be literals*/
+  DEF_INST(0x32, SHFL, "[ ]*(SHFL)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_RD | OP_IO::OP1_WR | OP_IO::OP2_RD),                            /* SHFL R1, R2; R2 can be a literal representing how many positions to shift*/
+  DEF_INST(0x33, SHFR, "[ ]*(SHFR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_RD | OP_IO::OP1_WR | OP_IO::OP2_RD)};                            /* SHFR R1, R2; R2 can be a literal representing how many positions to shift*/
+
+  #define ADD_INST basicArithInsts[0]
+  #define SUB_INST basicArithInsts[1]
+  #define SHFL_INST basicArithInsts[2]
+  #define SHFR_INST basicArithInsts[3]
 
   //MEMORY INSTRUNCTIONS
   /** \brief All the memory related instructions
@@ -148,11 +175,20 @@ namespace scm {
    * or to obtain the parameters
    */
   static inst_def_t const memInsts[] = {
-  DEF_INST( LDIMM, "[ ]*(LDIMM)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ")[ ]*;.*", 2, OP_IO::OP1_WR),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
-  DEF_INST( LDADR, "[ ]*(LDADR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_WR | OP_IO::OP2_RD),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
-  DEF_INST( LDOFF, "[ ]*(LDOFF)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_WR | OP_IO::OP2_RD | OP_IO::OP3_RD),  /* LDOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
-  DEF_INST( STADR, "[ ]*(STADR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_RD| OP_IO::OP2_RD),                          /* STADR R1, R2; R2 can be a literal or the address in a the register*/
-  DEF_INST( STOFF, "[ ]*(STOFF)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD | OP_IO::OP3_RD)};  /* STOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
+  DEF_INST(0x40, LDIMM, "[ ]*(LDIMM)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ")[ ]*;.*", 2, OP_IO::OP1_WR),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
+  DEF_INST(0x41, LDADR, "[ ]*(LDADR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_WR | OP_IO::OP2_RD),                          /* LDADR R1, R2; R2 can be a literal or the address in a the register*/
+  DEF_INST(0x42, LDOFF, "[ ]*(LDOFF)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_WR | OP_IO::OP2_RD | OP_IO::OP3_RD),  /* LDOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
+  DEF_INST(0x43, STADR, "[ ]*(STADR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_RD| OP_IO::OP2_RD),                          /* STADR R1, R2; R2 can be a literal or the address in a the register*/
+  DEF_INST(0x44, STOFF, "[ ]*(STOFF)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD | OP_IO::OP3_RD)};  /* STOFF R1, R2, R3; R1 is the base destination register, R2 is the base address, R3 is the offset. R2 and R3 can be literals */
+
+  #define LDIMM_INST memInsts[0]
+  #define LDADR_INST memInsts[1]
+  #define LDOFF_INST memInsts[2]
+  #define STADR_INST memInsts[3]
+  #define STOFF_INST memInsts[4]
+
+
+
 
   /** \brief Definition of the instruction types 
    *

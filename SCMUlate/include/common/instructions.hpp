@@ -37,6 +37,7 @@ namespace scm {
        *
        */
       instType type;
+      opcode_t opcode;
       std::string instruction;
       std::string op1_s;
       std::string op2_s;
@@ -50,13 +51,13 @@ namespace scm {
 
    public:
       // Constructors
-      decoded_instruction_t (instType type) :
-        type(type), instruction(""), op1_s(""), op2_s(""), op3_s(""), op_in_out(OP_IO::NO_RD_WR), cod_exec(nullptr), op1(), op2(), op3() {}
-      decoded_instruction_t (instType type, std::string inst, std::string op1s = std::string(), std::string op2s = std::string(), std::string op3s = std::string()) :
-        type(type), instruction(inst), op1_s(op1s), op2_s(op2s), op3_s(op3s), op_in_out(OP_IO::NO_RD_WR), cod_exec(nullptr), op1(), op2(), op3()  {}
+      decoded_instruction_t (instType type, opcode_t opc) :
+        type(type), opcode(opc), instruction(""), op1_s(""), op2_s(""), op3_s(""), op_in_out(OP_IO::NO_RD_WR), cod_exec(nullptr), op1(), op2(), op3() {}
+      decoded_instruction_t (instType type, opcode_t opcode, std::string inst, std::string op1s = std::string(), std::string op2s = std::string(), std::string op3s = std::string()) :
+        type(type), opcode(opcode), instruction(inst), op1_s(op1s), op2_s(op2s), op3_s(op3s), op_in_out(OP_IO::NO_RD_WR), cod_exec(nullptr), op1(), op2(), op3()  {}
 
       decoded_instruction_t (const decoded_instruction_t &other) :
-              type(other.type), instruction(other.instruction), op1_s(other.op1_s), op2_s(other.op2_s), op3_s(other.op3_s), op_in_out(other.op_in_out),cod_exec(nullptr), op1(other.op1), op2(other.op2), op3(other.op3), memRanges(other.memRanges) {
+              type(other.type), opcode(other.opcode), instruction(other.instruction), op1_s(other.op1_s), op2_s(other.op2_s), op3_s(other.op3_s), op_in_out(other.op_in_out),cod_exec(nullptr), op1(other.op1), op2(other.op2), op3(other.op3), memRanges(other.memRanges) {
                 if (other.cod_exec != nullptr) {
                   codelet_params newParams = other.cod_exec->getParams();
                   this->cod_exec = codeletFactory::createCodelet(getInstruction(), newParams);
@@ -68,10 +69,15 @@ namespace scm {
        *  \sa istType
        */
       inline instType& getType() { return type; }
+      /** \brief get the instruction opcode
+       */
+      inline opcode_t getOpcode() { return opcode; }
       /** \brief get the instruction name
        */
       inline std::string& getInstruction() { return instruction; }
 
+      /** \brief get the instruction string with the actual used registers
+       */
       inline std::string getFullInstruction() { 
         std::string fullInstWithRename("");
         fullInstWithRename += instruction + std::string(" ");
@@ -285,7 +291,7 @@ namespace scm {
       if (!dec) isBasicArith(instruction, &dec);
       if (!dec) isExecution(instruction, &dec);
       if (!dec) isMemory(instruction, &dec);
-      if (!dec) dec = new decoded_instruction_t(UNKNOWN);
+      if (!dec) dec = new decoded_instruction_t(UNKNOWN, 0xFF);
 
       SCMULATE_INFOMSG(4, "decoded: {type = %d, opcode = %s, op1 = %s, op2 = %s, op3 = %s}, ", dec->getType(), dec->getInstruction().c_str(), dec->getOp1Str().c_str(), dec->getOp2Str().c_str(), dec->getOp3Str().c_str());
       
@@ -298,7 +304,7 @@ namespace scm {
       std::regex search_exp(COMMIT_INST.inst_regex, std::regex_constants::ECMAScript);
       std::smatch matches;
       if (std::regex_search(inst.begin(), inst.end(), matches, search_exp)) {
-        *decInst = new decoded_instruction_t(COMMIT, matches[1]);
+        *decInst = new decoded_instruction_t(COMMIT, COMMIT_INST.opcode, matches[1]);
         return true;
       }
       decInst = NULL;
@@ -358,13 +364,13 @@ namespace scm {
         std::smatch matches;
         if (std::regex_search(inst.begin(), inst.end(), matches, search_exp)) {
           if (controlInsts[i].num_op == 0) {
-            *decInst = new decoded_instruction_t(CONTROL_INST, matches[1], "" , "", "");
+            *decInst = new decoded_instruction_t(CONTROL_INST, controlInsts[i].opcode, matches[1], "" , "", "");
           } else if (controlInsts[i].num_op == 1) {
-            *decInst = new decoded_instruction_t(CONTROL_INST, matches[1], matches[2] , "", "");
+            *decInst = new decoded_instruction_t(CONTROL_INST, controlInsts[i].opcode, matches[1], matches[2] , "", "");
           } else if (controlInsts[i].num_op == 2) {
-            *decInst = new decoded_instruction_t(CONTROL_INST, matches[1], matches[2] , matches[3], "");
+            *decInst = new decoded_instruction_t(CONTROL_INST, controlInsts[i].opcode, matches[1], matches[2] , matches[3], "");
           } else if (controlInsts[i].num_op == 3) {
-            *decInst = new decoded_instruction_t(CONTROL_INST, matches[1], matches[2] , matches[3], matches[4]);
+            *decInst = new decoded_instruction_t(CONTROL_INST, controlInsts[i].opcode, matches[1], matches[2] , matches[3], matches[4]);
           } else {
             SCMULATE_ERROR(0, "Unsupported number of operands for CONTROL instruction");
           }
@@ -383,13 +389,13 @@ namespace scm {
         std::smatch matches;
         if (std::regex_search(inst.begin(), inst.end(), matches, search_exp)) {
           if (basicArithInsts[i].num_op == 0) {
-            *decInst = new decoded_instruction_t(BASIC_ARITH_INST, matches[1], "" , "", "");
+            *decInst = new decoded_instruction_t(BASIC_ARITH_INST, basicArithInsts[i].opcode, matches[1], "" , "", "");
           } else if (basicArithInsts[i].num_op == 1) {
-            *decInst = new decoded_instruction_t(BASIC_ARITH_INST, matches[1], matches[2] , "", "");
+            *decInst = new decoded_instruction_t(BASIC_ARITH_INST, basicArithInsts[i].opcode, matches[1], matches[2] , "", "");
           } else if (basicArithInsts[i].num_op == 2) {
-            *decInst = new decoded_instruction_t(BASIC_ARITH_INST, matches[1], matches[2] , matches[3], "");
+            *decInst = new decoded_instruction_t(BASIC_ARITH_INST, basicArithInsts[i].opcode, matches[1], matches[2] , matches[3], "");
           } else if (basicArithInsts[i].num_op == 3) {
-            *decInst = new decoded_instruction_t(BASIC_ARITH_INST, matches[1], matches[2] , matches[3], matches[4]);
+            *decInst = new decoded_instruction_t(BASIC_ARITH_INST, basicArithInsts[i].opcode, matches[1], matches[2] , matches[3], matches[4]);
           } else {
             SCMULATE_ERROR(0, "Unsupported number of operands for BASIC_ARITH_INST instruction");
           }
@@ -411,7 +417,7 @@ namespace scm {
         size_t pos = 0;
         size_t opNum = 0;
         std::string token;
-        *decInst = new decoded_instruction_t(EXECUTE_INST);
+        *decInst = new decoded_instruction_t(EXECUTE_INST, CODELET_INST.opcode);
         (*decInst)->setInstruction(matches[1]);
         while (operands.length() != 0) {
           pos = operands.find(delimiter);
@@ -444,13 +450,13 @@ namespace scm {
         std::smatch matches;
         if (std::regex_search(inst.begin(), inst.end(), matches, search_exp)) {
           if (memInsts[i].num_op == 0) {
-            *decInst = new decoded_instruction_t(MEMORY_INST, matches[1], "" , "", "");
+            *decInst = new decoded_instruction_t(MEMORY_INST, memInsts[i].opcode, matches[1], "" , "", "");
           } else if (memInsts[i].num_op == 1) {
-            *decInst = new decoded_instruction_t(MEMORY_INST, matches[1], matches[2] , "", "");
+            *decInst = new decoded_instruction_t(MEMORY_INST, memInsts[i].opcode, matches[1], matches[2] , "", "");
           } else if (memInsts[i].num_op == 2) {
-            *decInst = new decoded_instruction_t(MEMORY_INST, matches[1], matches[2] , matches[3], "");
+            *decInst = new decoded_instruction_t(MEMORY_INST, memInsts[i].opcode, matches[1], matches[2] , matches[3], "");
           } else if (memInsts[i].num_op == 3) {
-            *decInst = new decoded_instruction_t(MEMORY_INST, matches[1], matches[2] , matches[3], matches[4]);
+            *decInst = new decoded_instruction_t(MEMORY_INST, memInsts[i].opcode, matches[1], matches[2] , matches[3], matches[4]);
           } else {
             SCMULATE_ERROR(0, "Unsupported number of operands for MEMORY_INST instruction");
           }

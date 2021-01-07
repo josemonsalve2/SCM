@@ -172,8 +172,8 @@ int scm::fetch_decode_module::behavior()
         this->ctrl_st_m->get_executor(i)->empty_slot();
       }
     }
-
-    //printf("%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", stall, waiting, ready, execution_done, executing, decomision, finish_exec, this->inst_buff_m.getBufferSize());
+    instructionLevelParallelism.printStats();
+    SCMULATE_INFOMSG(6, "%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", stall, waiting, ready, execution_done, executing, decomision, finish_exec, this->inst_buff_m.getBufferSize());
     // Clear out instructions that are decomissioned
     this->inst_buff_m.clean_out_queue();
 

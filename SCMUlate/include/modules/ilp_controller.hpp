@@ -387,7 +387,6 @@ namespace scm {
       std::unordered_set<decoded_reg_t> renamedInUse;
       std::map<decoded_reg_t, instruction_operand_ref_t> subscribers;
       std::map<decoded_reg_t, instruction_operand_ref_t> broadcasters;
-      std::set<memory_location> memoryLocations;
       std::set<instruction_state_pair *> reservationTable; // Contains instructions that were already processed
 
       // Structural hazzard: When there are no registers for applying renaming. We must keep current progress 
@@ -520,6 +519,7 @@ namespace scm {
                   SCMULATE_INFOMSG(5, "Register %s is being 'used'. Renaming it to %s", current_operand->value.reg.reg_name.c_str(), newReg.reg_name.c_str());
                   if (!it_rename.second) {
                     SCMULATE_INFOMSG(5, "Register %s was already renamed to %s now it is changed to %s", current_operand->value.reg.reg_name.c_str(), it_rename.first->second.reg_name.c_str(), newReg.reg_name.c_str());
+                    renamedInUse.erase(it_rename.first->second);
                     it_rename.first->second = newReg;
                   }
                   current_operand->value.reg = newReg;
@@ -584,6 +584,7 @@ namespace scm {
                   SCMULATE_INFOMSG(5, "Register %s is being 'used'. Renaming it to %s", original_op_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
                   if (!it_rename.second) {
                     SCMULATE_INFOMSG(5, "Register %s was already renamed to %s now it is changed to %s", original_op_reg.reg_name.c_str(), original_renamed_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
+                    renamedInUse.erase(it_rename.first->second);
                     it_rename.first->second = new_renamed_reg;
                   }
                 } else {
@@ -671,12 +672,15 @@ namespace scm {
         return true;
       }
 
-
+      void printStats() {
+        SCMULATE_INFOMSG(6,"%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", used.size(), registerRenaming.size(), renamedInUse.size(), subscribers.size(), broadcasters.size(), reservationTable.size());
+      }
 
       decoded_reg_t inline getRenamedRegister(decoded_reg_t & otherReg) {
         static uint32_t curRegNum = 0;
         decoded_reg_t newReg = otherReg;
-        curRegNum = (curRegNum+1) % hidden_register_file.getNumRegForSize(newReg.reg_size_bytes);
+        uint32_t numReg4size = hidden_register_file.getNumRegForSize(newReg.reg_size_bytes);
+        curRegNum = (curRegNum+1) % numReg4size;
         newReg.reg_number = curRegNum;
         uint32_t attempts = 0;
 
@@ -684,9 +688,9 @@ namespace scm {
         do {
           newReg.reg_ptr = hidden_register_file.getNextRegister(newReg.reg_size_bytes, newReg.reg_number);
           attempts++;
-        } while ((this->used.find(newReg) != this->used.end() || this->renamedInUse.find(newReg) != this->renamedInUse.end()) && attempts != hidden_register_file.getNumRegForSize(newReg.reg_size_bytes));
-        if (attempts == hidden_register_file.getNumRegForSize(newReg.reg_size_bytes)) {
-          SCMULATE_INFOMSG(4, "When trying to rename, we could not find another register that was free out of %d", hidden_register_file.getNumRegForSize(newReg.reg_size_bytes));
+        } while ((this->used.find(newReg) != this->used.end() || this->renamedInUse.find(newReg) != this->renamedInUse.end()) && attempts != numReg4size);
+        if (attempts == numReg4size) {
+          SCMULATE_INFOMSG(4, "When trying to rename, we could not find another register that was free out of %d", numReg4size);
           return otherReg;
         }
         newReg.reg_name = std::string("R_ren_") + newReg.reg_size + std::string("_") + std::to_string(newReg.reg_number);
@@ -907,6 +911,11 @@ namespace scm {
           SCMULATE_ERROR(0, "What are you doing here?");
         }
         return false;
+      }
+      void printStats(){
+        if (SCMULATE_ILP_MODE == ILP_MODES::OOO) {
+          ooo_ctrl.printStats();
+        }
       }
       void inline instructionFinished(instruction_state_pair * inst) {
         if (SCMULATE_ILP_MODE == ILP_MODES::SEQUENTIAL) {

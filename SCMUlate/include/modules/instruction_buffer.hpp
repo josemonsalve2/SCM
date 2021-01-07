@@ -67,7 +67,7 @@ namespace scm {
         return this->instruction_buffer.size() >= INSTRUCTIONS_BUFFER_SIZE;
       }
 
-      uint16_t inline getBufferSize() const {
+      uint64_t inline getBufferSize() const {
         return this->instruction_buffer.size();
       }
 

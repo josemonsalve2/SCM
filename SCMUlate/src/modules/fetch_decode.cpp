@@ -35,8 +35,6 @@ int scm::fetch_decode_module::behavior()
     do {
       if (this->stallingInstruction == nullptr) {
         new_inst = this->inst_mem_m->fetch(this->PC);
-        TIMERS_COUNTERS_GUARD(
-          this->time_cnt_m->addEvent(this->su_timer_name, FETCH_DECODE_INSTRUCTION, std::string("PC = ") + std::to_string(PC) + std::string(" ") + new_inst->getFullInstruction()););
         if (!new_inst) {
           *(this->aliveSignal) = false;
           SCMULATE_ERROR(0, "Returned instruction is NULL for PC = %d. This should not happen", PC);
@@ -44,6 +42,8 @@ int scm::fetch_decode_module::behavior()
         }
         // Insert new instruction
         if (this->inst_buff_m.add_instruction(*new_inst)) {
+          TIMERS_COUNTERS_GUARD(
+            this->time_cnt_m->addEvent(this->su_timer_name, FETCH_DECODE_INSTRUCTION, std::string("PC = ") + std::to_string(PC) + std::string(" ") + new_inst->getFullInstruction()););
           SCMULATE_INFOMSG(5, "Executing PC = %d", this->PC);
           instructionLevelParallelism.checkMarkInstructionToSched(this->inst_buff_m.get_latest());
           if (this->inst_buff_m.get_latest()->second == instruction_state::STALL)
@@ -52,9 +52,9 @@ int scm::fetch_decode_module::behavior()
           // Mark instruction for scheduling
           SCMULATE_INFOMSG(5, "incrementing PC");
           this->PC++;
+          TIMERS_COUNTERS_GUARD(
+            this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE, std::string("PC = ") + std::to_string(PC)) );
         }
-        TIMERS_COUNTERS_GUARD(
-          this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE, std::string("PC = ") + std::to_string(PC)) );
       } else {
         new_inst = this->stallingInstruction->first;
         if (this->stallingInstruction->second != instruction_state::STALL)
@@ -62,9 +62,12 @@ int scm::fetch_decode_module::behavior()
       }
     } while (++fetch_reps < INSTRUCTION_FETCH_WINDOW && new_inst->getType() != instType::CONTROL_INST && new_inst->getType() != instType::COMMIT && stallingInstruction == nullptr);
     
-    TIMERS_COUNTERS_GUARD(
-        this->time_cnt_m->addEvent(this->su_timer_name, DISPATCH_INSTRUCTION, std::string("PC = ") + std::to_string(PC) + std::string(" ") + new_inst->getFullInstruction()););
-
+    // bool mark_event = (this->inst_buff_m.getBufferSize() > 0 );
+    // if (mark_event) {
+    //   TIMERS_COUNTERS_GUARD(
+    //       this->time_cnt_m->addEvent(this->su_timer_name, DISPATCH_INSTRUCTION, std::string("PC = ") + std::to_string(PC) + std::string(" ") + new_inst->getFullInstruction()););
+    // }
+    // Stats to collect
     stall = 0; waiting = 0; ready = 0; execution_done = 0; executing = 0; decomision = 0;
     // Iterate over the instruction buffer (window) looking for instructions to execute
     for (auto it = this->inst_buff_m.get_buffer()->begin(); it != this->inst_buff_m.get_buffer()->end(); ++it) {
@@ -162,24 +165,15 @@ int scm::fetch_decode_module::behavior()
     }
 
     // Check if any instructions have finished
-    uint64_t finish_exec=0;
-    for (uint32_t i = 0; i < this->ctrl_st_m->numExecutors(); i++) {
-      if (this->ctrl_st_m->get_executor(i)->is_done()) {
-        finish_exec++;
-        this->ctrl_st_m->get_executor(i)->getHead()->second = instruction_state::EXECUTION_DONE;
-        SCMULATE_INFOMSG(5, "Instruction %s has finished executing", this->ctrl_st_m->get_executor(i)->getHead()->first->getFullInstruction().c_str());
-
-        this->ctrl_st_m->get_executor(i)->empty_slot();
-      }
-    }
     instructionLevelParallelism.printStats();
-    SCMULATE_INFOMSG(6, "%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", stall, waiting, ready, execution_done, executing, decomision, finish_exec, this->inst_buff_m.getBufferSize());
+    SCMULATE_INFOMSG(6, "%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", stall, waiting, ready, execution_done, executing, decomision, this->inst_buff_m.getBufferSize());
     // Clear out instructions that are decomissioned
     this->inst_buff_m.clean_out_queue();
 
-    // Progress PC, if not stalling
-    TIMERS_COUNTERS_GUARD(
-      this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE, std::string("PC = ") + std::to_string(PC)););       
+    // if (mark_event) {  
+    //   TIMERS_COUNTERS_GUARD(
+    //     this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE, std::string("PC = ") + std::to_string(PC)););
+    // }
   }
   SCMULATE_INFOMSG(1, "Shutting down fetch decode unit");
   TIMERS_COUNTERS_GUARD(
@@ -528,19 +522,13 @@ bool scm::fetch_decode_module::attemptAssignExecuteInstruction(scm::instruction_
   while (!sched && attempts++ < this->ctrl_st_m->numExecutors()) {
     curSched++;
     curSched %= this->ctrl_st_m->numExecutors();
-    if (this->ctrl_st_m->get_executor(curSched)->is_empty())
-    {
-      this->ctrl_st_m->get_executor(curSched)->assign(inst);
+    if (!this->ctrl_st_m->get_executor(curSched)->is_full()) {
+      this->ctrl_st_m->get_executor(curSched)->insert(inst);
       sched = true;
     }
   }
-  if (!sched)
-  {
-    SCMULATE_INFOMSG(5, "Could not find a free unit");
-  }
-  else
-  {
-    SCMULATE_INFOMSG(5, "Scheduling to CUMEM %d", curSched);
-  }
+  SCMULATE_INFOMSG_IF(5, sched, "Scheduling to CUMEM %d", curSched);
+  SCMULATE_INFOMSG_IF(5, !sched, "Could not find a free unit");
+
   return sched;
 }

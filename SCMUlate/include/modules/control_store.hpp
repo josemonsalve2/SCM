@@ -13,43 +13,51 @@ namespace scm {
 
   /* An execution slot connects the scheduling of an instruction to its 
    * corresponding executor. The executor will be reading the execution
-   * slot waiting for something to be available, once there's something
-   * it will remove start its execution, and when it is finished it will
-   * cleare it for the scheduler to assign more work. At this stage it's 
-   * assumed the result has been commited either to the memory unit or
+   * slot waiting for instructions to be available, once there's something
+   * it will start its execution, and when it is finished it will remove it
+   * At this stage it's assumed the result has been commited either to the memory unit or
    * or the register directly. On the other hand the scheduler will have
    * a list of all the execution slots and chose one according to some 
    * scheduling policy. 
    */
   typedef enum {EMPTY, BUSY, DONE} executorState;
+  typedef std::vector< instruction_state_pair* > instructions_queue_t;
   class execution_slot {
     private:
-      executorState state;
-      instruction_state_pair* executionInstruction;
+      instructions_queue_t executionQueue;
+      instructions_queue_t::iterator head;
+      instructions_queue_t::iterator tail;
 
     public:
       // Constructor 
-      execution_slot(): state(EMPTY), executionInstruction(NULL) {}; 
+      execution_slot() {
+        for (int i = 0; i < EXECUTION_QUEUE_SIZE; i++) {
+          executionQueue.emplace_back(nullptr);
+        }
+        head = tail = executionQueue.begin();
+      };
 
-      void assign(instruction_state_pair *);
-      void empty_slot();
-      void done_execution();
-      inline bool is_busy() {
-        executorState ret;
-        #pragma omp atomic read
-          ret = this->state;
-        return ret == BUSY; }
+      void insert(instruction_state_pair *);
+      void consume();
+
       inline bool is_empty() {
-        executorState ret;
-        #pragma omp atomic read
-          ret = this->state;
-        return ret == EMPTY; }
-      inline bool is_done() { 
-        executorState ret;
-        #pragma omp atomic read
-          ret = this->state;
-        return ret == DONE; }
-      inline instruction_state_pair * getHead() const { return this->executionInstruction; }
+        return head == tail;
+      }
+
+      inline bool is_full() {
+        auto tail_nxt = tail;
+        getNext(tail_nxt);
+        return head == tail_nxt;
+      }
+
+      void inline getNext (instructions_queue_t::iterator& current) {
+        current++; 
+        if (current == executionQueue.end())
+          current = executionQueue.begin();
+      }
+      
+
+      inline instruction_state_pair * getHead() const { return *this->head; }
   };
 
 

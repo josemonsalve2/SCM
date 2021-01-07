@@ -7,6 +7,7 @@ namespace scm {
 }
 
 #define INSTRUCTIONS_BUFFER_SIZE 64
+#define EXECUTION_QUEUE_SIZE 10
 #ifndef DEBUGER_MODE
 #define DEBUGER_MODE 0
 #endif

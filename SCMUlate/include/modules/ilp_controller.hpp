@@ -387,7 +387,7 @@ namespace scm {
       std::unordered_set<decoded_reg_t> renamedInUse;
       std::map<decoded_reg_t, instruction_operand_ref_t> subscribers;
       std::map<decoded_reg_t, instruction_operand_ref_t> broadcasters;
-      std::set<instruction_state_pair *> reservationTable; // Contains instructions that were already processed
+      std::unordered_set<instruction_state_pair *> reservationTable; // Contains instructions that were already processed
 
       // Structural hazzard: When there are no registers for applying renaming. We must keep current progress 
       // on the instruction and attempt to continue in the process. Control flow must be returned to caller

@@ -19,7 +19,7 @@ scm::cu_executor_module::behavior() {
   // Initialization barrier
   #pragma omp barrier
   while (*(this->aliveSignal)) {
-    if (myExecutor->is_busy()) {
+    if (!myExecutor->is_empty()) {
       SCMULATE_INFOMSG(4, "  CUMEM[%d]: Executing instruction ", cu_executor_id);
       scm::decoded_instruction_t * curInstruction = myExecutor->getHead()->first;
       if (curInstruction->getType() == scm::instType::MEMORY_INST) {
@@ -51,7 +51,7 @@ scm::cu_executor_module::behavior() {
           this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_IDLE);
         #endif
       );
-      myExecutor->done_execution();
+      myExecutor->consume();
     }
   }
   SCMULATE_INFOMSG(1, "Shutting down executor CUMEM %d", cu_executor_id);

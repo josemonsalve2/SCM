@@ -1,23 +1,16 @@
 #include "control_store.hpp"
 
 void 
-scm::execution_slot::assign(scm::instruction_state_pair *newInstruction) {
-  this->executionInstruction = newInstruction;
-  #pragma omp atomic write
-  this->state = BUSY;
+scm::execution_slot::insert(scm::instruction_state_pair *newInstruction) {
+  *this->tail = newInstruction;
+  getNext(tail);
 }
 
 void 
-scm::execution_slot::empty_slot() {
-  this->executionInstruction = NULL;
-  #pragma omp atomic write
-  this->state = EMPTY;
-}
-
-void 
-scm::execution_slot::done_execution() {
-  #pragma omp atomic write
-  this->state = DONE;
+scm::execution_slot::consume() {
+  (*head)->second = instruction_state::EXECUTION_DONE;
+  *this->head = nullptr;
+  getNext(head);
 }
 
 scm::control_store_module::control_store_module(const int numExecUnits) {

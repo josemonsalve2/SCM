@@ -382,11 +382,11 @@ namespace scm {
       typedef std::vector< instruction_operand_pair_t > instruction_operand_ref_t;
 
       memory_queue_controller memCtrl;
-      std::unordered_map<decoded_reg_t, reg_state> used;
+      std::unordered_map<unsigned char *, reg_state> used;
       std::unordered_map<decoded_reg_t, decoded_reg_t> registerRenaming;
-      std::unordered_set<decoded_reg_t> renamedInUse;
-      std::map<decoded_reg_t, instruction_operand_ref_t> subscribers;
-      std::map<decoded_reg_t, instruction_operand_ref_t> broadcasters;
+      std::unordered_set<unsigned char *> renamedInUse;
+      std::map<unsigned char*, instruction_operand_ref_t> subscribers;
+      std::map<unsigned char*, instruction_operand_ref_t> broadcasters;
       std::unordered_set<instruction_state_pair *> reservationTable; // Contains instructions that were already processed
 
       // Structural hazzard: When there are no registers for applying renaming. We must keep current progress 

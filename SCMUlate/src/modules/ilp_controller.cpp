@@ -75,7 +75,7 @@ namespace scm {
                   current_operand->value.reg = it_rename->second;
                 }
 
-                auto it_used = used.find(current_operand->value.reg);
+                auto it_used = used.find(current_operand->value.reg.reg_ptr);
                 if(it_used != used.end() && it_used->second == reg_state::WRITE) {
                   SCMULATE_INFOMSG(5, "Register %s is currently on WRITE state. Will subscribe but not sched", current_operand->value.reg.reg_name.c_str());
                 } else if (it_used != used.end() && it_used->second == reg_state::READ) {
@@ -84,15 +84,15 @@ namespace scm {
                   SCMULATE_INFOMSG(5, "Register %s is currently on READ state. Subscribing and allowing sched", current_operand->value.reg.reg_name.c_str());
                 } else {
                   // Insert it in used, and register to subscribers
-                  used.insert(std::pair<decoded_reg_t, reg_state> (current_operand->value.reg, reg_state::READ));
+                  used.insert(std::pair<unsigned char *, reg_state> (current_operand->value.reg.reg_ptr, reg_state::READ));
                   // Operand ready for execution
                   current_operand->full_empty = true;
                   SCMULATE_INFOMSG(5, "Register %s was not found in the 'used' registers map. Marking as READ, subscribing, and allowing sched", current_operand->value.reg.reg_name.c_str());
                 }
                 // Attempt inserting if it does not exists already
                 auto it_subs_insert = subscribers.insert(
-                                      std::pair<decoded_reg_t, instruction_operand_ref_t >(
-                                            current_operand->value.reg, instruction_operand_ref_t() ));
+                                      std::pair<unsigned char *, instruction_operand_ref_t >(
+                                            current_operand->value.reg.reg_ptr, instruction_operand_ref_t() ));
                 it_subs_insert.first->second.push_back(instruction_operand_pair_t(inst_state, i));
 
               } else if (it_inst_dir->second == reg_state::WRITE) {
@@ -100,7 +100,7 @@ namespace scm {
                 ////////////////////////// CASE WRITE ////////////////////////
                 //////////////////////////////////////////////////////////////
 
-                auto it_used = used.find(current_operand->value.reg);
+                auto it_used = used.find(current_operand->value.reg.reg_ptr);
                 decoded_reg_t original_reg = current_operand->value.reg;
 
                 if(it_used != used.end()) {
@@ -115,11 +115,11 @@ namespace scm {
                   }
 
                   auto it_rename = registerRenaming.insert(std::pair<decoded_reg_t, decoded_reg_t> (current_operand->value.reg, newReg));
-                  renamedInUse.insert(newReg);
+                  renamedInUse.insert(newReg.reg_ptr);
                   SCMULATE_INFOMSG(5, "Register %s is being 'used'. Renaming it to %s", current_operand->value.reg.reg_name.c_str(), newReg.reg_name.c_str());
                   if (!it_rename.second) {
                     SCMULATE_INFOMSG(5, "Register %s was already renamed to %s now it is changed to %s", current_operand->value.reg.reg_name.c_str(), it_rename.first->second.reg_name.c_str(), newReg.reg_name.c_str());
-                    renamedInUse.erase(it_rename.first->second);
+                    renamedInUse.erase(it_rename.first->second.reg_ptr);
                     it_rename.first->second = newReg;
                   }
                   current_operand->value.reg = newReg;
@@ -128,7 +128,7 @@ namespace scm {
                   // Register not in used. Remove renaming for future references
                   auto it_rename = registerRenaming.find(current_operand->value.reg);
                   if (it_rename != registerRenaming.end()) {
-                    renamedInUse.erase(it_rename->second);
+                    renamedInUse.erase(it_rename->second.reg_ptr);
                     registerRenaming.erase(it_rename);
                   }
                   SCMULATE_INFOMSG(5, "Register %s register was not found in the 'used' registers map. If renamed is set, we cleared it", current_operand->value.reg.reg_name.c_str());
@@ -147,7 +147,7 @@ namespace scm {
                   }
                 }
                 SCMULATE_INFOMSG(5, "Register %s. Marking as WRITE and allowing sched", current_operand->value.reg.reg_name.c_str());
-                used.insert(std::pair<decoded_reg_t, reg_state> (current_operand->value.reg, reg_state::WRITE));
+                used.insert(std::pair<unsigned char *, reg_state> (current_operand->value.reg.reg_ptr, reg_state::WRITE));
                 current_operand->full_empty = true;
 
               } else if (it_inst_dir->second == reg_state::READWRITE) {
@@ -167,7 +167,7 @@ namespace scm {
                 }
 
                 // Second check if the operand is currently being used. Important for writing
-                auto it_used = used.find(original_op_reg);
+                auto it_used = used.find(original_op_reg.reg_ptr);
                 if(it_used != used.end()) {
                   // It is already being used, let's rename
                   new_renamed_reg = getRenamedRegister(original_op_reg);
@@ -180,16 +180,16 @@ namespace scm {
                   }
 
                   auto it_rename = registerRenaming.insert(std::pair<decoded_reg_t, decoded_reg_t> (original_op_reg, new_renamed_reg));
-                  renamedInUse.insert(new_renamed_reg);
+                  renamedInUse.insert(new_renamed_reg.reg_ptr);
                   SCMULATE_INFOMSG(5, "Register %s is being 'used'. Renaming it to %s", original_op_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
                   if (!it_rename.second) {
                     SCMULATE_INFOMSG(5, "Register %s was already renamed to %s now it is changed to %s", original_op_reg.reg_name.c_str(), original_renamed_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
-                    renamedInUse.erase(it_rename.first->second);
+                    renamedInUse.erase(it_rename.first->second.reg_ptr);
                     it_rename.first->second = new_renamed_reg;
                   }
                 } else {
                   if (it_rename != registerRenaming.end()) {
-                    renamedInUse.erase(it_rename->second);
+                    renamedInUse.erase(it_rename->second.reg_ptr);
                     registerRenaming.erase(it_rename);
                   }
                   SCMULATE_INFOMSG(5, "Register %s was not found in the 'used' registers map. If it was previously renamed, we removed it", original_op_reg.reg_name.c_str());
@@ -197,7 +197,7 @@ namespace scm {
 
                 // Third, check if current source (read) is available or not, to decide if broadcasting or subscription 
                 // Stores if the operand is available for reading in variable available
-                auto source_used = used.find(original_renamed_reg);
+                auto source_used = used.find(original_renamed_reg.reg_ptr);
                 bool available = source_used == used.end() || source_used->second == reg_state::READ;
 
                 // Forth, if available make a copy into new register
@@ -220,8 +220,8 @@ namespace scm {
                       } else {
                         // Insert it in used, and register to broadcasters 
                         auto it_broadcast_insert = broadcasters.insert(
-                                              std::pair<decoded_reg_t, instruction_operand_ref_t >(
-                                                    original_renamed_reg, instruction_operand_ref_t() ));
+                                              std::pair<unsigned char *, instruction_operand_ref_t >(
+                                                    original_renamed_reg.reg_ptr, instruction_operand_ref_t() ));
                         it_broadcast_insert.first->second.push_back(instruction_operand_pair_t(inst_state, other_op_num));
                         SCMULATE_INFOMSG(5, "Register %s. Marking as WRITE. Do not allow to schedule until broadcast happens", new_renamed_reg.reg_name.c_str());
                       }
@@ -231,7 +231,7 @@ namespace scm {
                 }
 
                 // Finally insert new_renamed_reg into used (remember that new_renamed_reg == original_op_reg if no renamed happened)
-                used.insert(std::pair<decoded_reg_t, reg_state> (new_renamed_reg, reg_state::WRITE));
+                used.insert(std::pair<unsigned char *, reg_state> (new_renamed_reg.reg_ptr, reg_state::WRITE));
               }
             } else {
               // Operand is ready by default (IMMEDIATE or UNKNOWN)
@@ -285,7 +285,7 @@ namespace scm {
         do {
           newReg.reg_ptr = hidden_register_file->getNextRegister(newReg.reg_size_bytes, newReg.reg_number);
           attempts++;
-        } while ((this->used.find(newReg) != this->used.end() || this->renamedInUse.find(newReg) != this->renamedInUse.end()) && attempts != numReg4size);
+        } while ((this->used.find(newReg.reg_ptr) != this->used.end() || this->renamedInUse.find(newReg.reg_ptr) != this->renamedInUse.end()) && attempts != numReg4size);
         if (attempts == numReg4size) {
           SCMULATE_INFOMSG(4, "When trying to rename, we could not find another register that was free out of %d", numReg4size);
           return otherReg;
@@ -315,10 +315,10 @@ namespace scm {
 
             // Check the operand's direction
             if (it->second == reg_state::READ) {
-              auto it_used = used.find(it->first);
+              auto it_used = used.find(it->first.reg_ptr);
               // Check the state in the used map
               if (it_used->second == reg_state::READ) {
-                auto subscribers_list_it = subscribers.find(it->first);
+                auto subscribers_list_it = subscribers.find(it->first.reg_ptr);
                 if (subscribers_list_it != subscribers.end()) {
                   // Remove subscription
                   for (auto it_subs = subscribers_list_it->second.begin(); it_subs != subscribers_list_it->second.end();) {
@@ -343,10 +343,10 @@ namespace scm {
               }
 
             } else if (it->second == reg_state::WRITE || it->second == reg_state::READWRITE) {
-              auto it_used = used.find(it->first);
+              auto it_used = used.find(it->first.reg_ptr);
               // Check the state in the used map
               if (it_used->second == reg_state::WRITE) {
-                auto broadcaster_list_it = broadcasters.find(it->first);
+                auto broadcaster_list_it = broadcasters.find(it->first.reg_ptr);
                 if (broadcaster_list_it != broadcasters.end()) {
                   // enable broadcasters operand and possibly instruction
                   for (auto it_broadcast = broadcaster_list_it->second.begin(); it_broadcast != broadcaster_list_it->second.end(); it_broadcast = broadcaster_list_it->second.erase(it_broadcast)) {
@@ -366,7 +366,7 @@ namespace scm {
                   }
                   broadcasters.erase(broadcaster_list_it);
                 }
-                auto subscribers_list_it = subscribers.find(it->first);
+                auto subscribers_list_it = subscribers.find(it->first.reg_ptr);
                 if (subscribers_list_it != subscribers.end()) {
                   // enable subscribed operand and possibly instruction
                   for (auto it_subs = subscribers_list_it->second.begin(); it_subs != subscribers_list_it->second.end(); it_subs++) {

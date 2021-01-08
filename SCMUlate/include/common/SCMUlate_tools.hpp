@@ -19,6 +19,39 @@ typedef unsigned char * l2_memory_t;
 #define VERBOSE_MODE -1
 #endif
 
+#if PROFILER_INSTRUMENT
+  #if __INTEL_LLVM_COMPILER
+    #include <ittnotify.h>
+    #define ITT_HANDLE_NAME(name) __scmulate_itt_handle_ ## name
+    #define ITT_DOMAIN_VAR_NAME(name) __scmulate_itt_domain_ ## name
+    #define ITT_LINE_NUMBER "_l" ## __LINE__
+    #define ITT_DOMAIN_STR_NAME(name) "SCMULATE_DOM_" # name
+    #define ITT_PAUSE __itt_pause();
+    #define ITT_RESUME __itt_resume();
+    #define ITT_DETACH __itt_detach();
+    #define ITT_DOMAIN(name) __itt_domain* scmulate_itt_domain = __itt_domain_create(ITT_DOMAIN_STR_NAME(name));
+    #define ITT_STR_HANDLE(name) __itt_string_handle* ITT_HANDLE_NAME(name) = __itt_string_handle_create(#name);
+    #define ITT_TASK_BEGIN(domain, taskname) __itt_task_begin(scmulate_itt_domain, __itt_null, __itt_null, ITT_HANDLE_NAME(taskname));
+    #define ITT_TASK_END(domain) __itt_task_end(scmulate_itt_domain);
+  #else 
+    #define ITT_PAUSE 
+    #define ITT_RESUME 
+    #define ITT_DETACH 
+    #define ITT_DOMAIN(name) 
+    #define ITT_STR_HANDLE(name) 
+    #define ITT_TASK_BEGIN(domain, name) 
+    #define ITT_TASK_END(name) 
+  #endif
+#else
+  #define ITT_PAUSE 
+  #define ITT_RESUME 
+  #define ITT_DETACH 
+  #define ITT_DOMAIN(name) 
+  #define ITT_STR_HANDLE(name) 
+  #define ITT_TASK_BEGIN(domain, name) 
+  #define ITT_TASK_END(name) 
+#endif
+
 // Macro for output of information, warning and error messages
 #if VERBOSE_MODE >= 0
   #define SCMULATE_WARNING(level, message, ...) { \

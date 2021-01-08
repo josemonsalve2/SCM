@@ -29,14 +29,14 @@
 
 
 #define SU_THREAD 0
-#define CUS 1
+//#define CUS 1
 //#define CUS 1, 2
 //#define CUS 1, 2, 3
 //#define CUS 1, 2, 3, 4
 //#define CUS 1, 2, 3, 4, 5
 //#define CUS 1, 2, 3, 4, 5, 6
 //#define CUS 1, 2, 3, 4, 5, 6, 7
-//#define CUS 1, 2, 3, 4, 5, 6, 7, 8
+ #define CUS 1, 2, 3, 4, 5, 6, 7, 8
 //#define CUS 1, 2, 3, 4, 5, 6, 7, 8, 9
 //#define CUS 1, 2, 3, 4, 5, 6, 7, 8, 9, 10
 //#define CUS 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11

@@ -23,6 +23,11 @@ else ()
   set(CMAKE_BUILD_TYPE Release)
 endif (DEBUG)
 
+## CHECK FOR DEBUG MODE
+if (PROFILER_INSTRUMENT)
+  set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVERBOSE_MODE=${VERBOSE_MODE}")
+endif (PROFILER_INSTRUMENT)
+
 ## CHECK FOR VERBOSE EXECUTION MODE
 if (VERBOSE_MODE)
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -DVERBOSE_MODE=${VERBOSE_MODE}")
@@ -63,7 +68,12 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   message("Identified Clang family as ${CLANG_CXX_FAMILY}")
   # using Clang
   if ("${CLANG_CXX_FAMILY}" STREQUAL "icpx")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fiopenmp -fopenmp-targets=spir64 -DDECLARE_VARIANT=1")
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fiopenmp") #-fopenmp-targets=spir64 -DDECLARE_VARIANT=1
+    if (PROFILER_INSTRUMENT)
+      link_directories("/opt/intel/oneapi/vtune/latest/lib64")
+      link_directories("/opt/intel/oneapi/vtune/latest/sdk/lib64")
+      include_directories("/opt/intel/oneapi/vtune/latest/include/")
+    endif(PROFILER_INSTRUMENT)
     set(DECLARE_VARIANT_ENABLED ON)
   else()
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
@@ -71,6 +81,8 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   # using GCC
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fopenmp")
+  set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -pg")
+
 elseif ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Intel")
   # using Intel C++
   set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -qopenmp")
@@ -81,7 +93,7 @@ else()
   message( FATAL_ERROR "No support for ${CMAKE_CXX_COMPILER_ID} yet" )
 endif()
 
-set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O0 -std=c++17")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -g -O3 -std=c++17")
 set(CMAKE_CXX_FLAGS_RELEASE "${CMAKE_CXX_FLAGS_RELEASE} -g -O3 -std=c++17")
 
 add_subdirectory (src) 
@@ -93,7 +105,7 @@ if (CMAKE_BUILD_TYPE MATCHES Debug)
       set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
     elseif(UNIX)
       message("Adding sanitizer for Clang in Linux")
-      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=memory")
+      set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fsanitize=address")
     endif()
 
   endif()

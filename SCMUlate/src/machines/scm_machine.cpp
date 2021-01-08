@@ -43,6 +43,7 @@ scm::scm_machine::scm_machine(char * in_filename, l2_memory_t const memory, ILP_
     }
       
     init_correct = true;
+    ITT_RESUME;
 }
 
 scm::run_status
@@ -97,6 +98,7 @@ scm::scm_machine::run() {
 }
 
 scm::scm_machine::~scm_machine() {
+  ITT_PAUSE;
   for (auto it = executors_m.begin(); it < executors_m.end(); ++it) 
     delete (*it);
   TIMERS_COUNTERS_GUARD(

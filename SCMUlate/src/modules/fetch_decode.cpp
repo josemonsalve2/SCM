@@ -22,7 +22,11 @@ scm::fetch_decode_module::fetch_decode_module(inst_mem_module *const inst_mem,
 
 int scm::fetch_decode_module::behavior()
 {
+  ITT_DOMAIN(fetch_decode_module_behavior);
+  ITT_STR_HANDLE(checkMarkInstructionToSched);
+  ITT_STR_HANDLE(instructionFinished);
   uint64_t stall = 0, waiting = 0, ready = 0, execution_done = 0, executing = 0, decomision = 0;
+  bool commited = false; 
   TIMERS_COUNTERS_GUARD(
       this->time_cnt_m->addEvent(this->su_timer_name, SU_START););
   SCMULATE_INFOMSG(1, "Initializing the SU");
@@ -32,36 +36,41 @@ int scm::fetch_decode_module::behavior()
     // FETCHING PC
     int fetch_reps = 0;
     scm::decoded_instruction_t *new_inst = nullptr;
-    do {
-      if (this->stallingInstruction == nullptr) {
-        new_inst = this->inst_mem_m->fetch(this->PC);
-        if (!new_inst) {
-          *(this->aliveSignal) = false;
-          SCMULATE_ERROR(0, "Returned instruction is NULL for PC = %d. This should not happen", PC);
-          continue;
-        }
-        // Insert new instruction
-        if (this->inst_buff_m.add_instruction(*new_inst)) {
-          TIMERS_COUNTERS_GUARD(
-            this->time_cnt_m->addEvent(this->su_timer_name, FETCH_DECODE_INSTRUCTION, std::string("PC = ") + std::to_string(PC) + std::string(" ") + new_inst->getFullInstruction()););
-          SCMULATE_INFOMSG(5, "Executing PC = %d", this->PC);
-          instructionLevelParallelism.checkMarkInstructionToSched(this->inst_buff_m.get_latest());
-          if (this->inst_buff_m.get_latest()->second == instruction_state::STALL)
-              this->stallingInstruction = this->inst_buff_m.get_latest();
+    if (!commited) {
+      do {
+        if (this->stallingInstruction == nullptr) {
+          SCMULATE_INFOMSG(5, "FETCHING PC = %d", this->PC);
+          new_inst = this->inst_mem_m->fetch(this->PC);
+          if (!new_inst) {
+            *(this->aliveSignal) = false;
+            SCMULATE_ERROR(0, "Returned instruction is NULL for PC = %d. This should not happen", PC);
+            continue;
+          }
+          // Insert new instruction
+          if (this->inst_buff_m.add_instruction(*new_inst)) {
+            TIMERS_COUNTERS_GUARD(
+              this->time_cnt_m->addEvent(this->su_timer_name, FETCH_DECODE_INSTRUCTION, std::string("PC = ") + std::to_string(PC) + std::string(" ") + new_inst->getFullInstruction()););
+            SCMULATE_INFOMSG(5, "Executing PC = %d", this->PC);
+            ITT_TASK_BEGIN(fetch_decode_module_behavior, checkMarkInstructionToSched);
+            instructionLevelParallelism.checkMarkInstructionToSched(this->inst_buff_m.get_latest());
+            ITT_TASK_END(checkMarkInstructionToSched);
+            if (this->inst_buff_m.get_latest()->second == instruction_state::STALL)
+                this->stallingInstruction = this->inst_buff_m.get_latest();
 
-          // Mark instruction for scheduling
-          SCMULATE_INFOMSG(5, "incrementing PC");
-          this->PC++;
-          TIMERS_COUNTERS_GUARD(
-            this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE, std::string("PC = ") + std::to_string(PC)) );
+            // Mark instruction for scheduling
+            commited = new_inst->getOpcode() == COMMIT_INST.opcode;
+            SCMULATE_INFOMSG(5, "incrementing PC");
+            this->PC++;
+            TIMERS_COUNTERS_GUARD(
+              this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE, std::string("PC = ") + std::to_string(PC)) );
+          }
+        } else {
+          new_inst = this->stallingInstruction->first;
+          if (this->stallingInstruction->second != instruction_state::STALL)
+            this->stallingInstruction = nullptr;
         }
-      } else {
-        new_inst = this->stallingInstruction->first;
-        if (this->stallingInstruction->second != instruction_state::STALL)
-          this->stallingInstruction = nullptr;
-      }
-    } while (++fetch_reps < INSTRUCTION_FETCH_WINDOW && new_inst->getType() != instType::CONTROL_INST && new_inst->getType() != instType::COMMIT && stallingInstruction == nullptr);
-    
+      } while (stallingInstruction == nullptr && !commited && ++fetch_reps < INSTRUCTION_FETCH_WINDOW && new_inst->getType() != instType::CONTROL_INST && new_inst->getType() != instType::COMMIT );
+    }
     // bool mark_event = (this->inst_buff_m.getBufferSize() > 0 );
     // if (mark_event) {
     //   TIMERS_COUNTERS_GUARD(
@@ -75,7 +84,9 @@ int scm::fetch_decode_module::behavior()
       switch (current_pair->second) {
         case instruction_state::STALL:
           stall++;
+          ITT_TASK_BEGIN(fetch_decode_module_behavior, checkMarkInstructionToSched);
           instructionLevelParallelism.checkMarkInstructionToSched(current_pair);
+          ITT_TASK_END(checkMarkInstructionToSched);
           if (current_pair->second == instruction_state::STALL)
             this->stallingInstruction = current_pair;
           break;
@@ -83,7 +94,9 @@ int scm::fetch_decode_module::behavior()
           waiting++;
           // TIMERS_COUNTERS_GUARD(
           //   this->time_cnt_m->addEvent(this->su_timer_name, FETCH_DECODE_INSTRUCTION, current_pair->first->getFullInstruction()););
+          ITT_TASK_BEGIN(fetch_decode_module_behavior, checkMarkInstructionToSched);
           instructionLevelParallelism.checkMarkInstructionToSched(current_pair);
+          ITT_TASK_END(checkMarkInstructionToSched);
           if (current_pair->second == instruction_state::STALL)
             this->stallingInstruction = current_pair;
           // TIMERS_COUNTERS_GUARD(
@@ -94,15 +107,12 @@ int scm::fetch_decode_module::behavior()
           current_pair->second = instruction_state::EXECUTING;
           switch (current_pair->first->getType()) {
             case COMMIT:
-              // Check if there are other instructions in the buffer that need to be finished
-              if (this->inst_buff_m.get_buffer()->size() == 1) {
-                SCMULATE_INFOMSG(4, "Scheduling and Exec a COMMIT");
-                SCMULATE_INFOMSG(1, "Turning off machine alive = false");
-                #pragma omp atomic write
-                *(this->aliveSignal) = false;
-                // Properly clear the COMMIT instruction
-                current_pair->second = instruction_state::DECOMISION;
-              }
+              SCMULATE_INFOMSG(4, "Scheduling and Exec a COMMIT");
+              SCMULATE_INFOMSG(1, "Turning off machine alive = false");
+              #pragma omp atomic write
+              *(this->aliveSignal) = false;
+              // Properly clear the COMMIT instruction
+              current_pair->second = instruction_state::DECOMISION;
               break;
             case CONTROL_INST:
               SCMULATE_INFOMSG(4, "Scheduling a CONTROL_INST %s", current_pair->first->getFullInstruction().c_str());
@@ -142,16 +152,18 @@ int scm::fetch_decode_module::behavior()
         
         case instruction_state::EXECUTION_DONE:
           execution_done ++;
-          // TIMERS_COUNTERS_GUARD(
-          //   this->time_cnt_m->addEvent(this->su_timer_name, DISPATCH_INSTRUCTION, current_pair->first->getFullInstruction()););
+          TIMERS_COUNTERS_GUARD(
+            this->time_cnt_m->addEvent(this->su_timer_name, DISPATCH_INSTRUCTION, current_pair->first->getFullInstruction()););
           // check if stalling instruction
           if (this->stallingInstruction != nullptr && this->stallingInstruction == current_pair)
             this->stallingInstruction = nullptr;
+          ITT_TASK_BEGIN(fetch_decode_module_behavior, instructionFinished);
           instructionLevelParallelism.instructionFinished(current_pair);
+          ITT_TASK_END(instructionFinished);
           SCMULATE_INFOMSG(5, "Marking instruction %s for decomision", current_pair->first->getFullInstruction().c_str());
           current_pair->second = instruction_state::DECOMISION;
-          // TIMERS_COUNTERS_GUARD(
-          //   this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE, current_pair->first->getFullInstruction()););
+          TIMERS_COUNTERS_GUARD(
+            this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE, current_pair->first->getFullInstruction()););
           break;
         case instruction_state::EXECUTING:
           executing++;

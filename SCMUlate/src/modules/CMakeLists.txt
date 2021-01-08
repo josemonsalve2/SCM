@@ -21,6 +21,9 @@ set( fetch_decode_inc
     ${CMAKE_SOURCE_DIR}/include/modules/ilp_controller.hpp)
 
 add_library(fetch_decode ${fetch_decode_src} ${fetch_decode_inc})
+if (PROFILER_INSTRUMENT)
+    target_link_libraries(fetch_decode ittnotify)
+endif(PROFILER_INSTRUMENT)
 
 # EXECUTORS
 set( executor_src executor.cpp )

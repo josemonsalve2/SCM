@@ -41,10 +41,12 @@ namespace scm {
       void consume();
 
       inline bool is_empty() {
+        #pragma omp flush acquire
         return head == tail;
       }
 
       inline bool is_full() {
+        #pragma omp flush acquire
         auto tail_nxt = tail;
         getNext(tail_nxt);
         return head == tail_nxt;

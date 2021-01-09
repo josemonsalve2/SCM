@@ -484,6 +484,7 @@ namespace scm {
           for (int i = 1; i <= MAX_NUM_OPERANDS; ++i) {
             operand_t &thisOperand = inst->getOp(i);
             if(!thisOperand.full_empty && inst->isOpAnAddress(i)) {
+              SCMULATE_INFOMSG(5, "Stalling due to missing argument %d", i);
               return true;
               break;
             }
@@ -493,6 +494,7 @@ namespace scm {
           if (ranges->size() == 0)
             inst->calculateMemRanges();
           if (memCtrl.itOverlaps( ranges )) {
+            SCMULATE_INFOMSG(5, "Stalling due to memory range overlap");
             return true;
           }
           // The instruction is ready to schedule, let's mark the ranges as busy

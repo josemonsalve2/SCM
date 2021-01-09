@@ -3,16 +3,15 @@
 void 
 scm::execution_slot::insert(scm::instruction_state_pair *newInstruction) {
   *this->tail = newInstruction;
-  #pragma omp flush(tail)
+  #pragma omp flush release
   getNext(tail);
 }
 
 void 
 scm::execution_slot::consume() {
   (*head)->second = instruction_state::EXECUTION_DONE;
-  #pragma omp flush((*head)->second)
   *this->head = nullptr;
-  #pragma omp flush(head)
+  #pragma omp flush release 
   getNext(head);
 }
 

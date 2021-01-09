@@ -10,6 +10,10 @@ void timers_counters::addTimer(std::string counterName, counter_type type)
   this->counterType[counterName] = type;
 }
 
+double timers_counters::getTimestamp() {
+  std::chrono::duration<double> diff = std::chrono::high_resolution_clock::now() - this->globalInitialTimer;
+  return diff.count();
+}
 timer_event& timers_counters::addEvent(std::string counterName, int newEvent, std::string desc)
 {
   timer_event event(newEvent, desc);

@@ -248,6 +248,7 @@ namespace scm {
                 // Forth, if available make a copy into new register
                 if (available && original_renamed_reg != new_renamed_reg) {
                   SCMULATE_INFOMSG(5, "Copying register %s to register %s", original_renamed_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
+                  //printf("Copying register %s to register %s\n", original_renamed_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
                   std::memcpy(new_renamed_reg.reg_ptr, original_renamed_reg.reg_ptr, original_renamed_reg.reg_size_bytes);
                 }
 
@@ -488,8 +489,9 @@ namespace scm {
             }
           }
           // Check if a memory region overlaps
-          inst->calculateMemRanges();
           std::set <memory_location> * ranges = inst->getMemoryRange();
+          if (ranges->size() == 0)
+            inst->calculateMemRanges();
           if (memCtrl.itOverlaps( ranges )) {
             return true;
           }

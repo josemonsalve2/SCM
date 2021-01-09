@@ -239,6 +239,7 @@ namespace scm {
         globalInitialTimer = std::chrono::high_resolution_clock::now(); 
       }
       void addTimer(std::string, counter_type type);
+      double getTimestamp();
       timer_event& addEvent(std::string, int, std::string = std::string());
       void dumpTimers();
       inline void setFilename(std::string fn) { dumpFilename = fn; }

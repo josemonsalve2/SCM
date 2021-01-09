@@ -54,8 +54,10 @@ int scm::fetch_decode_module::behavior()
             ITT_TASK_BEGIN(fetch_decode_module_behavior, checkMarkInstructionToSched);
             instructionLevelParallelism.checkMarkInstructionToSched(this->inst_buff_m.get_latest());
             ITT_TASK_END(checkMarkInstructionToSched);
-            if (this->inst_buff_m.get_latest()->second == instruction_state::STALL)
+            if (this->inst_buff_m.get_latest()->second == instruction_state::STALL) {
                 this->stallingInstruction = this->inst_buff_m.get_latest();
+                SCMULATE_INFOMSG(5, "Stalling on %s", stallingInstruction->first->getFullInstruction().c_str());
+            }
 
             // Mark instruction for scheduling
             commited = new_inst->getOpcode() == COMMIT_INST.opcode;
@@ -66,8 +68,10 @@ int scm::fetch_decode_module::behavior()
           }
         } else {
           new_inst = this->stallingInstruction->first;
-          if (this->stallingInstruction->second != instruction_state::STALL)
+          if (this->stallingInstruction->second != instruction_state::STALL) {
+            SCMULATE_INFOMSG(5, "Unstalling on %s", stallingInstruction->first->getFullInstruction().c_str());
             this->stallingInstruction = nullptr;
+          }
         }
       } while (stallingInstruction == nullptr && !commited && ++fetch_reps < INSTRUCTION_FETCH_WINDOW && new_inst->getType() != instType::CONTROL_INST && new_inst->getType() != instType::COMMIT );
     }
@@ -97,8 +101,10 @@ int scm::fetch_decode_module::behavior()
           ITT_TASK_BEGIN(fetch_decode_module_behavior, checkMarkInstructionToSched);
           instructionLevelParallelism.checkMarkInstructionToSched(current_pair);
           ITT_TASK_END(checkMarkInstructionToSched);
-          if (current_pair->second == instruction_state::STALL)
+          if (current_pair->second == instruction_state::STALL) {
             this->stallingInstruction = current_pair;
+            SCMULATE_INFOMSG(5, "Stalling on %s", stallingInstruction->first->getFullInstruction().c_str());
+          }
           // TIMERS_COUNTERS_GUARD(
           //   this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
           break;
@@ -155,8 +161,10 @@ int scm::fetch_decode_module::behavior()
           TIMERS_COUNTERS_GUARD(
             this->time_cnt_m->addEvent(this->su_timer_name, DISPATCH_INSTRUCTION, current_pair->first->getFullInstruction()););
           // check if stalling instruction
-          if (this->stallingInstruction != nullptr && this->stallingInstruction == current_pair)
+          if (this->stallingInstruction != nullptr && this->stallingInstruction == current_pair) {
+            SCMULATE_INFOMSG(5, "Unstalling on %s", stallingInstruction->first->getFullInstruction().c_str());
             this->stallingInstruction = nullptr;
+          }
           ITT_TASK_BEGIN(fetch_decode_module_behavior, instructionFinished);
           instructionLevelParallelism.instructionFinished(current_pair);
           ITT_TASK_END(instructionFinished);

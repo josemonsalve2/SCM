@@ -59,8 +59,9 @@ namespace scm {
         isAddress[op_num] = true;
       }
 
+      // Params start in 1 in the caller
       bool inline isParamAnAddress(int op_num) {
-        return isAddress[op_num];
+        return isAddress[op_num-1];
       }
       // Get reference parameter
       template <class T = unsigned char *> 

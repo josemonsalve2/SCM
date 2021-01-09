@@ -278,21 +278,48 @@ namespace scm {
    * |             |               |             | operand = other            |                        |
    * |             |               |             | used = write               |                        |
    * +-------------+---------------+-------------+----------------------------+------------------------+
-   * 
-   * 
-   * ////// FIX THIS BOTTOM TABLE. 
-   * | ReadWrite   | Any or None   | Set to X    | renamed = x                | Apply table to renamed |
-   * +-------------+---------------+-------------+----------------------------+------------------------+
    * | ReadWrite   | None          | None        | Used = write               | Allow Scheduling       |
    * +-------------+---------------+-------------+----------------------------+------------------------+
-   * | ReadWrite   | Read          | None        | Rename = other             | Allow Scheduling       |
-   * |             |               |             | Copy Reg to other          |                        |
+   * | ReadWrite   | Read          | None        | rename = other             | Allow Scheduling       |
    * |             |               |             | operand = other            |                        |
+   * |             |               |             | copy origianl to other     |                        |
+   * |             |               |             | set other to write         |                        |
    * +-------------+---------------+-------------+----------------------------+------------------------+
-   * | ReadWrite   | Write         | None        | Rename = other             | Don't allow            |
-   * |             |               |             | other used = write         |                        |
-   * |             |               |             | broadcast += other         |                        |
+   * | ReadWrite   | Write         | None        | if (subscribers)           | Don't allow            |
+   * |             |               |             |   rename = other           |                        |
+   * |             |               |             |   operand = other          |                        |
+   * |             |               |             |   set other to write       |                        |
+   * |             |               |             |   broadcast += other       |                        |
+   * |             |               |             | else                       |                        |
+   * |             |               |             |   broadcast += original    |                        |
+   * |             |               |             |   // On finish dont change |                        |
+   * |             |               |             |   // operand to read       |                        |
+   * +-------------+---------------+-------------+----------------------------+------------------------+
+   * | ReadWrite   | Read          | None        | rename = other             | Allow Scheduling       |
    * |             |               |             | operand = other            |                        |
+   * |             |               |             | copy origianl to other     |                        |
+   * |             |               |             | set other to write         |                        |
+   * +-------------+---------------+-------------+----------------------------+------------------------+
+   * | ReadWrite   | Read          | Set to X    | if (used(x) == write)      | Don't allow            |
+   * |             | Can't be      |             |   if (subscribers(X))      |                        |
+   * |             | write         |             |     rename = other         |                        |
+   * |             |               |             |     operand = other        |                        |
+   * |             |               |             |     set other to write     |                        |
+   * |             |               |             |     broadcast += other     |                        |
+   * |             |               |             |   else                     |                        |
+   * |             |               |             |     // keep renaming       |                        |
+   * |             |               |             |     rename = X             |                        |
+   * |             |               |             |     broadcast += original  |                        |
+   * |             |               |             | elif (used(x) ==  read)    |                        |
+   * |             |               |             |   rename = other           |                        |
+   * |             |               |             |   operand = other          |                        |
+   * |             |               |             |   set other to write       |                        |
+   * |             |               |             |   broadcast += other       |                        |
+   * +-------------+---------------+-------------+----------------------------+------------------------+
+   * | ReadWrite   | ANY           | Set to X    | if (!used(x))              | Allow scheduling       |
+   * |             |               |             |   // keep renaming         |                        |
+   * |             |               |             |   // keep renaming         |                        |
+   * |             |               |             |   set other to write       |                        |
    * +-------------+---------------+-------------+----------------------------+------------------------+
    * 
    * The state of a register is determined by three values: 
@@ -308,7 +335,7 @@ namespace scm {
    *                   producing the value, all the operands in the subscribers list are updated to full.
    *  -> broadcast:    When a readwrite operation occurs on a register, one must be careful to keep both dependencies. Since 
    *                   we do not have a value broadcasting mechanism (i.e. tomasulo's bus), we must copy the value "manually"
-   *                   from one register to the other. This occurs so the write can occur while other instructions read from the same
+   *                   from one register to the other. This occurs so the RW operand can be written while other instructions read from the same
    *                   location. For example: 
    *                    1. Read R
    *                    2. Read R
@@ -316,7 +343,29 @@ namespace scm {
    *                    4. ReadWrite R
    *                   in this case, in order for instruction 4 to begin it must wait for other instructions 1-3, otherwise, the write 
    *                   operation will change the values read by 1-3. What we do is we assign a new register to 4 (renaming) and then broadcast
-   *                   the value from R to R'. This means. Copy the value from R to R'. Then R' can be freely modified
+   *                   the value from R to R'. This means. Copy the value from R to R'. Then R' can be freely modified.
+   *                   It is possible to avoid broadcasting (save copy time), when there are no subscribers to a given register. For example
+   *                    1. Write R
+   *                    2. Readwrite R
+   *                   In this case the value of R does not need to be saved for any reads. Therefore, we can bypass the broadcasting and
+   *                   leave the original reference to R in the other op. 
+   *                   There is a third case that must be considered. When two consecutive readwrites occur (with or without intermediate values)
+   *                    1. Write R
+   *                    2. ReadWrite R
+   *                    3. ReadWrite R
+   *                    4. Read R
+   *                    5. Read R
+   *                    6. ReadWrite R
+   *                   In this case one must be careful not to broadcast the original write incorrecty. The order in which the broadcast are
+   *                   registered is important. While 1 is happening 2 is issued. When analyzing 2, a broadcast operation on R is registered, 
+   *                   but no renaming occurs (bypassed broadcastig). In this case when 1 is finished R will not be set to read, insteaad, it is
+   *                   kept in write while 2 is enabled. If 3 is analyzed before 1 finishes, 3 will realize that it can bypass the broadcast
+   *                   however, the broadcast must occur from 2 (the dependency between 2 and 3 must be kept). Therefore, the broadcast list after
+   *                   3 is analyzed (and 1 has not finished) is ([inst2, op1(R)],[inst3,op1(R)]). Broadcasting must stop after the first broadcast.
+   *                   For the case of instruction 6, the subscribed instructions 4 and 5 will force renaming. Broadcasting will be on register R'.
+   *                   The list of broadcasting after 6 is issued (and 1 has not finished) is ([inst2, op1(R)],[inst3, Op1(R)],[inst6, op1(R')]). While the 
+   *                   subscribers of R will be ([inst4, op1(R)], [inst5, op1(R)])
+   *                   ()
    * 
    *  Allowing scheduling means to change the empty_full bit to full. Once all operands have their operands full, the instruction state
    *  is changed to READY
@@ -333,23 +382,35 @@ namespace scm {
    * | Read        | write   | ERROR!!                      |
    * +-------------+---------+------------------------------+
    * | Write       | write   | if (len(subscribers)>0)      |
-   * |             |         |   used = read                |
-   * |             |         |   for each subscriber:       |
-   * |             |         |     mark op as ready         |
    * |             |         |   for each broadcast:        |
-   * |             |         |     copy regiser             |
-   * |             |         | else                         |
+   * |             |         |     if (R == Rb):            |
+   * |             |         |       //enable this and any  |
+   * |             |         |       //future broadcasters  |
+   * |             |         |       //with the same R value|
+   * |             |         |     else:                    |
+   * |             |         |       copy regiser           |
+   * |             |         |   if (broadcasted_all):      |
+   * |             |         |     used = read              |
+   * |             |         |     for each subscriber:     |
+   * |             |         |       mark op as ready       |
+   * |             |         | else:                        |
    * |             |         |   used = none                |
    * +-------------+---------+------------------------------+
    * | Write       | Read    | ERROR!!                      |
    * +-------------+---------+------------------------------+
    * | ReadWrite   | Write   | if (len(subscribers)>0)      |
-   * |             |         |   used = read                |
-   * |             |         |   for each subscriber:       |
-   * |             |         |     mark op as ready         |
    * |             |         |   for each broadcast:        |
-   * |             |         |     copy regiser             |
-   * |             |         | else                         |
+   * |             |         |     if (R == Rb):            |
+   * |             |         |       //enable this and any  |
+   * |             |         |       //future broadcasters  |
+   * |             |         |       //with the same R value|
+   * |             |         |     else:                    |
+   * |             |         |       copy regiser           |
+   * |             |         |   if (broadcasted_all):      |
+   * |             |         |     used = read              |
+   * |             |         |     for each subscriber:     |
+   * |             |         |       mark op as ready       |
+   * |             |         | else:                        |
    * |             |         |   used = none                |
    * +-------------+---------+------------------------------+
    * | ReadWrite   | Read    | ERROR!!                      |

@@ -158,18 +158,58 @@ namespace scm {
                 decoded_reg_t original_op_reg = current_operand->value.reg;
                 decoded_reg_t original_renamed_reg = current_operand->value.reg;
                 decoded_reg_t new_renamed_reg = current_operand->value.reg;
+                auto it_used = used.find(original_op_reg.reg_ptr);
+                auto source_used = it_used;
 
                 // First check if operand was already renamed. Important for reading
                 auto it_rename = registerRenaming.find(original_op_reg);
                 if (it_rename != registerRenaming.end()) {
                   original_renamed_reg = it_rename->second;
                   SCMULATE_INFOMSG(5, "Register %s was previously renamed to %s", original_op_reg.reg_name.c_str(), original_renamed_reg.reg_name.c_str());
+                  source_used = used.find(original_renamed_reg.reg_ptr);
                 }
 
-                // Second check if the operand is currently being used. Important for writing
-                auto it_used = used.find(original_op_reg.reg_ptr);
-                if(it_used != used.end()) {
-                  // It is already being used, let's rename
+                bool rename = false; 
+                // Second check if need to re-name again, or keep the renaming. Important for writing
+                // Source register is either original register (when no prev renaming) or renamed register
+                // Rename if:
+                //   (1) There is no rename and: 
+                //         (a) The original register is in read
+                //         (b) The original register is in write and there are subscribiers
+                //   (2) There is rename and: 
+                //         (a) The renamed register is in read and the original register is used (cannot be write bc it is renamed)
+                //         (b) The renamed register is in write and there are subscribers, and the original register is used (cannot be write bc it is renamed)
+                // Keep original rename if:
+                //   (3) The renamed register is a write and there are no subscribers.
+                //   (4) The renamed register is not used.
+                // Otherwise, 
+                //   (5) Remove rename if it exists
+                if (it_rename == registerRenaming.end()) { // (1)
+                  if ( (it_used != used.end() && it_used->second == reg_state::READ)){ // (1a)
+                    SCMULATE_INFOMSG(5, "Renaming becase %s was found to be used as READ. Need real broadcasting", original_op_reg.reg_name.c_str());
+                    rename = true;
+                  }
+                  if (it_used != used.end() && 
+                      it_used->second == reg_state::WRITE && subscribers.find(it_used->first) != subscribers.end()) { // (1b)
+                    SCMULATE_INFOMSG(5, "Renaming becase %s was found to be used as WRITE and have subscribers. Need real broadcasting", original_op_reg.reg_name.c_str());
+                    rename = true; 
+                  }
+                }
+
+                if ( it_rename != registerRenaming.end() && it_used != used.end()) { // (2)
+                  if (source_used != used.end() && source_used->second == reg_state::READ) { // (2a)
+                    SCMULATE_INFOMSG(5, "Renaming becase renamed register %s of %s was found to be used as READ. Need real broadcasting", original_renamed_reg.reg_name.c_str(),  original_op_reg.reg_name.c_str());
+                    rename = true; 
+                  }
+                  if (source_used != used.end() && 
+                    source_used->second == reg_state::WRITE && subscribers.find(source_used->first) != subscribers.end()) { // (2b)
+                    SCMULATE_INFOMSG(5, "Renaming becase renamed register %s of %s was found to be used as WRITE and have subscribers. Need real broadcasting", original_renamed_reg.reg_name.c_str(),  original_op_reg.reg_name.c_str());
+                    rename = true; 
+                  }
+                }
+
+                if (rename) {
+                  //let's rename
                   new_renamed_reg = getRenamedRegister(original_op_reg);
                   // Check if renaming was successful.
                   if (new_renamed_reg == original_op_reg) {
@@ -187,24 +227,30 @@ namespace scm {
                     renamedInUse.erase(it_rename.first->second.reg_ptr);
                     it_rename.first->second = new_renamed_reg;
                   }
-                } else {
-                  if (it_rename != registerRenaming.end()) {
-                    renamedInUse.erase(it_rename->second.reg_ptr);
-                    registerRenaming.erase(it_rename);
-                  }
-                  SCMULATE_INFOMSG(5, "Register %s was not found in the 'used' registers map. If it was previously renamed, we removed it", original_op_reg.reg_name.c_str());
+                } else if (it_rename != registerRenaming.end() && ( 
+                            source_used == used.end() || // (4) (see above)
+                            (source_used != used.end() && source_used->second == reg_state::WRITE && subscribers.find(source_used->first) == subscribers.end())  // (3) see above
+                          )
+                          ) {
+                  // Keep renaming
+                  new_renamed_reg = original_renamed_reg;
+                  SCMULATE_INFOMSG(5, "Register %s is going to still be renamed as %s", original_op_reg.reg_name.c_str(), original_renamed_reg.reg_name.c_str());
+                } else if (it_rename != registerRenaming.end()) { // (5) see above
+                  renamedInUse.erase(it_rename->second.reg_ptr);
+                  registerRenaming.erase(it_rename);
+                  SCMULATE_INFOMSG(5, "Using the original register name %s. If it was previously renamed, we removed it", original_op_reg.reg_name.c_str());
                 }
 
                 // Third, check if current source (read) is available or not, to decide if broadcasting or subscription 
                 // Stores if the operand is available for reading in variable available
-                auto source_used = used.find(original_renamed_reg.reg_ptr);
                 bool available = source_used == used.end() || source_used->second == reg_state::READ;
 
                 // Forth, if available make a copy into new register
-                if (available && !(original_renamed_reg == new_renamed_reg)) {
+                if (available && original_renamed_reg != new_renamed_reg) {
                   SCMULATE_INFOMSG(5, "Copying register %s to register %s", original_renamed_reg.reg_name.c_str(), new_renamed_reg.reg_name.c_str());
                   std::memcpy(new_renamed_reg.reg_ptr, original_renamed_reg.reg_ptr, original_renamed_reg.reg_size_bytes);
                 }
+
 
                 // Fith. Apply renaming, and subscribe if not available
                 for (int other_op_num = 1; other_op_num <= MAX_NUM_OPERANDS; ++other_op_num) {
@@ -347,14 +393,26 @@ namespace scm {
               // Check the state in the used map
               if (it_used->second == reg_state::WRITE) {
                 auto broadcaster_list_it = broadcasters.find(it->first.reg_ptr);
+                bool readwrite_continuation = false; // When the broadcast is to the same register, do not change to READ, and do not subscribe
+                instruction_state_pair * readwrite_cont_inst = nullptr;
                 if (broadcaster_list_it != broadcasters.end()) {
                   // enable broadcasters operand and possibly instruction
                   for (auto it_broadcast = broadcaster_list_it->second.begin(); it_broadcast != broadcaster_list_it->second.end(); it_broadcast = broadcaster_list_it->second.erase(it_broadcast)) {
                     instruction_state_pair * other_inst_state_pair = it_broadcast->first;
-                    // Broadcasting
-                    // TODO: REMINDER: This may result in multiple copies of the same value. We must change it accordingly
-                    std::memcpy(other_inst_state_pair->first->getOp(it_broadcast->second).value.reg.reg_ptr, it->first.reg_ptr, it->first.reg_size_bytes);
-                    // Marking as ready
+                    // If there is a readwrite continuation, we must not broadcast in all the instructions. 
+                    // We leave the rest of the broadcast to when the next readwrite (cont) instruction is over.
+                    if (readwrite_cont_inst != nullptr && other_inst_state_pair != readwrite_cont_inst)
+                      break;
+                    if (it->first == other_inst_state_pair->first->getOp(it_broadcast->second).value.reg) {
+                      readwrite_continuation = true;
+                      readwrite_cont_inst = other_inst_state_pair;
+                      SCMULATE_INFOMSG(5, "Broadcasting bypassing on instruction %s, register %s, operand %d", other_inst_state_pair->first->getFullInstruction().c_str(), it->first.reg_name.c_str(), it_broadcast->second);
+                    } else {
+                      // Broadcasting
+                      // TODO: REMINDER: This may result in multiple copies of the same value. We must change it accordingly
+                      std::memcpy(other_inst_state_pair->first->getOp(it_broadcast->second).value.reg.reg_ptr, it->first.reg_ptr, it->first.reg_size_bytes);
+                      // Marking as ready
+                    }
                     other_inst_state_pair->first->getOp(it_broadcast->second).full_empty = true;
                     SCMULATE_INFOMSG(5, "Enabling operand %d with register %s, for instruction %s", it_broadcast->second, it->first.reg_name.c_str(), other_inst_state_pair->first->getFullInstruction().c_str());
                     if (isInstructionReady(other_inst_state_pair->first)) {
@@ -364,27 +422,30 @@ namespace scm {
                       }
                     }
                   }
-                  broadcasters.erase(broadcaster_list_it);
+                  if (broadcaster_list_it->second.size() == 0)
+                    broadcasters.erase(broadcaster_list_it);
                 }
-                auto subscribers_list_it = subscribers.find(it->first.reg_ptr);
-                if (subscribers_list_it != subscribers.end()) {
-                  // enable subscribed operand and possibly instruction
-                  for (auto it_subs = subscribers_list_it->second.begin(); it_subs != subscribers_list_it->second.end(); it_subs++) {
-                    instruction_state_pair * other_inst_state_pair = it_subs->first;
-                    other_inst_state_pair->first->getOp(it_subs->second).full_empty = true;
-                    SCMULATE_INFOMSG(5, "Enabling operand %d with register %s, for instruction %s", it_subs->second, it->first.reg_name.c_str(), other_inst_state_pair->first->getFullInstruction().c_str());
-                    if (isInstructionReady(other_inst_state_pair->first)) {
-                      if (!other_inst_state_pair->first->isMemoryInstruction() || other_inst_state_pair->second == instruction_state::WAITING || (other_inst_state_pair->second == instruction_state::STALL && !stallMemoryInstruction(other_inst_state_pair->first))) {
-                        other_inst_state_pair->second = instruction_state::READY;
-                        SCMULATE_INFOMSG(5, "Marking instruction %s as READY", other_inst_state_pair->first->getFullInstruction().c_str());
+                if (!readwrite_continuation) {
+                  auto subscribers_list_it = subscribers.find(it->first.reg_ptr);
+                  if (subscribers_list_it != subscribers.end()) {
+                    // enable subscribed operand and possibly instruction
+                    for (auto it_subs = subscribers_list_it->second.begin(); it_subs != subscribers_list_it->second.end(); it_subs++) {
+                      instruction_state_pair * other_inst_state_pair = it_subs->first;
+                      other_inst_state_pair->first->getOp(it_subs->second).full_empty = true;
+                      SCMULATE_INFOMSG(5, "Enabling operand %d with register %s, for instruction %s", it_subs->second, it->first.reg_name.c_str(), other_inst_state_pair->first->getFullInstruction().c_str());
+                      if (isInstructionReady(other_inst_state_pair->first)) {
+                        if (!other_inst_state_pair->first->isMemoryInstruction() || other_inst_state_pair->second == instruction_state::WAITING || (other_inst_state_pair->second == instruction_state::STALL && !stallMemoryInstruction(other_inst_state_pair->first))) {
+                          other_inst_state_pair->second = instruction_state::READY;
+                          SCMULATE_INFOMSG(5, "Marking instruction %s as READY", other_inst_state_pair->first->getFullInstruction().c_str());
+                        }
                       }
                     }
+                    // Marking the register as read, ready to be consumed
+                    it_used->second = reg_state::READ;
+                  } else {
+                    used.erase(it_used);
+                    SCMULATE_INFOMSG(5, "Register had no subscriptions. Move register %s to 'used' = NONE.", it->first.reg_name.c_str());
                   }
-                  // Marking the register as read, ready to be consumed
-                  it_used->second = reg_state::READ;
-                } else {
-                  used.erase(it_used);
-                  SCMULATE_INFOMSG(5, "Register had no subscriptions. Move register %s to 'used' = NONE.", it->first.reg_name.c_str());
                 }
               } else {
                   SCMULATE_ERROR(0, "A write direction operand, should be 'used' marked as WRITE and it is %s", reg_state_str(it_used->second).c_str());

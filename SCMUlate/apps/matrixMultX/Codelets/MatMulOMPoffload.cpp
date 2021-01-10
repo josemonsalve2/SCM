@@ -12,8 +12,8 @@
 
 MEMRANGE_CODELET(LoadSqTileGPU_2048L, 
   // Obtaining the parameters
-  unsigned char *reg2 = this->getParams().getParamAs(1); // Getting register 2
-  unsigned char *reg3 = this->getParams().getParamAs(2); // Getting register 3
+  unsigned char *reg2 = this->getParams().getParamAs(2); // Getting register 2
+  unsigned char *reg3 = this->getParams().getParamAs(3); // Getting register 3
   uint64_t address = reinterpret_cast<uint8_t*>(reg2)[0];
   uint64_t ldistance = reinterpret_cast<uint64_t>(reg3);
   ldistance *= sizeof(double);
@@ -28,7 +28,7 @@ MEMRANGE_CODELET(LoadSqTileGPU_2048L,
 );
 
 IMPLEMENT_CODELET(LoadSqTileGPU_2048L,
-  unsigned char *reg1 = this->getParams().getParamAs(0); // Getting register 1
+  unsigned char *reg1 = this->getParams().getParamAs(1); // Getting register 1
   double *destReg = reinterpret_cast<double*>(reg1);
   int i = 0;
 for (auto it = memoryRanges->reads.begin(); it != memoryRanges->reads.end(); it++) {
@@ -39,9 +39,9 @@ for (auto it = memoryRanges->reads.begin(); it != memoryRanges->reads.end(); it+
 
 IMPLEMENT_CODELET(MatMultGPU_2048L,
   // Obtaining the parameters
-  unsigned char *reg1 = this->getParams().getParamAs(0); // Getting register 1
-  unsigned char *reg2 = this->getParams().getParamAs(1); // Getting register 2
-  unsigned char *reg3 = this->getParams().getParamAs(2); // Getting register 3
+  unsigned char *reg1 = this->getParams().getParamAs(1); // Getting register 1
+  unsigned char *reg2 = this->getParams().getParamAs(2); // Getting register 2
+  unsigned char *reg3 = this->getParams().getParamAs(3); // Getting register 3
   double *A = reinterpret_cast<double*>(reg2);
   double *B = reinterpret_cast<double*>(reg3);
   double *C = reinterpret_cast<double*>(reg1);
@@ -61,8 +61,8 @@ _Pragma("omp target variant dispatch use_device_ptr(A, B, C)")
 
 MEMRANGE_CODELET(StoreSqTileGPU_2048L, 
   // Obtaining the parameters
-  unsigned char *reg2 = this->getParams().getParamAs(1); // Getting register 2
-  unsigned char *reg3 = this->getParams().getParamAs(2); // Getting register 3
+  unsigned char *reg2 = this->getParams().getParamAs(2); // Getting register 2
+  unsigned char *reg3 = this->getParams().getParamAs(3); // Getting register 3
   uint64_t address = reinterpret_cast<uint8_t*>(reg2)[0];
   uint64_t ldistance = reinterpret_cast<uint64_t>(reg3);
   ldistance *= sizeof(double);
@@ -77,7 +77,7 @@ MEMRANGE_CODELET(StoreSqTileGPU_2048L,
 
 IMPLEMENT_CODELET(StoreSqTileGPU_2048L,
   // Obtaining the parameters
-  unsigned char *reg1 = this->getParams().getParamAs(0); // Getting register 1
+  unsigned char *reg1 = this->getParams().getParamAs(1); // Getting register 1
   double *sourceReg = reinterpret_cast<double*>(reg1);
 
   int i = 0;

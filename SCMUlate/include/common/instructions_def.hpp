@@ -23,7 +23,7 @@
 #define REGISTER_REGEX "R[BbLl0-9_]+"
 #define REGISTER_SPLIT_REGEX "R([BbLl0-9]+)_([0-9]+)"
 #define INMIDIATE_REGEX "[-]?[0-9]+"
-#define LABEL_REGEX "([a-zA-Z0-9_]+)"
+#define LABEL_REGEX "([a-zA-Z][a-zA-Z0-9_]*)"
 #define COMMENT_REGEX "([ ]*//.*)"
 
 #define DEF_INST(opcode, name, regExp, numOp, opInOut) {opcode, #name, regExp, numOp, opInOut}
@@ -56,6 +56,31 @@ namespace scm {
       static constexpr std::uint_fast16_t OP7_WR { 0b0010'0000'0000'0000 }; // represents bit 14
       static constexpr std::uint_fast16_t OP8_RD  { 0b0100'0000'0000'0000 }; // represents bit 15
       static constexpr std::uint_fast16_t OP8_WR { 0b1000'0000'0000'0000 }; // represents bit 16
+  
+      static constexpr std::uint_fast16_t getOpRDIO(int num) {
+        if (num == 0) return NO_RD_WR;
+        if (num == 1) return OP1_RD;
+        if (num == 2) return OP2_RD;
+        if (num == 3) return OP3_RD;
+        if (num == 4) return OP4_RD;
+        if (num == 5) return OP5_RD;
+        if (num == 6) return OP6_RD;
+        if (num == 7) return OP7_RD;
+        if (num == 8) return OP8_RD;
+        return NO_RD_WR;
+      }
+      static constexpr std::uint_fast16_t getOpWRIO(int num) {
+        if (num == 0) return NO_RD_WR;
+        if (num == 1) return OP1_WR;
+        if (num == 2) return OP2_WR;
+        if (num == 3) return OP3_WR;
+        if (num == 4) return OP4_WR;
+        if (num == 5) return OP5_WR;
+        if (num == 6) return OP6_WR;
+        if (num == 7) return OP7_WR;
+        if (num == 8) return OP8_WR;
+        return NO_RD_WR;
+      }
   };
 
   class OP_ADDRESS {
@@ -124,7 +149,7 @@ namespace scm {
 
   // SCM specific insctructions
   const inst_def_t COMMIT_INST = DEF_INST(0x00, COMMIT, "[ ]*(COMMIT;).*", 0, OP_IO::NO_RD_WR);                                          /* COMMIT; */
-  const inst_def_t LABEL_INST = DEF_INST(0x01, LABEL,   "[ ]*([a-zA-Z0-9_]+)[ ]*:.*", 0, OP_IO::NO_RD_WR);                                 /* myLabel: */
+  const inst_def_t LABEL_INST = DEF_INST(0x01, LABEL,   "[ ]*" LABEL_REGEX "[ ]*:.*", 0, OP_IO::NO_RD_WR);                                 /* myLabel: */
   const inst_def_t CODELET_INST = DEF_INST(0x10, CODELET, "[ ]*COD[ ]+([a-zA-Z0-9_]+)[ ]+([a-zA-Z0-9_, ]*);.*", 0, OP_IO::NO_RD_WR);      /* COD codelet_name arg1, arg2, arg3; */
   
   // CONTROL FLOW INSTRUCTIONS
@@ -137,11 +162,11 @@ namespace scm {
   static inst_def_t const controlInsts[] = {
     DEF_INST(0x20, JMPLBL,  "[ ]*(JMPLBL)[ ]+(" LABEL_REGEX ");.*", 1, OP_IO::NO_RD_WR),                                                   /* JMPLBL destination;*/
     DEF_INST(0x21, JMPPC,   "[ ]*(JMPPC)[ ]+(" INMIDIATE_REGEX ");.*", 1, OP_IO::NO_RD_WR),                                                      /* JMPPC -100;*/
-    DEF_INST(0x22, BREQ,    "[ ]*(BREQ)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),            /* BREQ R1, R2, -100; */
-    DEF_INST(0x23, BGT,     "[ ]*(BGT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),             /* BGT R1, R2, -100; */
-    DEF_INST(0x24, BGET,    "[ ]*(BGET)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),            /* BGET R1, R2, -100; */
-    DEF_INST(0x25, BLT,     "[ ]*(BLT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),             /* BLT R1, R2, -100; */
-    DEF_INST(0x26, BLET,    "[ ]*(BLET)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD)};            /* BLET R1, R2, -100; */
+    DEF_INST(0x22, BREQ,    "[ ]*(BREQ)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" LABEL_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),            /* BREQ R1, R2, -100; */
+    DEF_INST(0x23, BGT,     "[ ]*(BGT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" LABEL_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),             /* BGT R1, R2, -100; */
+    DEF_INST(0x24, BGET,    "[ ]*(BGET)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" LABEL_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),            /* BGET R1, R2, -100; */
+    DEF_INST(0x25, BLT,     "[ ]*(BLT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" LABEL_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD),             /* BLT R1, R2, -100; */
+    DEF_INST(0x26, BLET,    "[ ]*(BLET)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" LABEL_REGEX ");.*", 3, OP_IO::OP1_RD | OP_IO::OP2_RD)};            /* BLET R1, R2, -100; */
 
   #define JMPLBL_INST controlInsts[0]
   #define JMPPC_INST controlInsts[1]
@@ -198,6 +223,14 @@ namespace scm {
    *  and for knwoing where to send the instruction for execution 
    */
   enum instType {UNKNOWN, COMMIT, CONTROL_INST, BASIC_ARITH_INST, EXECUTE_INST, MEMORY_INST};
+  #define instType_str(type) (\
+    type == instType::UNKNOWN ? std::string("instType::UNKNOWN") : \
+    type == instType::COMMIT ? std::string("instType::COMMIT"): \
+    type == instType::CONTROL_INST ? std::string("instType::CONTROL_INST"): \
+    type == instType::BASIC_ARITH_INST ? std::string("instType::BASIC_ARITH_INST"): \
+    type == instType::EXECUTE_INST ? std::string("instType::EXECUTE_INST") : \
+    type == instType::MEMORY_INST ? std::string("instType::MEMORY_INST") : \
+    std::string("?????"))
 
   /** \brief Decoded register structure
    *  
@@ -253,7 +286,13 @@ namespace scm {
    *
    */
   struct operand_t {
-    enum {UNKNOWN, REGISTER, IMMEDIATE_VAL} type;
+    enum {UNKNOWN, REGISTER, IMMEDIATE_VAL, LABEL} type;
+  #define operand_t_str(type) (\
+    type == operand_t::UNKNOWN ? std::string("operand_t::UNKNOWN") : \
+    type == operand_t::REGISTER ? std::string("operand_t::REGISTER"): \
+    type == operand_t::IMMEDIATE_VAL ? std::string("operand_t::IMMEDIATE_VAL"): \
+    type == operand_t::LABEL ? std::string("operand_t::LABEL"): \
+    std::string("?????"))
     union value_t {
       uint64_t immediate;
       decoded_reg_t reg;
@@ -273,7 +312,7 @@ namespace scm {
       type = other.type;
       if (type == REGISTER)
         value.reg = other.value.reg;
-      else if (type == IMMEDIATE_VAL)
+      else if (type == IMMEDIATE_VAL || type == LABEL)
         value.immediate = other.value.immediate;
       read = other.read;
       write = other.write;
@@ -284,7 +323,7 @@ namespace scm {
       type = other.type;
       if (type == REGISTER)
         value.reg = other.value.reg;
-      else if (type == IMMEDIATE_VAL)
+      else if (type == IMMEDIATE_VAL || type == LABEL)
         value.immediate = other.value.immediate;
       read = other.read;
       write = other.write;
@@ -295,7 +334,7 @@ namespace scm {
       type = other.type;
       if (type == REGISTER)
         value.reg = other.value.reg;
-      else if (type == IMMEDIATE_VAL)
+      else if (type == IMMEDIATE_VAL || type == LABEL)
         value.immediate = other.value.immediate;
       read = other.read;
       write = other.write;

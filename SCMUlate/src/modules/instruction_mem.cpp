@@ -19,22 +19,28 @@ scm::inst_mem_module::loader(char* filename) {
         // counted for offsets. Label lines are not counted for offsets
         if (line.length() != 0 ) {
           // When it is a label we store this value, it is not stored in memory
-          if (instructions::isLabel(line)) {
+          if (instructions::isLabelInst(line)) {
             std::string label = instructions::getLabel(line);
             SCMULATE_INFOMSG(4, "Found label: '%s'", label.c_str());
             labels[label] = curInst; 
           } else if (!instructions::isComment(line)) {
-            scm::decoded_instruction_t * inst = scm::instructions::findInstType(line); 
-            if (!inst->decodeOperands(this->reg_file_m)) {
-              SCMULATE_ERROR(0, "PROBLEM DECODING OPERANDS %s", filename);
-              return false;
-            }
-            this->memory.push_back(inst);
+            this->memory.push_back(scm::instructions::findInstType(line));
             // Any other instruction we store it in memory
             curInst++;
           }
         }
       file_stream.close();
+      for (const auto& inst : this->memory) { 
+        if (!inst->decodeOperands(this)) {
+          SCMULATE_ERROR(0, "PROBLEM DECODING OPERANDS %s", filename);
+          return false;
+        }
+        SCMULATE_INFOMSG(4, "decoded: {type = %s, opcode = %s, op1 (%s) = %s, op2 (%s) = %s, op3 (%s) = %s}, ", 
+                    instType_str(inst->getType()).c_str(), inst->getInstruction().c_str(), 
+                    operand_t_str(inst->getOp(1).type).c_str(), inst->getOpStr(1).c_str(), 
+                    operand_t_str(inst->getOp(2).type).c_str(), inst->getOpStr(2).c_str(), 
+                    operand_t_str(inst->getOp(3).type).c_str(), inst->getOpStr(3).c_str());
+      }
     } else {
       SCMULATE_ERROR(0, "PROGRAM DOES NOT EXIST %s", filename);
       return false;

@@ -1,101 +1,64 @@
 #include "instructions.hpp"
+#include "instruction_mem.hpp"
 
+// TODO: update all the functions to use getOpStr and getOp instead of the static op num
+//       to allow expansion in the future with multiple number of operands
 namespace scm {
     bool 
-    decoded_instruction_t::decodeOperands(reg_file_module * const reg_file_m) {
+    decoded_instruction_t::decodeOperands(inst_mem_module * const inst_memory) {
         // TODO: JMPLBL cannot be decoded because the potential of labels that have not been
         // parsed yet. Probably need to find a solution for this. 
-        if (this->opcode != JMPLBL_INST.opcode) { 
-          if (op1_s.size() != 0 && op1.type == operand_t::UNKNOWN) {
+        reg_file_module * reg_file_m = inst_memory->getRegisterFileModule();
+        for (uint32_t op_num = 1; op_num <= MAX_NUM_OPERANDS; op_num++) {
+          std::string & opStr = getOpStr(op_num);
+          operand_t & op = getOp(op_num);
+          if (opStr.size() != 0 && op.type == operand_t::UNKNOWN) {
             // Check for imm or regisiter
-            if (!instructions::isRegister(op1_s)) {
+            if (!instructions::isRegister(opStr) && !instructions::isLabel(opStr)) {
               // IMMEDIATE VALUE CASE
               // TODO: Think about the signed option of these operands
-              op1.type = operand_t::IMMEDIATE_VAL;
-              op1.value.immediate = std::stoull(op1_s);
-            } else {
+              op.type = operand_t::IMMEDIATE_VAL;
+              op.value.immediate = std::stoull(opStr);
+            } else if (instructions::isRegister(opStr)) {
               // REGISTER REGISTER ADD CASE
-              op1.type = operand_t::REGISTER;
-              op1.value.reg = instructions::decodeRegister(op1_s);
-              op1.value.reg.reg_ptr = reg_file_m->getRegisterByName(op1.value.reg.reg_size, op1.value.reg.reg_number);
-              op1.value.reg.reg_size_bytes = reg_file_m->getRegisterSizeInBytes(op1.value.reg.reg_size);
-            }
-            op1.read = OP_IO::OP1_RD & this->op_in_out;
-            op1.write = OP_IO::OP1_WR & this->op_in_out;
-          }
-          if (op2_s.size() != 0  && op2.type == operand_t::UNKNOWN) {
-            // Check for imm or regisiter
-            if (!instructions::isRegister(op2_s)) {
-              // IMMEDIATE VALUE CASE
-              // TODO: Think about the signed option of these operands
-              op2.type = operand_t::IMMEDIATE_VAL;
-              op2.value.immediate = std::stoull(op2_s);
+              op.type = operand_t::REGISTER;
+              op.value.reg = instructions::decodeRegister(opStr);
+              op.value.reg.reg_ptr = reg_file_m->getRegisterByName(op.value.reg.reg_size, op.value.reg.reg_number);
+              op.value.reg.reg_size_bytes = reg_file_m->getRegisterSizeInBytes(op.value.reg.reg_size);
+            } else if (instructions::isLabel(opStr)) {
+              op.type = operand_t::LABEL;
+              op.value.immediate = inst_memory->getMemoryLabel(opStr);
             } else {
-              // REGISTER REGISTER ADD CASE
-              op2.type = operand_t::REGISTER;
-              op2.value.reg = instructions::decodeRegister(op2_s);
-              op2.value.reg.reg_ptr = reg_file_m->getRegisterByName(op2.value.reg.reg_size, op2.value.reg.reg_number);
-              op2.value.reg.reg_size_bytes = reg_file_m->getRegisterSizeInBytes(op2.value.reg.reg_size);
+              SCMULATE_ERROR(0, "Operand was not recognized")
             }
-            op2.read = OP_IO::OP2_RD & this->op_in_out;
-            op2.write = OP_IO::OP2_WR & this->op_in_out;
-          }
-          if (op3_s.size() != 0  && op3.type == operand_t::UNKNOWN) {
-            // Check for imm or regisiter
-            if (!instructions::isRegister(op3_s)) {
-              // IMMEDIATE VALUE CASE
-              // TODO: Think about the signed option of these operands
-              op3.type = operand_t::IMMEDIATE_VAL;
-              op3.value.immediate = std::stoull(op3_s);
-            } else {
-              // REGISTER REGISTER ADD CASE
-              op3.type = operand_t::REGISTER;
-              op3.value.reg = instructions::decodeRegister(op3_s);
-              op3.value.reg.reg_ptr = reg_file_m->getRegisterByName(op3.value.reg.reg_size, op3.value.reg.reg_number);
-              op3.value.reg.reg_size_bytes = reg_file_m->getRegisterSizeInBytes(op3.value.reg.reg_size);
-            }
-            op3.read = OP_IO::OP3_RD & this->op_in_out;
-            op3.write = OP_IO::OP3_WR & this->op_in_out;
+            op.read = OP_IO::getOpRDIO(op_num) & this->op_in_out;
+            op.write = OP_IO::getOpWRIO(op_num) & this->op_in_out;
           }
         }
 
         // For codelets
         if (type == EXECUTE_INST) {
-          // TODO: To change the number oof arguments, wee should change this number
           codelet_params newArgs;
-          if (op1.type == operand_t::IMMEDIATE_VAL) {
-            newArgs.getParamAs(0) = reinterpret_cast<unsigned char *>(op1.value.immediate);
-          } else if (op1.type == operand_t::REGISTER) {
-            newArgs.getParamAs(0) = op1.value.reg.reg_ptr; 
-          } else {
-            newArgs.getParamAs(0) = nullptr;
+          for (uint32_t op_num = 1; op_num <= MAX_NUM_OPERANDS; op_num++) {
+            operand_t & op = getOp(op_num);
+            if (op.type == operand_t::IMMEDIATE_VAL) {
+              newArgs.getParamAs(op_num) = reinterpret_cast<unsigned char *>(op.value.immediate);
+            } else if (op.type == operand_t::REGISTER) {
+              newArgs.getParamAs(op_num) = op.value.reg.reg_ptr; 
+            } else {
+              newArgs.getParamAs(op_num) = nullptr;
+            }
           }
 
-          if (op2.type == operand_t::IMMEDIATE_VAL) {
-            newArgs.getParamAs(1) = reinterpret_cast<unsigned char *>(op2.value.immediate);
-          } else if (op2.type == operand_t::REGISTER) {
-            newArgs.getParamAs(1) = op2.value.reg.reg_ptr; 
-          } else {
-            newArgs.getParamAs(1) = nullptr;
-          }
-
-          if (op3.type == operand_t::IMMEDIATE_VAL) {
-            newArgs.getParamAs(2) = reinterpret_cast<unsigned char *>(op3.value.immediate);
-          } else if (op3.type == operand_t::REGISTER) {
-            newArgs.getParamAs(2) = op3.value.reg.reg_ptr; 
-          } else {
-            newArgs.getParamAs(2) = nullptr;
-          }
           cod_exec = scm::codeletFactory::createCodelet(this->getInstruction(), newArgs);
           cod_exec->setMemoryRange(&this->memRanges);
           if (cod_exec == nullptr) 
             return false;
-          op1.read = OP_IO::OP1_RD & cod_exec->getOpIO();
-          op1.write = OP_IO::OP1_WR & cod_exec->getOpIO();
-          op2.read = OP_IO::OP2_RD & cod_exec->getOpIO();
-          op2.write = OP_IO::OP2_WR & cod_exec->getOpIO();
-          op3.read = OP_IO::OP3_RD & cod_exec->getOpIO();
-          op3.write = OP_IO::OP3_WR & cod_exec->getOpIO();
+          for (uint32_t op_num = 1; op_num <= MAX_NUM_OPERANDS; op_num++) {
+            operand_t & op = getOp(op_num);
+            op.read = OP_IO::getOpRDIO(op_num) & cod_exec->getOpIO();
+            op.write = OP_IO::getOpWRIO(op_num) & cod_exec->getOpIO();
+          }
           this->setOpIO(cod_exec->getOpIO());
       }
       return true;
@@ -181,15 +144,15 @@ namespace scm {
         // TODO: To change the number oof arguments, wee should change this number
         codelet_params& newArgs = cod_exec->getParams();
         if (op1.type == operand_t::REGISTER) {
-          newArgs.getParamAs(0) = op1.value.reg.reg_ptr; 
+          newArgs.getParamAs(1) = op1.value.reg.reg_ptr; 
         }
         
         if (op2.type == operand_t::REGISTER) {
-          newArgs.getParamAs(1) = op2.value.reg.reg_ptr; 
+          newArgs.getParamAs(2) = op2.value.reg.reg_ptr; 
         }
 
         if (op3.type == operand_t::REGISTER) {
-          newArgs.getParamAs(2) = op3.value.reg.reg_ptr; 
+          newArgs.getParamAs(3) = op3.value.reg.reg_ptr; 
         }
       }
     }

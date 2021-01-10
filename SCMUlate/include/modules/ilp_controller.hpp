@@ -259,7 +259,7 @@ namespace scm {
       bool inline hazardExist(unsigned char * regName, uint_fast16_t io_dir) { 
         auto foundReg = busyRegisters.find(register_reservation(regName, io_dir));
         bool isFound = busyRegisters.find(register_reservation(regName, io_dir)) != busyRegisters.end();
-        SCMULATE_INFOMSG_IF(5, isFound, "Hazard detected");
+        SCMULATE_INFOMSG_IF(6, isFound, "Hazard detected");
         if (!isFound) return false;
         if ((foundReg->reg_direction & OP_IO::OP1_WR) | (io_dir & OP_IO::OP1_WR)) return true; // WAW or RAW or WAR
         return false;

@@ -24,9 +24,9 @@ int main() {
     myChar[4] = 'o';
     myChar[6] = '\0';
 
-    myParams.getParamAs<unsigned char *>(0) = myChar;
-    myParams.getParamAs<uint64_t>(1) = 2;
-    myParams.getParamAs<double>(2) = 9.99;
+    myParams.getParamAs<unsigned char *>(1) = myChar;
+    myParams.getParamAs<uint64_t>(2) = 2;
+    myParams.getParamAs<double>(3) = 9.99;
     
     scm::codelet * myCodelet = scm::codeletFactory::createCodelet("hello_world", myParams);
     myCodelet->implementation();

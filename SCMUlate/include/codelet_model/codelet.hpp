@@ -7,8 +7,6 @@
 #include "SCMUlate_tools.hpp"
 #include "instructions_def.hpp"
 
-#define MAX_NUM_PARAMS_CODELETS 3
-#define MAX_NUM_OPERANDS 3
 namespace scm {
   class cu_executor_module;
 
@@ -28,10 +26,10 @@ namespace scm {
       size_t size_params;
     public:
       codelet_params() {
-        size_params = MAX_NUM_PARAMS_CODELETS * sizeof(unsigned char*);
+        size_params = MAX_NUM_OPERANDS * sizeof(unsigned char*);
         params = new unsigned char* [size_params];
-        isAddress = new bool [MAX_NUM_PARAMS_CODELETS];
-        std::memset(isAddress, 0, sizeof(bool)*MAX_NUM_PARAMS_CODELETS);
+        isAddress = new bool [MAX_NUM_OPERANDS];
+        std::memset(isAddress, 0, sizeof(bool)*MAX_NUM_OPERANDS);
       }
       // Copy constructor
       codelet_params(const codelet_params &other) : size_params(other.size_params) {
@@ -41,8 +39,8 @@ namespace scm {
         } else {
           this->params = nullptr;
         }
-        isAddress = new bool [MAX_NUM_PARAMS_CODELETS];
-        std::memcpy(this->isAddress, other.isAddress, sizeof(bool)*MAX_NUM_PARAMS_CODELETS);
+        isAddress = new bool [MAX_NUM_OPERANDS];
+        std::memcpy(this->isAddress, other.isAddress, sizeof(bool)*MAX_NUM_OPERANDS);
       }
 
       void inline setParamAsAddress(uint32_t bitmapParams) {
@@ -66,7 +64,7 @@ namespace scm {
       // Get reference parameter
       template <class T = unsigned char *> 
       T & getParamAs(int paramNum) {
-        return reinterpret_cast<T&>(params[paramNum]);
+        return reinterpret_cast<T&>(params[paramNum-1]);
       }
       // Get constant reference parameter
       template <class T = unsigned char *> 

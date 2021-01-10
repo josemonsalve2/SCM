@@ -85,9 +85,9 @@ int main (int argc, char * argv[]) {
   double warmB[NumElements_AB];
   double warmC[NumElements_C];
   scm::codelet_params vars;
-  vars.getParamAs(0) = reinterpret_cast<unsigned char*>(warmA); // Getting register 1
-  vars.getParamAs(1) = reinterpret_cast<unsigned char*>(warmB); // Getting register 2
-  vars.getParamAs(2) = reinterpret_cast<unsigned char*>(warmC); // Getting register 3
+  vars.getParamAs(1) = reinterpret_cast<unsigned char*>(warmA); // Getting register 1
+  vars.getParamAs(2) = reinterpret_cast<unsigned char*>(warmB); // Getting register 2
+  vars.getParamAs(3) = reinterpret_cast<unsigned char*>(warmC); // Getting register 3
 #ifdef DECLARE_VARIANT
   // OMP TARGET WARM UP
   int isDevice= -1;

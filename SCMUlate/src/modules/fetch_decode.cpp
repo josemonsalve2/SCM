@@ -185,12 +185,6 @@ int scm::fetch_decode_module::behavior()
     // Check if any instructions have finished
     instructionLevelParallelism.printStats();
     SCMULATE_INFOMSG(6, "%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", stall, waiting, ready, execution_done, executing, decomision, this->inst_buff_m.getBufferSize());
-    static int num_it = 0;
-    // if (num_it++ % 100  == 0) {
-    //   printf("%f\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", this->time_cnt_m->getTimestamp(), stall, waiting, ready, execution_done, executing, decomision, this->inst_buff_m.getBufferSize());
-    //   // if (stallingInstruction != nullptr)
-    //   //   printf("Stalling on %s\n", stallingInstruction->first->getFullInstruction().c_str());
-    // }
     // Clear out instructions that are decomissioned
     this->inst_buff_m.clean_out_queue();
 
@@ -211,9 +205,8 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE JMPLBL INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getOpcode() == JMPLBL_INST.opcode)
-  {
-    int newPC = this->inst_mem_m->getMemoryLabel(inst->getOp1Str());
+  if (inst->getOpcode() == JMPLBL_INST.opcode) {
+    int newPC = inst->getOp(1).value.immediate;
     SCMULATE_ERROR_IF(0, newPC == -1, "Incorrect label translation");
     PC = newPC;
     return;
@@ -221,8 +214,7 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE JMPPC INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getOpcode() == JMPPC_INST.opcode)
-  {
+  if (inst->getOpcode() == JMPPC_INST.opcode) {
     int offset = inst->getOp1().value.immediate;
     int target = offset + PC - 1;
     SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0), "Incorrect destination offset");
@@ -232,8 +224,7 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE BREQ INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getOpcode() == BREQ_INST.opcode)
-  {
+  if (inst->getOpcode() == BREQ_INST.opcode) {
     decoded_reg_t reg1 = inst->getOp1().value.reg;
     decoded_reg_t reg2 = inst->getOp2().value.reg;
     unsigned char *reg1_ptr = reg1.reg_ptr;
@@ -241,18 +232,20 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
     SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
     bool bitComparison = true;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
-    for (uint32_t i = 0; i < reg1.reg_size_bytes; ++i)
-    {
-      if (reg1_ptr[i] ^ reg2_ptr[i])
-      {
+    for (uint32_t i = 0; i < reg1.reg_size_bytes; ++i) {
+      if (reg1_ptr[i] ^ reg2_ptr[i]) {
         bitComparison = false;
         break;
       }
     }
-    if (bitComparison)
-    {
-      int offset = inst->getOp3().value.immediate;
-      int target = offset + PC - 1;
+    if (bitComparison) {
+      int target;
+      if (inst->getOp(3).type == operand_t::LABEL) {
+        target = inst->getOp(3).value.immediate;
+      } else {
+        int offset = inst->getOp(3).value.immediate;
+        target = offset + PC - 1;
+      }
       SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0), "Incorrect destination offset");
       PC = target;
     }
@@ -261,8 +254,7 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE BGT INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getOpcode() == BGT_INST.opcode)
-  {
+  if (inst->getOpcode() == BGT_INST.opcode) {
     decoded_reg_t reg1 = inst->getOp1().value.reg;
     decoded_reg_t reg2 = inst->getOp2().value.reg;
     unsigned char *reg1_ptr = reg1.reg_ptr;
@@ -270,19 +262,21 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
     SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
     bool reg1_gt_reg2 = false;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
-    for (uint32_t i = 0; i < reg1.reg_size_bytes; ++i)
-    {
+    for (uint32_t i = 0; i < reg1.reg_size_bytes; ++i) {
       // Find the first byte from MSB to LSB that is different in reg1 and reg2. If reg1 > reg2 in that byte, then reg1 > reg2 in general
-      if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] > reg2_ptr[i])
-      {
+      if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] > reg2_ptr[i]) {
         reg1_gt_reg2 = true;
         break;
       }
     }
-    if (reg1_gt_reg2)
-    {
-      int offset = inst->getOp3().value.immediate;
-      int target = offset + PC - 1;
+    if (reg1_gt_reg2) {
+      int target;
+      if (inst->getOp(3).type == operand_t::LABEL) {
+        target = inst->getOp(3).value.immediate;
+      } else {
+        int offset = inst->getOp(3).value.immediate;
+        target = offset + PC - 1;
+      }
       SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0), "Incorrect destination offset");
       PC = target;
     }
@@ -291,8 +285,7 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE BGET INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getOpcode() == BGET_INST.opcode)
-  {
+  if (inst->getOpcode() == BGET_INST.opcode) {
     decoded_reg_t reg1 = inst->getOp1().value.reg;
     decoded_reg_t reg2 = inst->getOp2().value.reg;
     unsigned char *reg1_ptr = reg1.reg_ptr;
@@ -301,11 +294,9 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
     bool reg1_get_reg2 = false;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
     uint32_t size_reg_bytes = reg1.reg_size_bytes;
-    for (uint32_t i = 0; i < size_reg_bytes; ++i)
-    {
+    for (uint32_t i = 0; i < size_reg_bytes; ++i) {
       // Find the first byte from MSB to LSB that is different in reg1 and reg2. If reg1 > reg2 in that byte, then reg1 > reg2 in general
-      if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] > reg2_ptr[i])
-      {
+      if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] > reg2_ptr[i]) {
         reg1_get_reg2 = true;
         break;
       }
@@ -313,10 +304,14 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
       if (i == size_reg_bytes - 1 && reg1_ptr[i] == reg2_ptr[i])
         reg1_get_reg2 = true;
     }
-    if (reg1_get_reg2)
-    {
-      int offset = inst->getOp3().value.immediate;
-      int target = offset + PC - 1;
+    if (reg1_get_reg2) {
+      int target;
+      if (inst->getOp(3).type == operand_t::LABEL) {
+        target = inst->getOp(3).value.immediate;
+      } else {
+        int offset = inst->getOp(3).value.immediate;
+        target = offset + PC - 1;
+      }
       SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0), "Incorrect destination offset");
       PC = target;
     }
@@ -325,8 +320,7 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE BLT INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getOpcode() == BLT_INST.opcode)
-  {
+  if (inst->getOpcode() == BLT_INST.opcode) {
     decoded_reg_t reg1 = inst->getOp1().value.reg;
     decoded_reg_t reg2 = inst->getOp2().value.reg;
     unsigned char *reg1_ptr = reg1.reg_ptr;
@@ -334,19 +328,21 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
     SCMULATE_INFOMSG(4, "Comparing register %s %d to %s %d", reg1.reg_size.c_str(), reg1.reg_number, reg2.reg_size.c_str(), reg2.reg_number);
     bool reg1_lt_reg2 = false;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
-    for (uint32_t i = 0; i < reg1.reg_size_bytes; ++i)
-    {
+    for (uint32_t i = 0; i < reg1.reg_size_bytes; ++i) {
       // Find the first byte from MSB to LSB that is different in reg1 and reg2. If reg1 < reg2 in that byte, then reg1 < reg2 in general
-      if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] < reg2_ptr[i])
-      {
+      if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] < reg2_ptr[i]) {
         reg1_lt_reg2 = true;
         break;
       }
     }
-    if (reg1_lt_reg2)
-    {
-      int offset = inst->getOp3().value.immediate;
-      int target = offset + PC - 1;
+    if (reg1_lt_reg2) {
+      int target;
+      if (inst->getOp(3).type == operand_t::LABEL) {
+        target = inst->getOp(3).value.immediate;
+      } else {
+        int offset = inst->getOp(3).value.immediate;
+        target = offset + PC - 1;
+      }
       SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0), "Incorrect destination offset");
       PC = target;
     }
@@ -355,8 +351,7 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
   /////////////////////////////////////////////////////
   ///// CONTROL LOGIC FOR THE BLET INSTRUCTION
   /////////////////////////////////////////////////////
-  if (inst->getOpcode() == BLET_INST.opcode)
-  {
+  if (inst->getOpcode() == BLET_INST.opcode) {
     decoded_reg_t reg1 = inst->getOp1().value.reg;
     decoded_reg_t reg2 = inst->getOp2().value.reg;
     unsigned char *reg1_ptr = reg1.reg_ptr;
@@ -365,11 +360,9 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
     bool reg1_let_reg2 = false;
     SCMULATE_ERROR_IF(0, reg1.reg_size != reg2.reg_size, "Attempting to compare registers of different size");
     uint32_t size_reg_bytes = reg1.reg_size_bytes;
-    for (uint32_t i = 0; i < size_reg_bytes; ++i)
-    {
+    for (uint32_t i = 0; i < size_reg_bytes; ++i) {
       // Find the first byte from MSB to LSB that is different in reg1 and reg2. If reg1 < reg2 in that byte, then reg1 < reg2 in general
-      if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] < reg2_ptr[i])
-      {
+      if (reg1_ptr[i] ^ reg2_ptr[i] && reg1_ptr[i] < reg2_ptr[i]) {
         reg1_let_reg2 = true;
         break;
       }
@@ -377,10 +370,14 @@ void scm::fetch_decode_module::executeControlInstruction(scm::decoded_instructio
       if (i == size_reg_bytes - 1 && reg1_ptr[i] == reg2_ptr[i])
         reg1_let_reg2 = true;
     }
-    if (reg1_let_reg2)
-    {
-      int offset = inst->getOp3().value.immediate;
-      int target = offset + PC - 1;
+    if (reg1_let_reg2) {
+      int target;
+      if (inst->getOp(3).type == operand_t::LABEL) {
+        target = inst->getOp(3).value.immediate;
+      } else {
+        int offset = inst->getOp(3).value.immediate;
+        target = offset + PC - 1;
+      }
       SCMULATE_ERROR_IF(0, ((uint32_t)target > this->inst_mem_m->getMemSize() || target < 0), "Incorrect destination offset");
       PC = target;
     }

@@ -28,6 +28,8 @@
 
 
 namespace scm {
+  // circular reference
+  class inst_mem_module;
   class decoded_instruction_t {
     private:
       /** \brief contains the break down of an instruction
@@ -112,15 +114,30 @@ namespace scm {
        * on three operands. It should be a little bit more clever than this.
        */
       inline operand_t& getOp(int num) {
-        if (num < 1 || num > 3) {
+        if (num < 1 || num > MAX_NUM_OPERANDS) {
           SCMULATE_ERROR(0, "getOp(num) called with an incorrect operand number");
-          num = (num % 3) + 1;
+          num = (num % MAX_NUM_OPERANDS) + 1;
         } 
         if (num == 1)
-          return getOp1();
+          return op1;
         else if (num == 2)
-          return getOp2();
-        return getOp3();
+          return op2;
+        return op3;
+      }
+      /** \brief get operand string by number
+       * TODO: This is wrong in so many levels. We need to remove the limit
+       * on three operands. It should be a little bit more clever than this.
+       */
+      inline std::string& getOpStr(int num) {
+        if (num < 1 || num > MAX_NUM_OPERANDS) {
+          SCMULATE_ERROR(0, "getOp(num) called with an incorrect operand number");
+          num = (num % MAX_NUM_OPERANDS) + 1;
+        } 
+        if (num == 1)
+          return op1_s;
+        else if (num == 2)
+          return op2_s;
+        return op3_s;
       }
       /** \brief get the op1 
        */
@@ -150,7 +167,7 @@ namespace scm {
        */
       inline void setOp3Str(std::string str) { op3_s = str; }
 
-      bool decodeOperands(reg_file_module * const reg_file_m);
+      bool decodeOperands(inst_mem_module * const reg_file_m);
 
       /** \brief Update codelet register references to connect with renaming
        * 
@@ -225,7 +242,13 @@ namespace scm {
        *  \param inst the corresponding instruction text to identify
        *  \returns true or false if the instruction is LABEL type
        */
-      static inline bool isLabel(std::string const inst);
+      static inline bool isLabelInst(std::string const inst);
+
+      /** \brief Is the operand a LABEL
+       *  \param op the corresponding operand text to identify
+       *  \returns true or false if the operand is LABEL type
+       */
+      static inline bool isLabel(std::string const op);
 
       /** \brief Is the instruction type COMMIT
        *  \param inst the corresponding instruction text to identify
@@ -292,10 +315,6 @@ namespace scm {
       if (!dec) isExecution(instruction, &dec);
       if (!dec) isMemory(instruction, &dec);
       if (!dec) dec = new decoded_instruction_t(UNKNOWN, 0xFF);
-
-      SCMULATE_INFOMSG(4, "decoded: {type = %d, opcode = %s, op1 = %s, op2 = %s, op3 = %s}, ", dec->getType(), dec->getInstruction().c_str(), dec->getOp1Str().c_str(), dec->getOp2Str().c_str(), dec->getOp3Str().c_str());
-      
-
       return dec;
     }
 
@@ -328,7 +347,15 @@ namespace scm {
     }
 
   bool 
-    instructions::isLabel(std::string const inst) {
+    instructions::isLabel(std::string const op) {
+      std::regex search_exp(LABEL_REGEX, std::regex_constants::ECMAScript);
+      if (std::regex_match(op, search_exp))
+        return true;
+      return false;
+    }
+
+  bool 
+    instructions::isLabelInst(std::string const inst) {
       std::regex search_exp(LABEL_INST.inst_regex, std::regex_constants::ECMAScript);
       if (std::regex_match(inst, search_exp))
         return true;

@@ -82,6 +82,7 @@ int scm::fetch_decode_module::behavior()
     stall = 0; waiting = 0; ready = 0; execution_done = 0; executing = 0; decomision = 0;
     // Iterate over the instruction buffer (window) looking for instructions to execute
     for (auto it = this->inst_buff_m.get_buffer()->begin(); it != this->inst_buff_m.get_buffer()->end(); ++it) {
+      #pragma omp flush acquire
       instruction_state_pair * current_pair = *it;
       switch (current_pair->second) {
         case instruction_state::STALL:

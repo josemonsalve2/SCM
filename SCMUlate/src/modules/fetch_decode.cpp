@@ -531,6 +531,50 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
 #pragma omp atomic write
     *(this->aliveSignal) = false;
   }
+
+  /////////////////////////////////////////////////////
+  ///// ARITHMETIC LOGIC FOR THE MULT INSTRUCTION
+  /////////////////////////////////////////////////////
+  if (inst->getOpcode() == MULT_INST.opcode) {
+    decoded_reg_t reg1 = inst->getOp(1).value.reg;
+    decoded_reg_t reg2 = inst->getOp(2).value.reg;
+    uint64_t op2_val = 0;
+    uint64_t op3_val = 0;
+
+    // Get value for reg2
+    unsigned char *reg2_ptr = reg2.reg_ptr;
+    int32_t size_reg2_bytes = reg2.reg_size_bytes;
+    for (int32_t i = 0; i < size_reg2_bytes; ++i) {
+      op2_val <<= 8;
+      op2_val += static_cast<uint8_t>(reg2_ptr[i]);
+    }
+    // Third operand may be register or immediate. We assumme immediate are no longer than a long long
+    if (inst->getOp(3).type == scm::operand_t::IMMEDIATE_VAL) {
+      // IMMEDIATE MULT CASE
+      // TODO: Think about the signed option of these operands
+      op3_val = inst->getOp(3).value.immediate;
+    } else {
+      // REGISTER REGISTER ADD CASE
+      decoded_reg_t reg3 = inst->getOp3().value.reg;
+      unsigned char *reg3_ptr = reg3.reg_ptr;
+      int32_t size_reg3_bytes = reg3.reg_size_bytes;
+      for (int32_t i = 0; i < size_reg3_bytes; ++i) {
+        op3_val <<= 8;
+        op3_val += static_cast<uint8_t>(reg3_ptr[i]);
+      }
+    }
+
+    uint64_t mult_res = op2_val * op3_val;
+    printf("%ld * %ld = %ld\n", op2_val, op3_val, mult_res);
+    // Where to store the result
+    unsigned char *reg1_ptr = reg1.reg_ptr;
+    int32_t size_reg1_bytes = reg1.reg_size_bytes;
+    for (int32_t i = size_reg1_bytes - 1; i >= 0; --i) {
+      reg1_ptr[i] = mult_res & 255;
+      mult_res >>= 8;
+    }
+    return;
+  }
 }
 
 bool scm::fetch_decode_module::attemptAssignExecuteInstruction(scm::instruction_state_pair *inst)

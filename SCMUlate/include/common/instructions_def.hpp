@@ -119,6 +119,8 @@ namespace scm {
       return (this->memoryAddress == other.memoryAddress && this->size == other.size);
     }
   };
+  
+  typedef struct {std::set<memory_location> reads; std::set<memory_location> writes;} memranges_pair;
 
   // SCM specific insctructions
   const inst_def_t COMMIT_INST = DEF_INST(0x00, COMMIT, "[ ]*(COMMIT;).*", 0, OP_IO::NO_RD_WR);                                          /* COMMIT; */

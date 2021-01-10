@@ -2,8 +2,6 @@
 #include <string>
 #include <vector>
 
-#define INSTRUCTION_FETCH_WINDOW 10
-
 scm::fetch_decode_module::fetch_decode_module(inst_mem_module *const inst_mem, 
                                               control_store_module *const control_store_m, 
                                               bool *const aliveSig, 
@@ -187,6 +185,12 @@ int scm::fetch_decode_module::behavior()
     // Check if any instructions have finished
     instructionLevelParallelism.printStats();
     SCMULATE_INFOMSG(6, "%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", stall, waiting, ready, execution_done, executing, decomision, this->inst_buff_m.getBufferSize());
+    static int num_it = 0;
+    // if (num_it++ % 100  == 0) {
+    //   printf("%f\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", this->time_cnt_m->getTimestamp(), stall, waiting, ready, execution_done, executing, decomision, this->inst_buff_m.getBufferSize());
+    //   // if (stallingInstruction != nullptr)
+    //   //   printf("Stalling on %s\n", stallingInstruction->first->getFullInstruction().c_str());
+    // }
     // Clear out instructions that are decomissioned
     this->inst_buff_m.clean_out_queue();
 
@@ -540,11 +544,12 @@ bool scm::fetch_decode_module::attemptAssignExecuteInstruction(scm::instruction_
   uint32_t attempts = 0;
   // We try scheduling on all the sched units
   while (!sched && attempts++ < this->ctrl_st_m->numExecutors()) {
-    curSched++;
-    curSched %= this->ctrl_st_m->numExecutors();
     if (!this->ctrl_st_m->get_executor(curSched)->is_full()) {
       this->ctrl_st_m->get_executor(curSched)->insert(inst);
       sched = true;
+    } else {
+      curSched++;
+      curSched %= this->ctrl_st_m->numExecutors();
     }
   }
   SCMULATE_INFOMSG_IF(5, sched, "Scheduling to CUMEM %d", curSched);

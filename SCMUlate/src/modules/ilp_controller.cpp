@@ -351,8 +351,8 @@ namespace scm {
         SCMULATE_INFOMSG(3, "Instruction (%lu) %s has finished. Starting clean up process", (unsigned long) inst,  inst->getFullInstruction().c_str() );
         // In memory instructions we need to remove range from memory
         if (inst->isMemoryInstruction()) {
-          std::set <memory_location> * ranges = inst->getMemoryRange();
-          memCtrl.removeRange( ranges );
+          memranges_pair * ranges = inst->getMemoryRange();
+          memCtrl.removeRanges( ranges );
         }
         
         getOperandsDirs(inst);
@@ -490,8 +490,8 @@ namespace scm {
             }
           }
           // Check if a memory region overlaps
-          std::set <memory_location> * ranges = inst->getMemoryRange();
-          if (ranges->size() == 0)
+          memranges_pair * ranges = inst->getMemoryRange();
+          if (ranges->reads.size() == 0 && ranges->writes.size() == 0)
             inst->calculateMemRanges();
           if (memCtrl.itOverlaps( ranges )) {
             SCMULATE_INFOMSG(5, "Stalling due to memory range overlap");

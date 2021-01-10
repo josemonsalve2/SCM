@@ -47,7 +47,7 @@ namespace scm {
       operand_t op1;
       operand_t op2;
       operand_t op3;
-      std::set<memory_location> memRanges;
+      memranges_pair memRanges;
 
    public:
       // Constructors
@@ -168,7 +168,7 @@ namespace scm {
        * of this instruction. Allowing an in-order memory access.
        * 
        */
-      std::set<memory_location>* getMemoryRange() { return &this->memRanges; }
+      memranges_pair* getMemoryRange() { return &this->memRanges; }
       void calculateMemRanges();
 
       /** \brief Tells if a register represents an address value of a memory instruction or codelet

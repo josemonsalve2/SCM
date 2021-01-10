@@ -103,7 +103,8 @@ namespace scm {
 
     void
     decoded_instruction_t::calculateMemRanges() {
-      memRanges.clear();
+      memRanges.reads.clear();
+      memRanges.writes.clear();
       if (this->getType() == instType::MEMORY_INST && this->getOpcode() != LDIMM_INST.opcode) {
         int32_t size_dest = this->getOp1().value.reg.reg_size_bytes;
         unsigned long base_addr = 0;
@@ -149,7 +150,10 @@ namespace scm {
             SCMULATE_ERROR(0, "Incorrect operand type");
           }
         }
-        memRanges.emplace(reinterpret_cast<l2_memory_t>(base_addr + offset), size_dest);
+        if (this->getOpcode() == LDOFF_INST.opcode || this->getOpcode() == LDADR_INST.opcode)
+          memRanges.reads.emplace(reinterpret_cast<l2_memory_t>(base_addr + offset), size_dest);
+        if (this->getOpcode() == STOFF_INST.opcode || this->getOpcode() == STADR_INST.opcode)
+          memRanges.writes.emplace(reinterpret_cast<l2_memory_t>(base_addr + offset), size_dest);
       } else if (this->getType() == instType::EXECUTE_INST && this->cod_exec->isMemoryCodelet()) {
         this->cod_exec->calculateMemRanges();
       }

@@ -95,7 +95,7 @@ namespace scm {
   class codelet {
     protected:
       uint32_t numParams;
-      std::set<scm::memory_location> * memoryRanges;
+      memranges_pair * memoryRanges;
       // we use codelet_params because eventually we want this to be the interface for a compiler
       // generated code (e.g. pthreads equivalent). Also because we would like to provide
       // support for different parameters packing according to immediate vs register values. 
@@ -110,8 +110,8 @@ namespace scm {
       virtual void implementation() = 0;
       virtual bool isMemoryCodelet() { return false; }
       virtual void calculateMemRanges() { };
-      void setMemoryRange( std::set<scm::memory_location> * memRange ) { this->memoryRanges = memRange; };
-      std::set<memory_location> * getMemoryRange() { return memoryRanges; };
+      void setMemoryRange( memranges_pair * memRange ) { this->memoryRanges = memRange; };
+      memranges_pair * getMemoryRange() { return memoryRanges; };
       bool isOpAnAddress(int op_num) { return params.isParamAnAddress(op_num); };
       inline codelet_params& getParams() { return this->params; };
       inline std::uint_fast16_t& getOpIO() { return op_in_out; };
@@ -181,8 +181,11 @@ namespace scm {
         creatorFnc thisFunc = codeletCreator; \
         codeletFactory::registerCreator( #name, thisFunc); \
       }\
-      void inline addMemRange(uint64_t start, uint32_t size) { \
-        memoryRanges->emplace(reinterpret_cast<l2_memory_t>(start), size); \
+      void inline addReadMemRange(uint64_t start, uint32_t size) { \
+        memoryRanges->reads.emplace(reinterpret_cast<l2_memory_t>(start), size); \
+      } \
+      void inline addWriteMemRange(uint64_t start, uint32_t size) { \
+        memoryRanges->writes.emplace(reinterpret_cast<l2_memory_t>(start), size); \
       } \
       \
       /* Implementation function */ \

@@ -84,52 +84,71 @@ namespace scm {
   class memory_queue_controller {
     private:
       // Ranges are inclusive on begining and exclusive on end
-      std::set<memory_location> ranges;
+      std::set<memory_location> ranges_read;
+      std::set<memory_location> ranges_write;
     public:
       memory_queue_controller() { };
-      uint32_t inline numberOfRanges () { return ranges.size(); }
-      void inline addRange( std::set<memory_location> * in_ranges) {
+      uint32_t inline numberOfRanges () { return ranges_read.size() + ranges_write.size(); }
+      void inline addRange( memranges_pair * in_ranges) {
         SCMULATE_INFOMSG(4, "Adding ranges");
-        this->ranges.insert(in_ranges->begin(), in_ranges->end());
+        this->ranges_read.insert(in_ranges->reads.begin(), in_ranges->reads.end());
+        this->ranges_write.insert(in_ranges->writes.begin(), in_ranges->writes.end());
       }
-      void inline removeRange(std::set<memory_location> * out_ranges) {
+      void inline removeRanges(memranges_pair * out_ranges) {
         SCMULATE_INFOMSG(4, "Removing ranges");
-         std::set<memory_location> res_ranges;
-         std::set_difference( std::make_move_iterator(this->ranges.begin()), 
-                              std::make_move_iterator(this->ranges.end()), 
-                              std::make_move_iterator(out_ranges->begin()), std::make_move_iterator(out_ranges->end()),
-                              std::inserter(res_ranges, res_ranges.begin()));
-        ranges.swap(res_ranges);
+         memranges_pair res_ranges;
+         std::set_difference( std::make_move_iterator(this->ranges_read.begin()), 
+                              std::make_move_iterator(this->ranges_read.end()), 
+                              std::make_move_iterator(out_ranges->reads.begin()), std::make_move_iterator(out_ranges->reads.end()),
+                              std::inserter(res_ranges.reads, res_ranges.reads.begin()));
+        ranges_read.swap(res_ranges.reads);
+        std::set_difference( std::make_move_iterator(this->ranges_write.begin()), 
+                    std::make_move_iterator(this->ranges_write.end()), 
+                    std::make_move_iterator(out_ranges->writes.begin()), std::make_move_iterator(out_ranges->writes.end()),
+                    std::inserter(res_ranges.writes, res_ranges.writes.begin()));
+        ranges_write.swap(res_ranges.writes);
 
       }
-      bool inline itOverlaps(std::set<memory_location> * in_ranges) {
+      bool inline itOverlaps(memranges_pair const * in_ranges) const{
+        // We compare in_writes with writes, in_writes with reads, 
+        // and in_reads with writes (allow read after read)
         // The start of the curLocation cannot be in between a beginning and end of the range
         // The end of the curLocation cannot be between a beginning and end
+        
+        if (itOverlapsHelper(&ranges_write, &in_ranges->writes))
+          return true;
+        if (itOverlapsHelper(&ranges_read, &in_ranges->writes))
+          return true;
+        if (itOverlapsHelper(&ranges_write, &in_ranges->reads))
+          return true;
+        return false;
+      }
+
+      bool inline itOverlapsHelper(std::set<memory_location> const * ranges, std::set<memory_location> const * in_ranges) const {
         for (const auto& incoming_range : *in_ranges) {
           // Case ranges is empty, no possible overlap
-          if (ranges.size() == 0) return false;
+          if (ranges->size() == 0) return false;
 
           // get the lower_bound ( next closest element or equal) 
           // and the upper_bound (next closest element or end)
-          auto it_ranges = ranges.equal_range(incoming_range);
+          auto it_ranges = ranges->equal_range(incoming_range);
           auto next_element = it_ranges.second;
           auto prev_eq_element = it_ranges.first;
 
           // Case I only have one element, or the incoming range is lower than
           // the minimum element
-          if (prev_eq_element != ranges.begin())
+          if (prev_eq_element != ranges->begin())
             prev_eq_element = std::prev(prev_eq_element);
           else if (incoming_range < *prev_eq_element)
-            prev_eq_element = ranges.end();
+            prev_eq_element = ranges->end();
 
-          if (prev_eq_element != ranges.end() && (*prev_eq_element == incoming_range || prev_eq_element->upperLimit() > incoming_range.memoryAddress)) {
+          if (prev_eq_element != ranges->end() && (*prev_eq_element == incoming_range || prev_eq_element->upperLimit() > incoming_range.memoryAddress)) {
             return true;
           }
-          if (next_element != ranges.end() && next_element->memoryAddress < incoming_range.upperLimit()) {
+          if (next_element != ranges->end() && next_element->memoryAddress < incoming_range.upperLimit()) {
             return true;
           }
         }
-
         return false;
       }
   };
@@ -179,7 +198,7 @@ namespace scm {
         if (inst->isMemoryInstruction()) {
           // Check all the ranges
           inst->calculateMemRanges();
-          std::set <memory_location> * ranges = inst->getMemoryRange();
+          memranges_pair * ranges = inst->getMemoryRange();
           if (memCtrl.itOverlaps( ranges )) {
             inst_state->second = instruction_state::STALL;
             return false;
@@ -215,8 +234,8 @@ namespace scm {
         decoded_instruction_t * inst = inst_state->first;
         // In memory instructions we need to figure out if there is a hazard in the memory
         if (inst->isMemoryInstruction()) {
-          std::set <memory_location> * ranges = inst->getMemoryRange();
-          memCtrl.removeRange( ranges );
+          memranges_pair * ranges = inst->getMemoryRange();
+          memCtrl.removeRanges( ranges );
         } 
 
         if (inst->getOp1().type == operand_t::REGISTER) {
@@ -454,8 +473,8 @@ namespace scm {
       // on the instruction and attempt to continue in the process. Control flow must be returned to caller
       // to try to liberate registers
       instruction_state_pair * hazzard_inst_state;
-      std::set<int> already_processed_operands;
-      std::map<decoded_reg_t, reg_state> inst_operand_dir;
+      std::unordered_set<int> already_processed_operands;
+      std::unordered_map<decoded_reg_t, reg_state> inst_operand_dir;
 
     public:
       ilp_OoO() : hidden_register_file(new reg_file_module()), hazzard_inst_state(nullptr) { }

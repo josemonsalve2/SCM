@@ -27,6 +27,10 @@
   Future_label2:
     ADD R64B_1, R64B_2, 100; 
     COD print R64B_1, 8; // PC = 23
+    MULT R64B_1, R64B_1, 2;
+    COD print R64B_1, 8;
+    MULT R64B_1, R64B_1, R64B_1;
+    COD print R64B_1, 8;
     ADD R64B_1, R64B_1, 100; 
     ADD R64B_1, R64B_1, 100; 
     ADD R64B_2, R64B_1, R64B_1; 

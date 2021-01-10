@@ -184,15 +184,17 @@ namespace scm {
    * or to obtain the parameters
    */
   static inst_def_t const basicArithInsts[] = {
-  DEF_INST(0x30, ADD,  "[ ]*(ADD)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_WR | OP_IO::OP2_RD | OP_IO::OP3_RD),     /* ADD R1, R2, R3; R2 and R3 can be literals*/
-  DEF_INST(0x31, SUB,  "[ ]*(SUB)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_WR | OP_IO::OP2_RD | OP_IO::OP3_RD),     /* SUB R1, R2, R3; R2 and R3 can be literals*/
-  DEF_INST(0x32, SHFL, "[ ]*(SHFL)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_RD | OP_IO::OP1_WR | OP_IO::OP2_RD),                            /* SHFL R1, R2; R2 can be a literal representing how many positions to shift*/
-  DEF_INST(0x33, SHFR, "[ ]*(SHFR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_RD | OP_IO::OP1_WR | OP_IO::OP2_RD)};                            /* SHFR R1, R2; R2 can be a literal representing how many positions to shift*/
+  DEF_INST(0x30, ADD,  "[ ]*(ADD)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_WR | OP_IO::OP2_RD | OP_IO::OP3_RD),     /* ADD R1, R2, R3; R2 and R3 can be literals*/
+  DEF_INST(0x31, SUB,  "[ ]*(SUB)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_WR | OP_IO::OP2_RD | OP_IO::OP3_RD),     /* SUB R1, R2, R3; R2 and R3 can be literals*/
+  DEF_INST(0x32, SHFL, "[ ]*(SHFL)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_RD | OP_IO::OP1_WR | OP_IO::OP2_RD),                            /* SHFL R1, R2; R2 can be a literal representing how many positions to shift*/
+  DEF_INST(0x33, SHFR, "[ ]*(SHFR)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*;.*", 2, OP_IO::OP1_RD | OP_IO::OP1_WR | OP_IO::OP2_RD),                            /* SHFR R1, R2; R2 can be a literal representing how many positions to shift*/
+  DEF_INST(0x34, MULT,  "[ ]*(MULT)[ ]+(" REGISTER_REGEX ")[ ]*,[ ]*(" REGISTER_REGEX ")[ ]*,[ ]*(" INMIDIATE_REGEX "|" REGISTER_REGEX ")[ ]*;.*", 3, OP_IO::OP1_WR | OP_IO::OP2_RD | OP_IO::OP3_RD)};    /* MULT R1, R2, R3; R2 and R3 can be literals*/
 
   #define ADD_INST basicArithInsts[0]
   #define SUB_INST basicArithInsts[1]
   #define SHFL_INST basicArithInsts[2]
   #define SHFR_INST basicArithInsts[3]
+  #define MULT_INST basicArithInsts[4]
 
   //MEMORY INSTRUNCTIONS
   /** \brief All the memory related instructions

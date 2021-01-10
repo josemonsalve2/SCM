@@ -449,12 +449,9 @@ namespace scm {
    * other data structures (have already been processed). On re-entry to checkMarkInstructionsToSched, we check
    * if there is a previous hazzard, and we ignore current instruction in favor of resolving the hazzard. 
    */
-
-#define reg_state_str(state) (state == reg_state::READ ? std::string("reg_state::READ") : state == reg_state::WRITE ? std::string("reg_state::WRITE"): state == reg_state::READWRITE ? std::string("reg_state::READWRITE") :  std::string("reg_state::NONE"))
   class ilp_OoO {
     private:
       reg_file_module * hidden_register_file;
-      enum reg_state { NONE, READ, WRITE, READWRITE };
 
       // We must maintain a reference to the operand and its specific operand. The operand is maintained
       // as an integer to be used with getOp(). The instruction is needed to allow changing instruction state
@@ -474,7 +471,6 @@ namespace scm {
       // to try to liberate registers
       instruction_state_pair * hazzard_inst_state;
       std::unordered_set<int> already_processed_operands;
-      std::unordered_map<decoded_reg_t, reg_state> inst_operand_dir;
 
     public:
       ilp_OoO() : hidden_register_file(new reg_file_module()), hazzard_inst_state(nullptr) { }
@@ -496,8 +492,6 @@ namespace scm {
       bool inline isInstructionReady(decoded_instruction_t * inst);
 
       bool inline stallMemoryInstruction(decoded_instruction_t * inst);
-
-      void getOperandsDirs (decoded_instruction_t * inst);
 
       ~ilp_OoO() {
         delete hidden_register_file;

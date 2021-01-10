@@ -52,8 +52,9 @@ namespace scm {
 
         SCMULATE_INFOMSG(3, "Dependency discovery and hazzard avoidance process on instruction (%lu) %s", (unsigned long) inst, inst->getFullInstruction().c_str());
         // Get directions for the current instruction. (Col 1)
-        getOperandsDirs(inst);
-        
+        std::unordered_map<decoded_reg_t, reg_state>* inst_operand_dir = inst->getOperandsDirs();
+        bool wasRenamed = false;
+
         // Let's analyze each operand's dependency. Marking as allow sched or not.
         for (int i = 1; i <= MAX_NUM_OPERANDS; ++i) {
           if (already_processed_operands.find(i) == already_processed_operands.end()) {
@@ -61,7 +62,7 @@ namespace scm {
 
             // Only apply this analysis to registers
             if (current_operand->type == operand_t::REGISTER) {
-              auto it_inst_dir = inst_operand_dir.find(current_operand->value.reg);
+              auto it_inst_dir = inst_operand_dir->find(current_operand->value.reg);
 
               if (it_inst_dir->second == reg_state::READ) {
                 //////////////////////////////////////////////////////////////
@@ -73,6 +74,7 @@ namespace scm {
                 if (it_rename != registerRenaming.end()) {
                   SCMULATE_INFOMSG(5, "Register %s was previously renamed to %s", current_operand->value.reg.reg_name.c_str(), it_rename->second.reg_name.c_str());
                   current_operand->value.reg = it_rename->second;
+                  wasRenamed = true;
                 }
 
                 auto it_used = used.find(current_operand->value.reg.reg_ptr);
@@ -111,6 +113,8 @@ namespace scm {
                     SCMULATE_INFOMSG(5, "STRUCTURAL HAZZARD on operand %d. No new register was found for renaming. Leaving other operands for later SU iteration.", i);
                     hazzard_inst_state = inst_state;
                     inst_state->second = instruction_state::STALL;
+                    if (wasRenamed)
+                      inst->calculateOperandsDirs();
                     return false;
                   }
 
@@ -123,6 +127,7 @@ namespace scm {
                     it_rename.first->second = newReg;
                   }
                   current_operand->value.reg = newReg;
+                  wasRenamed = true;
                   // Insert it in used, and register to subscribers
                 } else {
                   // Register not in used. Remove renaming for future references
@@ -216,6 +221,8 @@ namespace scm {
                     SCMULATE_INFOMSG(5, "STRUCTURAL HAZZARD on operand %d. No new register was found for renaming. Leaving other operands for later SU iteration.", i);
                     hazzard_inst_state = inst_state;
                     inst_state->second = instruction_state::STALL;
+                    if (wasRenamed)
+                      inst->calculateOperandsDirs();
                     return false;
                   }
 
@@ -227,6 +234,7 @@ namespace scm {
                     renamedInUse.erase(it_rename.first->second.reg_ptr);
                     it_rename.first->second = new_renamed_reg;
                   }
+                  wasRenamed = true;
                 } else if (it_rename != registerRenaming.end() && ( 
                             source_used == used.end() || // (4) (see above)
                             (source_used != used.end() && source_used->second == reg_state::WRITE && subscribers.find(source_used->first) == subscribers.end())  // (3) see above
@@ -235,6 +243,7 @@ namespace scm {
                   // Keep renaming
                   new_renamed_reg = original_renamed_reg;
                   SCMULATE_INFOMSG(5, "Register %s is going to still be renamed as %s", original_op_reg.reg_name.c_str(), original_renamed_reg.reg_name.c_str());
+                  wasRenamed = true;
                 } else if (it_rename != registerRenaming.end()) { // (5) see above
                   renamedInUse.erase(it_rename->second.reg_ptr);
                   registerRenaming.erase(it_rename);
@@ -289,6 +298,10 @@ namespace scm {
         }
         SCMULATE_INFOMSG(3, "Resulting Inst after analisys (%lu) %s", (unsigned long) inst, inst->getFullInstruction().c_str());
 
+        // If it was renamed, we gotta re-calculate the operandDirs
+        if (wasRenamed)
+          inst->calculateOperandsDirs();
+        
         // Of inst is a Codelet, we must update the values of the registers
         inst_state->first->updateCodeletParams();
         // We have finished processing this instruction, if it was a hazzard, it is not a hazzard anymore
@@ -355,11 +368,10 @@ namespace scm {
           memCtrl.removeRanges( ranges );
         }
         
-        getOperandsDirs(inst);
+        std::unordered_map<decoded_reg_t, reg_state>* inst_operand_dir = inst->getOperandsDirs();
         // Depending on the operand direction, there is some book keeping that needs to happen, which 
         // also enables other instructions. See table 2 above
-        for (auto it = inst_operand_dir.begin(); it != inst_operand_dir.end(); ++it) {
-
+        for (auto it = inst_operand_dir->begin(); it != inst_operand_dir->end(); ++it) {
             // Check the operand's direction
             if (it->second == reg_state::READ) {
               auto it_used = used.find(it->first.reg_ptr);
@@ -503,30 +515,5 @@ namespace scm {
         return false;
 
       }
-
-      void 
-      ilp_OoO::getOperandsDirs (decoded_instruction_t * inst) {
-        inst_operand_dir.clear();
-        for (int i = 1; i <= MAX_NUM_OPERANDS; ++i) {
-          if (inst->getOp(i).type == operand_t::REGISTER) {
-            // Attempt to insert the register, if it is already there, the insert will return a pair with the iterator to the 
-            // already inserted value.
-            auto it_insert = inst_operand_dir.insert(std::pair<decoded_reg_t, reg_state>(inst->getOp(i).value.reg, reg_state::NONE));
-            reg_state &cur_state = it_insert.first->second;
-
-            // We need to set the value of reg_state to read, write or readwrite
-            if ( (inst->getOp(i).read && inst->getOp(i).write ) ||
-                 (inst->getOp(i).read && cur_state == reg_state::WRITE ) ||
-                 (inst->getOp(i).write && cur_state == reg_state::READ) ) 
-              cur_state = reg_state::READWRITE;
-            else if (inst->getOp(i).write && cur_state == reg_state::NONE)
-              cur_state = reg_state::WRITE;
-            else if (inst->getOp(i).read && cur_state == reg_state::NONE)
-              cur_state = reg_state::READ;
-            
-            SCMULATE_INFOMSG(5, "In instruction %s Register %s set as %s", inst->getFullInstruction().c_str() , inst->getOp(i).value.reg.reg_name.c_str(), reg_state_str(cur_state).c_str());
-        }
-      }
-    }
 
 }

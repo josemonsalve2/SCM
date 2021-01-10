@@ -60,8 +60,11 @@ namespace scm {
             op.write = OP_IO::getOpWRIO(op_num) & cod_exec->getOpIO();
           }
           this->setOpIO(cod_exec->getOpIO());
-      }
-      return true;
+        }
+
+        // Calculate directions for registers
+        calculateOperandsDirs();
+        return true;
     }
 
     void
@@ -135,6 +138,31 @@ namespace scm {
       }
 
       return false;
+    }
+
+    void 
+      decoded_instruction_t::calculateOperandsDirs () {
+        inst_operand_dir.clear();
+        for (int i = 1; i <= MAX_NUM_OPERANDS; ++i) {
+          if (this->getOp(i).type == operand_t::REGISTER) {
+            // Attempt to insert the register, if it is already there, the insert will return a pair with the iterator to the 
+            // already inserted value.
+            auto it_insert = inst_operand_dir.insert(std::pair<decoded_reg_t, reg_state>(this->getOp(i).value.reg, reg_state::NONE));
+            reg_state &cur_state = it_insert.first->second;
+
+            // We need to set the value of reg_state to read, write or readwrite
+            if ( (this->getOp(i).read && this->getOp(i).write ) ||
+                 (this->getOp(i).read && cur_state == reg_state::WRITE ) ||
+                 (this->getOp(i).write && cur_state == reg_state::READ) ) 
+              cur_state = reg_state::READWRITE;
+            else if (this->getOp(i).write && cur_state == reg_state::NONE)
+              cur_state = reg_state::WRITE;
+            else if (this->getOp(i).read && cur_state == reg_state::NONE)
+              cur_state = reg_state::READ;
+            
+            SCMULATE_INFOMSG(5, "In instruction %s Register %s set as %s", this->getFullInstruction().c_str() , this->getOp(i).value.reg.reg_name.c_str(), reg_state_str(cur_state).c_str());
+        }
+      }
     }
 
     void 

@@ -30,6 +30,15 @@
 namespace scm {
   // circular reference
   class inst_mem_module;
+
+  enum reg_state { NONE, READ, WRITE, READWRITE };
+  #define reg_state_str(state) (\
+  state == reg_state::READ ? std::string("reg_state::READ") : \
+  state == reg_state::WRITE ? std::string("reg_state::WRITE"): \
+  state == reg_state::READWRITE ? std::string("reg_state::READWRITE") : \
+  state == reg_state::NONE ? std::string("reg_state::NONE") : \
+  std::string("?????"))
+
   class decoded_instruction_t {
     private:
       /** \brief contains the break down of an instruction
@@ -50,6 +59,7 @@ namespace scm {
       operand_t op2;
       operand_t op3;
       memranges_pair memRanges;
+      std::unordered_map<decoded_reg_t, reg_state> inst_operand_dir;
 
    public:
       // Constructors
@@ -59,7 +69,7 @@ namespace scm {
         type(type), opcode(opcode), instruction(inst), op1_s(op1s), op2_s(op2s), op3_s(op3s), op_in_out(OP_IO::NO_RD_WR), cod_exec(nullptr), op1(), op2(), op3()  {}
 
       decoded_instruction_t (const decoded_instruction_t &other) :
-              type(other.type), opcode(other.opcode), instruction(other.instruction), op1_s(other.op1_s), op2_s(other.op2_s), op3_s(other.op3_s), op_in_out(other.op_in_out),cod_exec(nullptr), op1(other.op1), op2(other.op2), op3(other.op3), memRanges(other.memRanges) {
+              type(other.type), opcode(other.opcode), instruction(other.instruction), op1_s(other.op1_s), op2_s(other.op2_s), op3_s(other.op3_s), op_in_out(other.op_in_out),cod_exec(nullptr), op1(other.op1), op2(other.op2), op3(other.op3), memRanges(other.memRanges), inst_operand_dir(other.inst_operand_dir) {
                 if (other.cod_exec != nullptr) {
                   codelet_params newParams = other.cod_exec->getParams();
                   this->cod_exec = codeletFactory::createCodelet(getInstruction(), newParams);
@@ -187,6 +197,16 @@ namespace scm {
        */
       memranges_pair* getMemoryRange() { return &this->memRanges; }
       void calculateMemRanges();
+
+      /** \brief for each register, store if read, write or readwrite
+       * 
+       * This depends on the operands used. For example if you have ADD R1, R1, R1. Then the 
+       * register R1 is both read and write. It does not only depends on the operand position
+       * 
+       */
+      void calculateOperandsDirs();
+
+      std::unordered_map<decoded_reg_t, reg_state>* getOperandsDirs() {return &inst_operand_dir; }
 
       /** \brief Tells if a register represents an address value of a memory instruction or codelet
        * 

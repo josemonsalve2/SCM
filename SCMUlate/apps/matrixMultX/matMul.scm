@@ -33,15 +33,15 @@ ADD R64B_26, R64B_26, R64B_15; // C for the outer I offset
 // We are using j for the rows (A and C) and i for the cols (B and C)
 
 loop_j:
-  BREQ R64B_3, R64B_10, 34;
+  BREQ R64B_3, R64B_10, after_loop_j;
   ADD R64B_3, R64B_3, 1; // j++
   loop_i:
-    BREQ R64B_2, R64B_11, 20;
+    BREQ R64B_2, R64B_11, after_loop_i;
     ADD R64B_2, R64B_2, 1; // i++
     COD LoadSqTile_2048L R2048L_3, R64B_7, R64B_23; //Load C
 
     loop_k:
-      BREQ R64B_4, R64B_12, 8;
+      BREQ R64B_4, R64B_12, after_loop_k;
       ADD R64B_4, R64B_4, 1; // k++
       COD LoadSqTile_2048L R2048L_1, R64B_5, R64B_21; //Load A
       COD LoadSqTile_2048L R2048L_2, R64B_6, R64B_22; //Load B
@@ -49,6 +49,8 @@ loop_j:
       ADD R64B_5, R64B_5, R64B_19; // *A + Off_ak
       ADD R64B_6, R64B_6, R64B_18; // *B + Off_bk
       JMPLBL loop_k;
+
+after_loop_k:
     COD StoreSqTile_2048L R2048L_3, R64B_7, R64B_23; //Store C
 
     LDIMM R64B_4, 0; // Reset k index loop
@@ -60,6 +62,7 @@ loop_j:
     ADD R64B_6, R64B_6, R64B_25; // Set to beginning of new i
     JMPLBL loop_i;
 
+after_loop_i:
   LDIMM R64B_2, 0; // Reset i index loop
   ADD R64B_24, R64B_24, R64B_17; // Move A along j
   ADD R64B_26, R64B_26, R64B_20; // Move C along j
@@ -73,5 +76,6 @@ loop_j:
   ADD R64B_6, R64B_6, R64B_25; // Set to beginning of new i
   JMPLBL loop_j;
 
+after_loop_j:
 
 COMMIT;

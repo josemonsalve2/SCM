@@ -10,7 +10,7 @@ LDIMM R64B_9, 131072; // For offset B
 
 COD LoadSqTileGPU_2048L R2048L_3, R64B_3, 128; //Load C
 loop:
-  BREQ R64B_4, R64B_5, 8;
+  BREQ R64B_4, R64B_5, afterLoop;
   ADD R64B_4, R64B_4, 1;
   COD LoadSqTileGPU_2048L R2048L_1, R64B_1, 1280; //Load A
   COD LoadSqTileGPU_2048L R2048L_2, R64B_2, 128; //Load B
@@ -19,6 +19,7 @@ loop:
   ADD R64B_2, R64B_2, R64B_9; // *B + 131072
   JMPLBL loop;
 
+afterLoop:
 COD StoreSqTileGPU_2048L R2048L_3, R64B_3, 128; //Load C
 
 COMMIT;

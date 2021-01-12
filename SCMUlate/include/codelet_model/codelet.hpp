@@ -43,7 +43,7 @@ namespace scm {
         std::memcpy(this->isAddress, other.isAddress, sizeof(bool)*MAX_NUM_OPERANDS);
       }
 
-      void inline setParamAsAddress(uint32_t bitmapParams) {
+      void inline setParamAsAddress(uint32_t bitmapParams = scm::OP_ADDRESS::NO_ADDRESS) {
         int curParam = 0;
         while (bitmapParams != 0) {
           if (bitmapParams & 1)

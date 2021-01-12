@@ -14,7 +14,7 @@
  *  READY: The instruction is ready to be scheduled and executed. The SU (fetch decode)
  *          will determine when to execute it
  *  DONE: The instruction has been finished, there may be some cleaning that needs to be handled.
- *  DECOMISION: The instruction has been finished, and all cleaning has been taken care of.
+ *  DECOMMISSION: The instruction has been finished, and all cleaning has been taken care of.
  *              The buffer can recovery the buffer slot.
  *  STALL: The PC should not fetch any more instructions. The next instruction has not been 
  *         determined yet. 
@@ -52,7 +52,7 @@ namespace scm {
 
       void clean_out_queue() {
         for (auto it = instruction_buffer.begin(); it != instruction_buffer.end() ;) {
-          if ((*it)->second == instruction_state::DECOMISION) {
+          if ((*it)->second == instruction_state::DECOMMISSION) {
             SCMULATE_INFOMSG(5, "Deleting Instruction %s from buffer", (*it)->first->getFullInstruction().c_str());
             delete (*it)->first;
             delete *it;

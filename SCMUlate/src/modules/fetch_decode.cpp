@@ -117,7 +117,7 @@ int scm::fetch_decode_module::behavior()
               #pragma omp atomic write
               *(this->aliveSignal) = false;
               // Properly clear the COMMIT instruction
-              current_pair->second = instruction_state::DECOMISION;
+              current_pair->second = instruction_state::DECOMMISSION;
               break;
             case CONTROL_INST:
               SCMULATE_INFOMSG(4, "Scheduling a CONTROL_INST %s", current_pair->first->getFullInstruction().c_str());
@@ -168,14 +168,14 @@ int scm::fetch_decode_module::behavior()
           instructionLevelParallelism.instructionFinished(current_pair);
           ITT_TASK_END(instructionFinished);
           SCMULATE_INFOMSG(5, "Marking instruction %s for decomision", current_pair->first->getFullInstruction().c_str());
-          current_pair->second = instruction_state::DECOMISION;
+          current_pair->second = instruction_state::DECOMMISSION;
           TIMERS_COUNTERS_GUARD(
             this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE, current_pair->first->getFullInstruction()););
           break;
         case instruction_state::EXECUTING:
           executing++;
           break;
-        case instruction_state::DECOMISION:
+        case instruction_state::DECOMMISSION:
           decomision++;
         default:
           break;

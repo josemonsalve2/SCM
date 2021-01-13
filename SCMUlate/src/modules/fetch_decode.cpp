@@ -585,8 +585,7 @@ bool scm::fetch_decode_module::attemptAssignExecuteInstruction(scm::instruction_
   uint32_t attempts = 0;
   // We try scheduling on all the sched units
   while (!sched && attempts++ < this->ctrl_st_m->numExecutors()) {
-    if (!this->ctrl_st_m->get_executor(curSched)->is_full()) {
-      this->ctrl_st_m->get_executor(curSched)->insert(inst);
+    if (this->ctrl_st_m->get_executor(curSched)->try_insert(inst)) {
       sched = true;
     } else {
       curSched++;

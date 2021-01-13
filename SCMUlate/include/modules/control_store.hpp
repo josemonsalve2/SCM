@@ -37,19 +37,12 @@ namespace scm {
         head = tail = executionQueue.begin();
       };
 
-      void insert(instruction_state_pair *);
+      bool try_insert(instruction_state_pair *);
       void consume();
 
       inline bool is_empty() {
         #pragma omp flush acquire
-        return head == tail;
-      }
-
-      inline bool is_full() {
-        #pragma omp flush acquire
-        auto tail_nxt = tail;
-        getNext(tail_nxt);
-        return head == tail_nxt;
+        return *head == nullptr && head == tail;
       }
 
       void inline getNext (instructions_queue_t::iterator& current) {

@@ -1,10 +1,16 @@
 #include "control_store.hpp"
 
-void 
-scm::execution_slot::insert(scm::instruction_state_pair *newInstruction) {
-  *this->tail = newInstruction;
-  #pragma omp flush release
-  getNext(tail);
+bool 
+scm::execution_slot::try_insert(scm::instruction_state_pair *newInstruction) {
+  #pragma omp flush
+  if ((*tail) == nullptr) {
+    *this->tail = newInstruction;
+    getNext(tail);
+    return true;
+  } else {
+    return false;
+  }
+
 }
 
 void 

@@ -15,15 +15,16 @@ MEMRANGE_CODELET(LoadSqTileGPU_2048L,
   unsigned char *reg2 = this->getParams().getParamAs(2); // Getting register 2
   unsigned char *reg3 = this->getParams().getParamAs(3); // Getting register 3
   uint64_t address = reinterpret_cast<uint8_t*>(reg2)[0];
-  uint64_t ldistance = reinterpret_cast<uint64_t>(reg3);
-  ldistance *= sizeof(double);
+    uint64_t ldistance = reinterpret_cast<uint8_t*>(reg3)[0];
   for (int i = 1; i < 8; i++) {
     address <<= 8;
     address += static_cast<uint8_t>(reg2[i]);
+    ldistance <<= 8;
+    ldistance += static_cast<uint8_t>(reg3[i]);
   }
   // Add the ranges
   for (uint64_t i = 0; i < TILE_DIM; i++) {
-    this->addReadMemRange(address+ldistance*i, TILE_DIM*sizeof(double));
+    this->addReadMemRange(address+ldistance*sizeof(double)*i, TILE_DIM*sizeof(double));
   }
 );
 
@@ -64,14 +65,16 @@ MEMRANGE_CODELET(StoreSqTileGPU_2048L,
   unsigned char *reg2 = this->getParams().getParamAs(2); // Getting register 2
   unsigned char *reg3 = this->getParams().getParamAs(3); // Getting register 3
   uint64_t address = reinterpret_cast<uint8_t*>(reg2)[0];
-  uint64_t ldistance = reinterpret_cast<uint64_t>(reg3);
-  ldistance *= sizeof(double);
+  uint64_t ldistance = reinterpret_cast<uint8_t*>(reg3)[0];
+
   for (int i = 1; i < 8; i++) {
     address <<= 8;
     address += static_cast<uint8_t>(reg2[i]);
+    ldistance <<= 8;
+    ldistance += static_cast<uint8_t>(reg3[i]);
   }
   for (uint64_t i = 0; i < TILE_DIM; i++) {
-    this->addWriteMemRange(address+ldistance*i, TILE_DIM*sizeof(double));
+    this->addWriteMemRange(address+ldistance*sizeof(double)*i, TILE_DIM*sizeof(double));
   }
 );
 

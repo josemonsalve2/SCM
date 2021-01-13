@@ -6,7 +6,7 @@
 #include <iostream>
 
 // Reps
-#define REPS 400
+#define REPS 4000
 //B offset = sizeRegister*400 = 52428800
 #define B_offset (64*2048*REPS)
 //C offset = sizeRegister*400*2 = 104857600
@@ -51,7 +51,7 @@ int main (int argc, char * argv[]) {
   scm::scm_machine * myMachine;
   if (program_options.fileInput) {
     SCMULATE_INFOMSG(0, "Reading program file %s", program_options.fileName);
-    myMachine = new scm::scm_machine(program_options.fileName, memory, scm::SUPERSCALAR);
+    myMachine = new scm::scm_machine(program_options.fileName, memory, scm::SEQUENTIAL);
   } else {
     std::cout << "Need to give a file to read. use -i <filename>" << std::endl;
     return 1;
@@ -69,6 +69,7 @@ int main (int argc, char * argv[]) {
   for (long unsigned i = 0; i < NumElements; ++i) {
     if (C[i] != i+i) {
       success = false;
+      printf("RESULT ERROR in i = %ld, value C[i] = %f\n", i, C[i]);
       SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %f", i, C[i]);
       break;  
     }

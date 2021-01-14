@@ -61,7 +61,7 @@ namespace scm {
       ilp_controller instructionLevelParallelism;
       instructions_buffer_module inst_buff_m;
       instruction_state_pair * stallingInstruction;
-      const bool debugger;
+      //const bool debugger;
 
       TIMERS_COUNTERS_GUARD(
         std::string su_timer_name;

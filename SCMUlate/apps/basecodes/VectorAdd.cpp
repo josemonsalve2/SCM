@@ -31,7 +31,7 @@ void ParallelVecAdd(double * A, double * B, double *C) {
 
 
 int main (int argc, char * argv[]) {
-  bool parallel;
+  bool parallel = false;
   numThreads = omp_get_max_threads();
   for (int i = 1; i + 1 < argc; i++) {
     if (std::string(argv[i]) == std::string("-p")) {

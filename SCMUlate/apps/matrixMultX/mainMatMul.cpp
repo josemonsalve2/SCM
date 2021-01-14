@@ -47,7 +47,19 @@ void parseProgramOptions(int argc, char* argv[]);
 void initMatrix (double * mat, int elements, int val = 0) {
   for (int i = 0; i < elements; i++)
     mat[i] = (i)*val;
-} 
+}
+
+void alg_matmul2D_serial(int m, int n, int p, double* a, double* b, double* c) {
+   int i,j,k;
+   for (i=0; i<m; i=i+1){
+      for (j=0; j<n; j=j+1){
+         c[i*n + j]=0.;
+         for (k=0; k<p; k=k+1){
+            c[i*n + j]=(c[i*n + j])+((a[i*p + k])*(b[k*n + j]));
+         }
+      }
+   }
+}
 
 template<typename T>
 T changeEndiandness (T val) {
@@ -87,6 +99,7 @@ int main (int argc, char * argv[]) {
   vars.getParamAs(1) = reinterpret_cast<unsigned char*>(warmA); // Getting register 1
   vars.getParamAs(2) = reinterpret_cast<unsigned char*>(warmB); // Getting register 2
   vars.getParamAs(3) = reinterpret_cast<unsigned char*>(warmC); // Getting register 3
+#ifdef MKL
 #ifdef DECLARE_VARIANT
   // OMP TARGET WARM UP
   int isDevice= -1;
@@ -95,6 +108,7 @@ int main (int argc, char * argv[]) {
   printf("Is running in the %s\n", (isDevice? "Host": "Device"));
   scm::_cod_MatMultGPU_2048L warmCodGPU(vars);
   warmCodGPU.implementation();
+#endif
 #endif
   scm::_cod_MatMult_2048L warmCod(vars);
   warmCod.implementation();
@@ -190,7 +204,7 @@ int main (int argc, char * argv[]) {
   scm::scm_machine * myMachine;
   if (program_options.fileInput) {
     SCMULATE_INFOMSG(0, "Reading program file %s", program_options.fileName);
-    myMachine = new scm::scm_machine(program_options.fileName, memory, scm::SUPERSCALAR);
+    myMachine = new scm::scm_machine(program_options.fileName, memory, scm::OOO);
   } else {
     std::cout << "Need to give a file to read. use -i <filename>" << std::endl;
     return 1;
@@ -209,15 +223,18 @@ int main (int argc, char * argv[]) {
   bool success = true;
 
   std::chrono::time_point<std::chrono::high_resolution_clock> initTimer =  std::chrono::high_resolution_clock::now();
-  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, MDIM*TILE_DIM, NDIM*TILE_DIM, KDIM*TILE_DIM, 1, A, TILE_DIM*KDIM, B, TILE_DIM*NDIM, 1, testC, TILE_DIM*NDIM);
-  // aCod.implementation();
+  #ifndef NOBLAS
+    cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, MDIM*TILE_DIM, NDIM*TILE_DIM, KDIM*TILE_DIM, 1, A, TILE_DIM*KDIM, B, TILE_DIM*NDIM, 1, testC, TILE_DIM*NDIM);
+  #else
+    alg_matmul2D_serial(MDIM*TILE_DIM, NDIM*TILE_DIM, KDIM*TILE_DIM, A, B, testC);
+  #endif// aCod.implementation();
   std::chrono::time_point<std::chrono::high_resolution_clock> endTimer = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> diff =endTimer - initTimer;
   printf ("taking %f s\n", diff.count());
 
   int errors = 0;
   for (long unsigned i = 0; i < NumElements_C; ++i) {
-    if (C[i] != testC[i]) {
+    if (C[i] - testC[i] > 0.00001) {
       success = false;
       SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %f  vs testC[i] = %f", i, C[i], testC[i]);
       if (++errors > 1) break;

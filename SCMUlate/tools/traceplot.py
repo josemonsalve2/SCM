@@ -121,6 +121,16 @@ def load_file(fileName):
         print("Error opening file", file=sys.stderr)
         exit()
 
+class printStats:
+    map_of_instructions = {}
+    def addNewStat(self, name, start, end, eventType, description):
+        if description.split(" ")[0] not in self.map_of_instructions:
+            self.map_of_instructions[description.split(" ")[0]] = []
+        self.map_of_instructions[description.split(" ")[0]].append(end)
+    def print(self):
+        print(f" Instruction\tExecutionTimes\taverageTime")
+        for inst, list_exec_times in self.map_of_instructions.items():
+            print(f"{inst}\t{len(list_exec_times)}\t{np.average(list_exec_times):0.2e}")
 class traces:
     numPlots = 0
     plotNum = list()
@@ -232,7 +242,7 @@ class traces:
                     self.fig.add_trace(
                         go.Bar( x = [0], 
                                 y = [name],
-                                base = [0], 
+                                base = [0],
                                 orientation = 'h',
                                 name = name))
         self.fig.update_layout(
@@ -243,7 +253,7 @@ class traces:
             yaxis = {'fixedrange': True,
                      'title': "SCM Unit", 
                      'tickson': 'boundaries'},
-            font = dict(size=18),
+            font = dict(size=30),
             xaxis = {
                 'categoryorder': 'array',
                 'title': "Time (ms)"},
@@ -254,31 +264,35 @@ class traces:
                     showarrow=False,
                     xref='paper',
                     yref='paper',
-                    x=1.3,
+                    xanchor='left',
+                    x=1.001,
                     y=0,
                     bordercolor='black',
                     borderwidth=1, 
-                    font=dict(size=12)
+                    font=dict(size=18)
                 )
             ])
         self.fig.show(config=self.config)
         
 
 
-    
+
 
 def main():
     parser = argparse.ArgumentParser(description='Plots the trace result of SCMUlate')
     parser.add_argument('--input', '-i', dest='fileName', action='store', nargs=1,
                     help='File name to be plot', required=True)
+    parser.add_argument('--stats-only', '-so', dest='statsOnly', action='store_true', help='Print stats only')
     parser.add_argument('--subtitle', '-st', dest='subtitle', action='store', nargs=1, help="Subtitle to be added to the plot", required=False)
 
     args = parser.parse_args()
     fileName = args.fileName[0]
+    statsOnly = args.statsOnly
     subText = ""
     if (args.subtitle != None):
         subText = args.subtitle[0]
     tracePloter = traces()
+    stats = printStats()
     if fileName != "":
         data = load_file(fileName)
         for name, counter in data.items():
@@ -300,12 +314,15 @@ def main():
                             for counter, value in event["hw_counters"]:
                                 description += "<br>" + counter + ": " + str(value)
 
-                        tracePloter.addNewPlot(name, prevTime, event["value"] - prevTime, typeEnum.name, description )
+                        tracePloter.addNewPlot(name, prevTime, event["value"] - prevTime, typeEnum.name, description)
+                        stats.addNewStat(name, prevTime, event["value"] - prevTime, typeEnum.name, description)
                     prevTime = event["value"]
                     prevType = event["type"]
                     prevEvent = event["description"]
-
-        tracePloter.plotTrace(subText)
+        if (not statsOnly):
+            tracePloter.plotTrace(subText)
+        else:
+            stats.print()
     else:
         print("No file specified")
         parser.print_help()

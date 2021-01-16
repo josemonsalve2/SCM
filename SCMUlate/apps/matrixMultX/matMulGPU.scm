@@ -45,7 +45,7 @@ loop_j:
       ADD R64B_4, R64B_4, 1; // k++
       COD LoadSqTileGPU_2048L R2048L_1, R64B_5, R64B_21; //Load A
       COD LoadSqTileGPU_2048L R2048L_2, R64B_6, R64B_22; //Load B
-      COD MatMult_2048L R2048L_3, R2048L_1, R2048L_2;
+      COD MatMultGPU_2048L R2048L_3, R2048L_1, R2048L_2;
       ADD R64B_5, R64B_5, R64B_19; // *A + Off_ak
       ADD R64B_6, R64B_6, R64B_18; // *B + Off_bk
       JMPLBL loop_k;

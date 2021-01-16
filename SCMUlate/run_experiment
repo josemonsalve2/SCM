@@ -1,0 +1,49 @@
+#!/bin/bash
+
+export PATH=/usr/local/cuda-11.0/bin:$PATH
+export LD_LIBRARY_PATH=/usr/local/cuda-11.0/lib64:$LD_LBRARY_PATH
+source load_intel
+
+execMode="OOO_MKL"
+base_project_dir=/home/josem/SCMUlate/SCM/SCMUlate
+threadConfigFile=${base_project_dir}/include/common/threads_configuration.hpp
+build_folder=${base_project_dir}/buildIntel_opt
+results_file=${build_folder}/"res.txt"
+time_results_file=${build_folder}/"res2.txt"
+program_folder=${build_folder}/apps/matrixMultX
+executable=MatMulX
+python_script=${base_project_dir}/tools/traceplot.py
+## List of all CU configurations
+#declare -a cu_list=("#define CUS 1" "#define CUS 1, 2" "#define CUS 1, 2, 3" "#define CUS 1, 2, 3, 4" "#define CUS 1, 2, 3, 4, 5" "#define CUS 1, 2, 3, 4, 5, 6" "#define CUS 1, 2, 3, 4, 5, 6, 7" "#define CUS 1, 2, 3, 4, 5, 6, 7, 8" "#define CUS 1, 2, 3, 4, 5, 6, 7, 8, 9" "#define CUS 1, 2, 3, 4, 5, 6, 7, 8, 9, 10" "#define CUS 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11")
+declare -a cu_list=("#define CUS 1, 2, 3, 4, 5, 6, 7" "#define CUS 1, 2, 3, 4, 5, 6, 7, 8" "#define CUS 1, 2, 3, 4, 5, 6, 7, 8, 9" "#define CUS 1, 2, 3, 4, 5, 6, 7, 8, 9, 10" "#define CUS 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11")
+#declare -a cu_list=("#define CUS 1")
+declare -a files_to_exec=("matMul.scm" "matMulGPU.scm")
+
+for val in "${cu_list[@]}"; do
+    echo $val
+    num_cus=${val##* }
+    #Change last line
+    sed -ie '$s/.*//g' $threadConfigFile
+    echo $val >> $threadConfigFile
+    cd $build_folder
+    make -j > /dev/null
+    cd $program_folder
+    #Iterate over codes
+    for file_scm in "${files_to_exec[@]}"; do
+        echo $file_scm
+        # repeat experiments 5 times
+        for reps in `seq 1 5`; do
+            for i in 10 20 30 40 50; do 
+                echo $reps " - " $i
+                exec_time=`./${executable} -M $i -N $i -K $i -i $file_scm | grep "Exec Time" | grep -oh "[0-9.]*"`
+                printf "%s\t%s\t%s\t%s\t%s\n" $execMode $file_scm $num_cus $i $exec_time >> $time_results_file
+            done;
+        done;
+        # python $python_script -i trace.json -so > .tmp.txt
+        # tail -n +2 .tmp.txt > .tmp2.txt
+        # rm .tmp.txt
+        # sed -ie "s/^/$execMode\t$file_scm\t$num_cus\t/" .tmp2.txt
+        # cat .tmp2.txt >> $results_file
+        # rm .tmp2.txt
+    done;
+done;

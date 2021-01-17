@@ -313,9 +313,9 @@ def main():
                         if "hw_counters" in event:
                             for counter, value in event["hw_counters"]:
                                 description += "<br>" + counter + ": " + str(value)
-
-                        tracePloter.addNewPlot(name, prevTime, event["value"] - prevTime, typeEnum.name, description)
-                        stats.addNewStat(name, prevTime, event["value"] - prevTime, typeEnum.name, description)
+                        if (event["value"] - prevTime != 0):
+                            tracePloter.addNewPlot(name, prevTime, event["value"] - prevTime, typeEnum.name, description)
+                            stats.addNewStat(name, prevTime, event["value"] - prevTime, typeEnum.name, description)
                     prevTime = event["value"]
                     prevType = event["type"]
                     prevEvent = event["description"]

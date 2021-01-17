@@ -89,6 +89,9 @@ loop_j:
     LDIMM R64B_7, 0; // Reset inner count C
     ADD R64B_7, R64B_7, R64B_26; // Set to beginning of C in same j
 
+    // Reset iteration counter 
+    LDIMM R64B_2, 0;
+
     JMPLBL loop_k;
 
   after_loop_k:
@@ -110,6 +113,9 @@ loop_j:
   ADD R64B_26, R64B_26, R64B_20; // Move C along j
   LDIMM R64B_7, 0; // Reset inner count C
   ADD R64B_7, R64B_7, R64B_26; // Set to beginning of C at j
+
+  // Reset iteration counter 
+  LDIMM R64B_4, 0;
 
   JMPLBL loop_j;
 after_loop_j:

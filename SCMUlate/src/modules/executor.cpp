@@ -4,7 +4,7 @@ scm::cu_executor_module::cu_executor_module(int CU_ID, control_store_module * co
   cu_executor_id(CU_ID),
   aliveSignal(aliveSig) {
     this->myExecutor = control_store_m->get_executor(execSlotNumber);
-    this->mem_interface_t = new mem_interface_module(upperMem);
+    this->mem_interface_t = new mem_interface_module(upperMem, this);
 }
 
 int
@@ -22,7 +22,7 @@ scm::cu_executor_module::behavior() {
     if (!myExecutor->is_empty()) {
       SCMULATE_INFOMSG(4, "  CUMEM[%d]: Executing instruction ", cu_executor_id);
       scm::decoded_instruction_t * curInstruction = myExecutor->getHead()->first;
-      if (curInstruction->getType() == scm::instType::MEMORY_INST) {
+      if (curInstruction->getType() == scm::instType::MEMORY_INST || curInstruction->getExecCodelet()->isMemoryCodelet()) {
         TIMERS_COUNTERS_GUARD(
           #ifdef PAPI_COUNT
           this->timer_cnt_m->startPAPIcounters(this->cu_timer_name);

@@ -235,6 +235,7 @@ namespace scm {
         // In memory instructions we need to figure out if there is a hazard in the memory
         if (inst->isMemoryInstruction()) {
           memranges_pair * ranges = inst->getMemoryRange();
+          if (ranges->reads.size() != 0 || ranges->writes.size() != 0)
           memCtrl.removeRanges( ranges );
         } 
 

@@ -19,6 +19,7 @@ namespace scm {
   class mem_interface_module{
     private:
       decoded_instruction_t* myInstructionSlot;
+      cu_executor_module * executorModule;
       l2_memory_t memorySpace;
 
       // This should only be called by this unit
@@ -28,7 +29,7 @@ namespace scm {
 
     public: 
       mem_interface_module() = delete;
-      mem_interface_module(unsigned char * const memory);
+      mem_interface_module(unsigned char * const memory, cu_executor_module * execMod);
       inline l2_memory_t getAddress(uint64_t address) { return this->memorySpace + address; }
       inline l2_memory_t getAddress(l2_memory_t address) { return this->memorySpace + reinterpret_cast<uint64_t> (address); }
 
@@ -41,6 +42,8 @@ namespace scm {
       }
 
       int behavior();
+
+      void executeMemoryCodelet();
 
       /** \brief logic to execute a memory instruction
        *

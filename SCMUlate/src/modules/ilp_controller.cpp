@@ -365,7 +365,8 @@ namespace scm {
         // In memory instructions we need to remove range from memory
         if (inst->isMemoryInstruction()) {
           memranges_pair * ranges = inst->getMemoryRange();
-          memCtrl.removeRanges( ranges );
+          if (ranges->reads.size() != 0 || ranges->writes.size() != 0)
+            memCtrl.removeRanges( ranges );
         }
         
         std::unordered_map<decoded_reg_t, reg_state>* inst_operand_dir = inst->getOperandsDirs();

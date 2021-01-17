@@ -1,20 +1,31 @@
 #include "memory_interface.hpp"
 
-scm::mem_interface_module::mem_interface_module(l2_memory_t const memory):
+scm::mem_interface_module::mem_interface_module(l2_memory_t const memory, cu_executor_module * execMod):
   myInstructionSlot(nullptr),
+  executorModule(execMod),
   memorySpace(memory)
   { }
 
 int
 scm::mem_interface_module::behavior() {
   if (!this->isInstSlotEmpty()) {
-    executeMemoryInstructions();
+    if (myInstructionSlot->getType() == MEMORY_INST)
+      executeMemoryInstructions();
+    else 
+      executeMemoryCodelet();
     emptyInstSlot();
   }
   return 0;
 }
- 
+
 void
+scm::mem_interface_module::executeMemoryCodelet() {
+    scm::codelet * curCodelet = myInstructionSlot->getExecCodelet();
+    curCodelet->setExecutor(this->executorModule);
+    curCodelet->implementation();
+}
+void
+
 scm::mem_interface_module::executeMemoryInstructions() {
   /////////////////////////////////////////////////////
   ///// LOGIC FOR THE LDIMM INSTRUCTION

@@ -96,18 +96,34 @@ namespace scm {
       }
       void inline removeRanges(memranges_pair * out_ranges) {
         SCMULATE_INFOMSG(4, "Removing ranges");
-         memranges_pair res_ranges;
-         std::set_difference( std::make_move_iterator(this->ranges_read.begin()), 
-                              std::make_move_iterator(this->ranges_read.end()), 
-                              std::make_move_iterator(out_ranges->reads.begin()), std::make_move_iterator(out_ranges->reads.end()),
-                              std::inserter(res_ranges.reads, res_ranges.reads.begin()));
-        ranges_read.swap(res_ranges.reads);
-        std::set_difference( std::make_move_iterator(this->ranges_write.begin()), 
-                    std::make_move_iterator(this->ranges_write.end()), 
-                    std::make_move_iterator(out_ranges->writes.begin()), std::make_move_iterator(out_ranges->writes.end()),
-                    std::inserter(res_ranges.writes, res_ranges.writes.begin()));
-        ranges_write.swap(res_ranges.writes);
+        auto it_out = out_ranges->reads.begin();
+        auto it = std::lower_bound(this->ranges_read.begin(), this->ranges_read.end(), *it_out);
+        uint64_t firstsize = this->ranges_read.size();
+        while (it != this->ranges_read.end() && it_out != out_ranges->reads.end()) {
+            if (*it == *it_out) {
+              it = this->ranges_read.erase(it);
+              it_out++;
+            } else{
+                it++;
+            }
+        }
+        uint64_t finalsize = this->ranges_read.size(); 
 
+        SCMULATE_ERROR_IF(0, finalsize != firstsize - out_ranges->reads.size(), "Error deleting read ranges");
+
+        firstsize = this->ranges_write.size();
+        it_out = out_ranges->writes.begin();
+        it = std::lower_bound(this->ranges_write.begin(), this->ranges_write.end(), *it_out);
+        while (it != this->ranges_write.end() && it_out != out_ranges->writes.end()) {
+            if (*it == *it_out) {
+              it = this->ranges_write.erase(it);
+              it_out++;
+            } else{
+                it++;
+            }
+        }
+        finalsize = this->ranges_write.size(); 
+        SCMULATE_ERROR_IF(0, finalsize != firstsize - out_ranges->writes.size(), "Error deleting write ranges");
       }
       bool inline itOverlaps(memranges_pair const * in_ranges) const{
         // We compare in_writes with writes, in_writes with reads, 
@@ -236,7 +252,7 @@ namespace scm {
         if (inst->isMemoryInstruction()) {
           memranges_pair * ranges = inst->getMemoryRange();
           if (ranges->reads.size() != 0 || ranges->writes.size() != 0)
-          memCtrl.removeRanges( ranges );
+            memCtrl.removeRanges( ranges ); 
         } 
 
         if (inst->getOp1().type == operand_t::REGISTER) {

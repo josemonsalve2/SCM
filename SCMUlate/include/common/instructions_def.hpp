@@ -24,7 +24,7 @@
 #define REGISTER_SPLIT_REGEX "R([BbLl0-9]+)_([0-9]+)"
 #define INMIDIATE_REGEX "[-]?[0-9]+"
 #define LABEL_REGEX "([a-zA-Z][a-zA-Z0-9_]*)"
-#define COMMENT_REGEX "([ ]*//.*)"
+#define COMMENT_REGEX "([ ]*//.*|^[ ]+$)"
 
 #define DEF_INST(opcode, name, regExp, numOp, opInOut) {opcode, #name, regExp, numOp, opInOut}
 #define NUM_OF_INST(a) sizeof(a)/sizeof(inst_def_t)

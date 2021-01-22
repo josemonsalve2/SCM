@@ -153,7 +153,7 @@ namespace scm {
 
           // Case I only have one element, or the incoming range is lower than
           // the minimum element
-          if (prev_eq_element != ranges->begin())
+          if (prev_eq_element != ranges->begin() && *prev_eq_element != incoming_range)
             prev_eq_element = std::prev(prev_eq_element);
           else if (incoming_range < *prev_eq_element)
             prev_eq_element = ranges->end();

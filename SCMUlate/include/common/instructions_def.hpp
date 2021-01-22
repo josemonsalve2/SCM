@@ -143,6 +143,10 @@ namespace scm {
     {
       return (this->memoryAddress == other.memoryAddress && this->size == other.size);
     }
+    inline bool operator!=(const memory_location &other) const
+    {
+      return !(*this == other);
+    }
   };
   
   typedef struct {std::set<memory_location> reads; std::set<memory_location> writes;} memranges_pair;

@@ -50,7 +50,6 @@ void alg_matmul2D_serial(int m, int n, int p, double* a, double* b, double* c) {
    int i,j,k;
    for (i=0; i<m; i=i+1){
       for (j=0; j<n; j=j+1){
-         c[i*n + j]=0.;
          for (k=0; k<p; k=k+1){
             c[i*n + j]=(c[i*n + j])+((a[i*p + k])*(b[k*n + j]));
          }
@@ -161,7 +160,7 @@ int main (int argc, char * argv[]) {
 
   int errors = 0;
   for (long unsigned i = 0; i < NumElements_C; ++i) {
-    if (C[i] - testC[i] > 0.00001) {
+    if (abs(C[i] - testC[i]) > 0.00001) {
       success = false;
       SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %f  vs testC[i] = %f", i, C[i], testC[i]);
       if (++errors > 256) break;

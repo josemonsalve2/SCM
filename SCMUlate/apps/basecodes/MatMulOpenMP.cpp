@@ -4,12 +4,6 @@
 #include <omp.h>
 #include <math.h>
 
-#ifdef MKL
-#include <mkl.h>
-#endif
-#ifdef BLAS
-#include <cblas.h>
-#endif
 
 // Reps
 uint32_t MDIM;
@@ -32,7 +26,8 @@ static struct {
   uint32_t NDIM_OPT;
   uint32_t KDIM_OPT;
   uint64_t numThreads;
-  } program_options;
+  bool parallel;
+} program_options;
 
 
  // 4 GB
@@ -42,17 +37,48 @@ void parseProgramOptions(int argc, char* argv[]);
 
 void initMatrix (double * mat, int elements, int val = 0) {
   for (int i = 0; i < elements; i++)
-    mat[i] = ((double)(i*val))*0.0001;
+    mat[i] = (i)*val;
 } 
+
+
+void alg_matmul2D_parallel(int m, int n, int p, double* a, double* b, double* c)
+{
+#pragma omp parallel shared(a,b,c) num_threads(program_options.numThreads)
+   {
+#pragma omp for schedule(static) collapse(2) 
+   for (int i=0; i<m; i=i+1) {
+      for (int j=0; j<n; j=j+1) {
+         c[i*n + j]=0.;
+         for (int k=0; k<p; k=k+1) {
+            c[i*n + j]=(c[i*n + j])+((a[i*p + k])*(b[k*n + j]));
+         }
+      }
+   }
+   }
+}
+
+void alg_matmul2D_serial(int m, int n, int p, double* a, double* b, double* c)
+{
+   int i,j,k;
+   for (i=0; i<m; i=i+1){
+      for (j=0; j<n; j=j+1){
+         c[i*n + j]=0.;
+         for (k=0; k<p; k=k+1){
+            c[i*n + j]=(c[i*n + j])+((a[i*p + k])*(b[k*n + j]));
+         }
+      }
+   }
+}
 
 
 
 int main (int argc, char * argv[]) {
+  bool parallel;
   parseProgramOptions(argc, argv);
-
   MDIM = program_options.MDIM_OPT;
   NDIM = program_options.NDIM_OPT;
   KDIM = program_options.KDIM_OPT;
+  parallel = program_options.parallel;
 
   unsigned char * memory;
   try
@@ -83,13 +109,11 @@ int main (int argc, char * argv[]) {
 
 
   std::chrono::time_point<std::chrono::high_resolution_clock> initTimer =  std::chrono::high_resolution_clock::now();
-#ifndef NOBLAS
-
-#if MKL
-  mkl_set_num_threads(program_options.numThreads);
-#endif
-  cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, MDIM*TILE_DIM, NDIM*TILE_DIM, KDIM*TILE_DIM, 1, A, TILE_DIM*KDIM, B, TILE_DIM*NDIM, 1, C, TILE_DIM*NDIM);
-#endif
+  if (parallel) {
+      alg_matmul2D_parallel(MDIM*TILE_DIM, NDIM*TILE_DIM, KDIM*TILE_DIM, A, B, C);
+  } else {
+      alg_matmul2D_serial(MDIM*TILE_DIM, NDIM*TILE_DIM, KDIM*TILE_DIM, A, B, C);
+  }
   // aCod.implementation();
   std::chrono::time_point<std::chrono::high_resolution_clock> endTimer = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> diff = endTimer - initTimer;
@@ -107,6 +131,7 @@ void parseProgramOptions(int argc, char* argv[]) {
   program_options.NDIM_OPT = 1;
   program_options.KDIM_OPT = 1;
   program_options.numThreads = 1;
+  program_options.parallel = false;
 
   for (int i = 1; i + 1 < argc; i++) {
     if (std::string(argv[i]) == std::string("-M")) {
@@ -119,6 +144,7 @@ void parseProgramOptions(int argc, char* argv[]) {
       program_options.KDIM_OPT = std::atoi(argv[++i]);
     }
     if (std::string(argv[i]) == std::string("-p")) {
+      program_options.parallel = true;
       program_options.numThreads = std::atoi(argv[++i]);
     }
   }

@@ -46,15 +46,14 @@ void parseProgramOptions(int argc, char* argv[]);
 
 void initMatrix (double * mat, int elements, int val = 0) {
   for (int i = 0; i < elements; i++)
-    mat[i] = (i)*val;
+    mat[i] = ((double)(i)*val)*0.00003;
 }
 
 void alg_matmul2D_serial(int m, int n, int p, double* a, double* b, double* c) {
    int i,j,k;
-   for (i=0; i<m; i=i+1){
-      for (j=0; j<n; j=j+1){
-         c[i*n + j]=0.;
-         for (k=0; k<p; k=k+1){
+   for (i=0; i<m; i=i+1) {
+      for (j=0; j<n; j=j+1) {
+         for (k=0; k<p; k=k+1) {
             c[i*n + j]=(c[i*n + j])+((a[i*p + k])*(b[k*n + j]));
          }
       }
@@ -152,6 +151,12 @@ int main (int argc, char * argv[]) {
   *Off_b = NDIM*TILE_DIM;
   *Off_c = NDIM*TILE_DIM;
   
+  #ifndef NOBLAS
+    std::cout << "Using BLAS"<< std::endl;
+  #else
+    std::cout << "Not using BLAS"<< std::endl;
+  #endif
+  
   
   std::cout << "MDIM = " << MDIM << std::endl
             << "NDIM = " << NDIM << std::endl
@@ -172,7 +177,12 @@ int main (int argc, char * argv[]) {
             << "*Off_cj = " << *Off_cj << std::endl
             << "*Off_a = " << *Off_a << std::endl
             << "*Off_b = " << *Off_b << std::endl
-            << "*Off_c = " << *Off_c << std::endl;
+            << "*Off_c = " << *Off_c << std::endl
+            << "Num_elements_A = " << NumElements_A << std::endl
+            << "Num_elements_B = " << NumElements_B << std::endl
+            << "Num_elements_C = " << NumElements_C << std::endl;
+
+
 
   double *A = reinterpret_cast<double*> (&memory[A_offset]); 
   double *B = reinterpret_cast<double*> (&memory[B_offset]); 
@@ -234,7 +244,7 @@ int main (int argc, char * argv[]) {
 
   int errors = 0;
   for (long unsigned i = 0; i < NumElements_C; ++i) {
-    if (C[i] - testC[i] > 0.00001) {
+    if (abs(C[i] - testC[i]) > 0.00001) {
       success = false;
       SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %f  vs testC[i] = %f", i, C[i], testC[i]);
       if (++errors > 1) break;

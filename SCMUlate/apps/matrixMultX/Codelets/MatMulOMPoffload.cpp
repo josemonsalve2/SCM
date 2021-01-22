@@ -5,6 +5,7 @@
 #include "mkl.h"
 #include "mkl_cblas.h"
 #include "mkl_omp_offload.h"
+#endif
 
 #pragma omp requires unified_shared_memory
 
@@ -47,7 +48,8 @@ IMPLEMENT_CODELET(MatMultGPU_2048L,
   double *B = reinterpret_cast<double*>(reg3);
   double *C = reinterpret_cast<double*>(reg1);
 
-    
+#ifndef NOBLAS
+#if MKL
 _Pragma("omp target data map(to:A[0:TILE_DIM*TILE_DIM],B[0:TILE_DIM*TILE_DIM]) map(tofrom:C[0:TILE_DIM*TILE_DIM])")
     {
 
@@ -57,7 +59,25 @@ _Pragma("omp target variant dispatch use_device_ptr(A, B, C)")
           cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM, 1, A, TILE_DIM, B, TILE_DIM, 1, C, TILE_DIM);
         }
     }
-
+#endif
+#else
+_Pragma("omp target data map(to:A[0:TILE_DIM*TILE_DIM],B[0:TILE_DIM*TILE_DIM]) map(tofrom:C[0:TILE_DIM*TILE_DIM])")
+    {
+_Pragma("omp target teams distribute parallel for collapse(2)")
+      {
+        for (uint32_t i = 0; i < TILE_DIM; ++i) {
+          for (uint32_t j = 0; j < TILE_DIM; ++j) {
+            double res = 0;
+            _Pragma("omp simd reduction(+:res)")
+            for (uint32_t k = 0; k < TILE_DIM; ++k) {
+              res += A[i*TILE_DIM + k]*B[k*TILE_DIM + j];
+            }
+            C[i*TILE_DIM + j] += res;
+          }
+        }
+      }
+    }
+#endif
 );
 
 MEMRANGE_CODELET(StoreSqTileGPU_2048L, 
@@ -89,5 +109,3 @@ IMPLEMENT_CODELET(StoreSqTileGPU_2048L,
     std::memcpy(addressStart, sourceReg+TILE_DIM*i++, it->size);
   }
 );
-
-#endif

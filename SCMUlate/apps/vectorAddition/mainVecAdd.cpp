@@ -51,7 +51,7 @@ int main (int argc, char * argv[]) {
   scm::scm_machine * myMachine;
   if (program_options.fileInput) {
     SCMULATE_INFOMSG(0, "Reading program file %s", program_options.fileName);
-    myMachine = new scm::scm_machine(program_options.fileName, memory, scm::SEQUENTIAL);
+    myMachine = new scm::scm_machine(program_options.fileName, memory, scm::OOO);
   } else {
     std::cout << "Need to give a file to read. use -i <filename>" << std::endl;
     return 1;

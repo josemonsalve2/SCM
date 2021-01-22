@@ -54,9 +54,8 @@ IMPLEMENT_CODELET(MatMult_2048L,
 #else
   for (int i=0; i<TILE_DIM; i=i+1){
     for (int j=0; j<TILE_DIM; j=j+1){
-        C[i*TILE_DIM + j]=0.;
-        for (int k=0; k<TILE_DIM; k=k+1){
-          C[i*TILE_DIM + j]=(C[i*TILE_DIM + j])+((A[i*TILE_DIM + k])*(B[k*TILE_DIM + j]));
+        for (int k=0; k<TILE_DIM; k=k+1) {
+          C[i*TILE_DIM + j]+=((A[i*TILE_DIM + k])*(B[k*TILE_DIM + j]));
         }
     }
    }

@@ -1,5 +1,7 @@
 configure_file(matMul.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 configure_file(matMulGPU.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+configure_file(matMulj_k_i.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+configure_file(matMulj_k_iGPU.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 configure_file(matMulUnrroli.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 
 if (NOT DEFINED NOBLAS)

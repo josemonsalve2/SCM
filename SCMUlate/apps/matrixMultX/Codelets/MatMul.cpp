@@ -53,12 +53,11 @@ IMPLEMENT_CODELET(MatMult_2048L,
 #ifndef NOBLAS
   cblas_dgemm(CblasRowMajor, CblasNoTrans, CblasNoTrans, TILE_DIM, TILE_DIM, TILE_DIM, 1, A, TILE_DIM, B, TILE_DIM, 1, C, TILE_DIM);
 #else
-  for (int i=0; i<TILE_DIM; i=i+1){
-    for (int j=0; j<TILE_DIM; j=j+1){
-        C[i*TILE_DIM + j]=0.;
-        for (int k=0; k<TILE_DIM; k=k+1){
-          C[i*TILE_DIM + j]=(C[i*TILE_DIM + j])+((A[i*TILE_DIM + k])*(B[k*TILE_DIM + j]));
-        }
+  for (int i=0; i<TILE_DIM; i=i+1) {
+    for (int k=0; k<TILE_DIM; k=k+1) {
+      for (int j=0; j<TILE_DIM; j=j+1) {
+        C[i*TILE_DIM + j] += ((A[i*TILE_DIM + k])*(B[k*TILE_DIM + j]));
+      }
     }
    }
 #endif

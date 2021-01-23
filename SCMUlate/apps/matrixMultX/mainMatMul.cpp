@@ -98,7 +98,6 @@ int main (int argc, char * argv[]) {
   vars.getParamAs(1) = reinterpret_cast<unsigned char*>(warmA); // Getting register 1
   vars.getParamAs(2) = reinterpret_cast<unsigned char*>(warmB); // Getting register 2
   vars.getParamAs(3) = reinterpret_cast<unsigned char*>(warmC); // Getting register 3
-#ifdef MKL
 #ifdef DECLARE_VARIANT
   // OMP TARGET WARM UP
   int isDevice= -1;
@@ -107,7 +106,6 @@ int main (int argc, char * argv[]) {
   printf("Is running in the %s\n", (isDevice? "Host": "Device"));
   scm::_cod_MatMultGPU_2048L warmCodGPU(vars);
   warmCodGPU.implementation();
-#endif
 #endif
   scm::_cod_MatMult_2048L warmCod(vars);
   warmCod.implementation();

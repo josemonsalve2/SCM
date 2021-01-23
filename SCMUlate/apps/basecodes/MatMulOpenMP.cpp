@@ -48,7 +48,6 @@ void alg_matmul2D_parallel(int m, int n, int p, double* a, double* b, double* c)
 #pragma omp for schedule(static) collapse(2) 
    for (int i=0; i<m; i=i+1) {
       for (int j=0; j<n; j=j+1) {
-         c[i*n + j]=0.;
          for (int k=0; k<p; k=k+1) {
             c[i*n + j]=(c[i*n + j])+((a[i*p + k])*(b[k*n + j]));
          }
@@ -62,7 +61,6 @@ void alg_matmul2D_serial(int m, int n, int p, double* a, double* b, double* c)
    int i,j,k;
    for (i=0; i<m; i=i+1){
       for (j=0; j<n; j=j+1){
-         c[i*n + j]=0.;
          for (k=0; k<p; k=k+1){
             c[i*n + j]=(c[i*n + j])+((a[i*p + k])*(b[k*n + j]));
          }

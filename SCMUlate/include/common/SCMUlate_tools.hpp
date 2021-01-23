@@ -12,6 +12,9 @@
 #include "system_config.hpp"
 #include "assert.h"
 
+#ifdef DECLARE_VARIANT
+#pragma omp requires unified_shared_memory
+#endif
 typedef unsigned char * l2_memory_t;
 
 #define __FILENAME__ (strrchr(__FILE__, '/') ? strrchr(__FILE__, '/') + 1 : __FILE__)
@@ -19,7 +22,7 @@ typedef unsigned char * l2_memory_t;
 #define VERBOSE_MODE -1
 #endif
 
-#if PROFILER_INSTRUMENT
+#ifdef PROFILER_INSTRUMENT
   #if __INTEL_LLVM_COMPILER
     #include <ittnotify.h>
     #define ITT_HANDLE_NAME(name) __scmulate_itt_handle_ ## name

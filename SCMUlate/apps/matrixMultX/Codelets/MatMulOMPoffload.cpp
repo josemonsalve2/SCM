@@ -7,7 +7,7 @@
 #include "mkl_omp_offload.h"
 #endif
 
-#pragma omp requires unified_shared_memory
+//#pragma omp requires unified_shared_memory
 
 #define TILE_DIM 128
 

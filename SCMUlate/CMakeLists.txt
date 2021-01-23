@@ -69,7 +69,7 @@ if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
   message("Identified Clang family as ${CLANG_CXX_FAMILY}")
   # using Clang
   if ("${CLANG_CXX_FAMILY}" STREQUAL "icpx")
-    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fiopenmp") #-fopenmp-targets=spir64 -DDECLARE_VARIANT=1
+    set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -fiopenmp -fopenmp-targets=spir64 -DDECLARE_VARIANT=1") 
     if (PROFILER_INSTRUMENT)
       link_directories("/opt/intel/oneapi/vtune/latest/lib64")
       link_directories("/opt/intel/oneapi/vtune/latest/sdk/lib64")

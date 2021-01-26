@@ -69,7 +69,7 @@ namespace scm {
       // Get constant reference parameter
       template <class T = unsigned char *> 
       T const & getParamAs(int paramNum) const {
-        return reinterpret_cast<T&>(params[paramNum]);
+        return reinterpret_cast<T&>(params[paramNum-1]);
       }
 
       // Get constant reference parameter
@@ -79,7 +79,9 @@ namespace scm {
         // Pointer to certain values is not permited. So we take the paramNum
         // position and we cast it to a pointer of the type. Then we get the first
         // element. Be careful if the size of T is larger than sizeof (unsigned char *)
-        return reinterpret_cast<T*>(params+paramNum)[0];
+        unsigned char * ret = params[paramNum-1];
+
+        return reinterpret_cast<T&>(ret);
       }
 
       void * getParams() { return this->params; }

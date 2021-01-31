@@ -13,15 +13,16 @@
 
 MEMRANGE_CODELET(LoadSqTileGPU_2048L, 
   // Obtaining the parameters
-  unsigned char *reg2 = this->getParams().getParamAs(2); // Getting register 2
-  unsigned char *reg3 = this->getParams().getParamAs(3); // Getting register 3
-  uint64_t address = reinterpret_cast<uint8_t*>(reg2)[0];
-    uint64_t ldistance = reinterpret_cast<uint8_t*>(reg3)[0];
+  uint8_t* address_reg = this->getParams().getParamValueAs<uint8_t*>(2);
+  uint8_t* ldistance_reg = this->getParams().getParamValueAs<uint8_t*>(3);
+
+  uint64_t address = address_reg[0];
+    uint64_t ldistance = ldistance_reg[0];
   for (int i = 1; i < 8; i++) {
     address <<= 8;
-    address += static_cast<uint8_t>(reg2[i]);
+    address += address_reg[i];
     ldistance <<= 8;
-    ldistance += static_cast<uint8_t>(reg3[i]);
+    ldistance += ldistance_reg[i];
   }
   // Add the ranges
   for (uint64_t i = 0; i < TILE_DIM; i++) {
@@ -30,10 +31,10 @@ MEMRANGE_CODELET(LoadSqTileGPU_2048L,
 );
 
 IMPLEMENT_CODELET(LoadSqTileGPU_2048L,
-  unsigned char *reg1 = this->getParams().getParamAs(1); // Getting register 1
-  double *destReg = reinterpret_cast<double*>(reg1);
+  double *destReg = this->getParams().getParamValueAs<double*>(1);
+
   int i = 0;
-for (auto it = memoryRanges->reads.begin(); it != memoryRanges->reads.end(); it++) {
+  for (auto it = memoryRanges->reads.begin(); it != memoryRanges->reads.end(); it++) {
     double *addressStart = reinterpret_cast<double *> (getAddress(it->memoryAddress)); // Address L2 memory to a pointer of the runtime
     std::memcpy(destReg+TILE_DIM*i++, addressStart, it->size);
   }
@@ -41,12 +42,9 @@ for (auto it = memoryRanges->reads.begin(); it != memoryRanges->reads.end(); it+
 
 IMPLEMENT_CODELET(MatMultGPU_2048L,
   // Obtaining the parameters
-  unsigned char *reg1 = this->getParams().getParamAs(1); // Getting register 1
-  unsigned char *reg2 = this->getParams().getParamAs(2); // Getting register 2
-  unsigned char *reg3 = this->getParams().getParamAs(3); // Getting register 3
-  double *A = reinterpret_cast<double*>(reg2);
-  double *B = reinterpret_cast<double*>(reg3);
-  double *C = reinterpret_cast<double*>(reg1);
+  double *A = this->getParams().getParamValueAs<double*>(2);
+  double *B = this->getParams().getParamValueAs<double*>(3);
+  double *C = this->getParams().getParamValueAs<double*>(1);
 
 #ifndef NOBLAS
 #if MKL
@@ -82,16 +80,16 @@ _Pragma("omp target teams distribute parallel for collapse(2)")
 
 MEMRANGE_CODELET(StoreSqTileGPU_2048L, 
   // Obtaining the parameters
-  unsigned char *reg2 = this->getParams().getParamAs(2); // Getting register 2
-  unsigned char *reg3 = this->getParams().getParamAs(3); // Getting register 3
-  uint64_t address = reinterpret_cast<uint8_t*>(reg2)[0];
-  uint64_t ldistance = reinterpret_cast<uint8_t*>(reg3)[0];
+  uint8_t* address_reg = this->getParams().getParamValueAs<uint8_t*>(2);
+  uint8_t* ldistance_reg = this->getParams().getParamValueAs<uint8_t*>(3);
 
+  uint64_t address = address_reg[0];
+  uint64_t ldistance = ldistance_reg[0];
   for (int i = 1; i < 8; i++) {
     address <<= 8;
-    address += static_cast<uint8_t>(reg2[i]);
+    address += address_reg[i];
     ldistance <<= 8;
-    ldistance += static_cast<uint8_t>(reg3[i]);
+    ldistance += ldistance_reg[i];
   }
   for (uint64_t i = 0; i < TILE_DIM; i++) {
     this->addWriteMemRange(address+ldistance*sizeof(double)*i, TILE_DIM*sizeof(double));
@@ -100,8 +98,7 @@ MEMRANGE_CODELET(StoreSqTileGPU_2048L,
 
 IMPLEMENT_CODELET(StoreSqTileGPU_2048L,
   // Obtaining the parameters
-  unsigned char *reg1 = this->getParams().getParamAs(1); // Getting register 1
-  double *sourceReg = reinterpret_cast<double*>(reg1);
+  double *sourceReg = this->getParams().getParamValueAs<double*>(1);
 
   int i = 0;
   for (auto it = memoryRanges->writes.begin(); it != memoryRanges->writes.end(); it++) {

@@ -5,18 +5,24 @@
 #include <cstring>
 #include <iostream>
 
-// Reps
+// Repetitions in L1
 #define REPS 4000
-//B offset = sizeRegister*400 = 52428800
-#define B_offset (64*2048*REPS)
-//C offset = sizeRegister*400*2 = 104857600
-#define C_offset (64*2048*REPS*2)
-#define NumElements ((64*2048*REPS)/sizeof(double))
+// Size of L1 register used
+#define REG2048L 64*2048
+// Size of each vector sizeRegister*4000 = 524288000 bytes
+#define SIZE_VECT ((REG2048L*REPS)/sizeof(double))
+
 
 static struct {
   bool fileInput = false;
   char * fileName;
 } program_options;
+
+struct  __attribute__((packed)) l2_memory {
+  double A[SIZE_VECT];
+  double B[SIZE_VECT];
+  double C[SIZE_VECT];
+};
 
  // 4 GB
 #define SIZEOFMEM (unsigned long)4e9 
@@ -27,23 +33,14 @@ void parseProgramOptions(int argc, char* argv[]);
 int SCMUlate();
 
 int main (int argc, char * argv[]) {
-  unsigned char * memory;
+  l2_memory * memory = new l2_memory;
   parseProgramOptions(argc, argv);
-  try
-  {
-    memory = new unsigned char[SIZEOFMEM];
-  }
-  catch (int e)
-  {
-    std::cout << "An exception occurred. Exception Nr. " << e << '\n';
-    return 1;
-  }
   
-  double *A = reinterpret_cast<double*> (memory); 
-  double *B = reinterpret_cast<double*> (&memory[B_offset]); 
-  double *C = reinterpret_cast<double*> (&memory[C_offset]); 
+  double *A = memory->A; 
+  double *B = memory->B; 
+  double *C = memory->C; 
 
-  for (unsigned long i = 0; i < NumElements; ++i) {
+  for (unsigned long i = 0; i < SIZE_VECT; ++i) {
       A[i] = i;
       B[i] = i;
   }
@@ -51,7 +48,7 @@ int main (int argc, char * argv[]) {
   scm::scm_machine * myMachine;
   if (program_options.fileInput) {
     SCMULATE_INFOMSG(0, "Reading program file %s", program_options.fileName);
-    myMachine = new scm::scm_machine(program_options.fileName, memory, scm::OOO);
+    myMachine = new scm::scm_machine(program_options.fileName, (unsigned char *)memory, scm::OOO);
   } else {
     std::cout << "Need to give a file to read. use -i <filename>" << std::endl;
     return 1;
@@ -66,7 +63,7 @@ int main (int argc, char * argv[]) {
 
   // Checking result
   bool success = true;
-  for (long unsigned i = 0; i < NumElements; ++i) {
+  for (long unsigned i = 0; i < SIZE_VECT; ++i) {
     if (C[i] != i+i) {
       success = false;
       printf("RESULT ERROR in i = %ld, value C[i] = %f\n", i, C[i]);
@@ -77,7 +74,7 @@ int main (int argc, char * argv[]) {
   if (success)
     printf("SUCCESS!!!\n");
   delete myMachine;
-  delete[] memory;
+  delete memory;
   return 0;
 }
 

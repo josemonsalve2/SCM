@@ -11,14 +11,14 @@
 
 MEMRANGE_CODELET(LoadSqTile_2048L, 
   // Obtaining the parameters
-  unsigned char *reg2 = this->getParams().getParamAs(2); // Getting register 2
-  unsigned char *reg3 = this->getParams().getParamAs(3); // Getting register 3
-  uint64_t address = reinterpret_cast<uint8_t*>(reg2)[0];
-  uint64_t ldistance = reinterpret_cast<uint64_t>(reg3);
+  uint8_t* address_reg = this->getParams().getParamValueAs<uint8_t*>(2);
+  uint64_t ldistance = this->getParams().getParamValueAs<uint64_t>(3);
+
+  uint64_t address = address_reg[0];
   ldistance *= sizeof(double);
   for (int i = 1; i < 8; i++) {
     address <<= 8;
-    address += static_cast<uint8_t>(reg2[i]);
+    address += address_reg[i];
   }
   // Add the ranges
   for (uint64_t i = 0; i < TILE_DIM; i++) {
@@ -26,8 +26,7 @@ MEMRANGE_CODELET(LoadSqTile_2048L,
   }
 );
 IMPLEMENT_CODELET(LoadSqTile_2048L,
-  unsigned char *reg1 = this->getParams().getParamAs(1); // Getting register 1
-  double *destReg = reinterpret_cast<double*>(reg1);
+  double *destReg = this->getParams().getParamValueAs<double*>(1);
   int i = 0;
   for (auto it = memoryRanges->reads.begin(); it != memoryRanges->reads.end(); it++) {
     double *addressStart = reinterpret_cast<double *> (getAddress(it->memoryAddress)); // Address L2 memory to a pointer of the runtime
@@ -36,13 +35,9 @@ IMPLEMENT_CODELET(LoadSqTile_2048L,
 );
 
 IMPLEMENT_CODELET(MatMult_2048L,
-  // Obtaining the parameters
-  unsigned char *reg1 = this->getParams().getParamAs(1); // Getting register 1
-  unsigned char *reg2 = this->getParams().getParamAs(2); // Getting register 2
-  unsigned char *reg3 = this->getParams().getParamAs(3); // Getting register 3
-  double *A = reinterpret_cast<double*>(reg2);
-  double *B = reinterpret_cast<double*>(reg3);
-  double *C = reinterpret_cast<double*>(reg1);
+  double *A = this->getParams().getParamValueAs<double*>(2);
+  double *B = this->getParams().getParamValueAs<double*>(3);
+  double *C = this->getParams().getParamValueAs<double*>(1);
 
   // for (int i = 0; i < TILE_DIM; i++)
   //   for (int j = 0; j < TILE_DIM; j++)
@@ -64,14 +59,14 @@ IMPLEMENT_CODELET(MatMult_2048L,
 
 MEMRANGE_CODELET(StoreSqTile_2048L, 
   // Obtaining the parameters
-  unsigned char *reg2 = this->getParams().getParamAs(2); // Getting register 2
-  unsigned char *reg3 = this->getParams().getParamAs(3); // Getting register 3
-  uint64_t address = reinterpret_cast<uint8_t*>(reg2)[0];
-  uint64_t ldistance = reinterpret_cast<uint64_t>(reg3);
+  uint8_t* address_reg = this->getParams().getParamValueAs<uint8_t*>(2);
+  uint64_t ldistance = this->getParams().getParamValueAs<uint64_t>(3);
+
+  uint64_t address = address_reg[0];
   ldistance *= sizeof(double);
   for (int i = 1; i < 8; i++) {
     address <<= 8;
-    address += static_cast<uint8_t>(reg2[i]);
+    address += address_reg[i];
   }
   for (uint64_t i = 0; i < TILE_DIM; i++) {
     this->addWriteMemRange(address+ldistance*i, TILE_DIM*sizeof(double));
@@ -80,8 +75,7 @@ MEMRANGE_CODELET(StoreSqTile_2048L,
 
 IMPLEMENT_CODELET(StoreSqTile_2048L,
   // Obtaining the parameters
-  unsigned char *reg1 = this->getParams().getParamAs(1); // Getting register 1
-  double *sourceReg = reinterpret_cast<double*>(reg1);
+  double *sourceReg = this->getParams().getParamValueAs<double*>(1);
 
   int i = 0;
   for (auto it = memoryRanges->writes.begin(); it != memoryRanges->writes.end(); it++) {

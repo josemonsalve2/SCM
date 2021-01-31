@@ -307,7 +307,6 @@ def main():
                     prevEvent = event["description"]
                 else:
                     typeEnum = getEnumPerType(counter_t, int(prevType))
-                    prevTypeEnum = getEnumPerType(counter_t, int(prevType))
                     if (typeEnum.name[-4:] != "IDLE" and typeEnum.name[-3:] != "END" and typeEnum.name[-5:] != "START"):
                         description = prevEvent
                         if "hw_counters" in event:

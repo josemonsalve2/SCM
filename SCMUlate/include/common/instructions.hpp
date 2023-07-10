@@ -17,15 +17,16 @@
  *
  */
 
-#include <string>
-#include <regex>
-#include <iostream>
-#include "codelet.hpp"
 #include "SCMUlate_tools.hpp"
-#include "stringHelper.hpp"
-#include "register.hpp"
+#include "codelet.hpp"
 #include "instructions_def.hpp"
+#include "register.hpp"
+#include "stringHelper.hpp"
+#include <iostream>
+#include <regex>
+#include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace scm {
   // circular reference
@@ -230,9 +231,18 @@ namespace scm {
   // helps the fetch decode determine if the instruction is ready or not for execution
   // The ilp_controller helps the fetch-decode unit to change this state.
   enum instruction_state {
-    WAITING, READY, EXECUTING, EXECUTION_DONE, DECOMMISSION, STALL
+    WAITING,
+    READY,
+    READY_DUP,
+    EXECUTING,
+    EXECUTING_DUP,
+    EXECUTION_DONE,
+    EXECUTION_DONE_DUP,
+    DECOMMISSION,
+    STALL
   };
-  typedef std::pair<decoded_instruction_t*, instruction_state> instruction_state_pair; 
+  typedef std::pair<decoded_instruction_t*, instruction_state> instruction_state_pair;
+  typedef std::vector<instruction_state_pair *> dupCodeletStates;
 
   class instructions {
     private:

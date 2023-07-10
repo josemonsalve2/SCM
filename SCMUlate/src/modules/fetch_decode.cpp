@@ -2,21 +2,20 @@
 #include <string>
 #include <vector>
 
-scm::fetch_decode_module::fetch_decode_module(inst_mem_module *const inst_mem, 
-                                              control_store_module *const control_store_m, 
-                                              bool *const aliveSig, 
-                                              ILP_MODES ilp_mode) : 
-                                              inst_mem_m(inst_mem),
-                                              ctrl_st_m(control_store_m),
-                                              aliveSignal(aliveSig),
-                                              PC(0),
-                                              su_number(0), 
-                                              instructionLevelParallelism(ilp_mode), 
-                                              stallingInstruction(nullptr)
-                                              //debugger(DEBUGER_MODE)
-                                              
-{
-}
+scm::fetch_decode_module::fetch_decode_module(
+    inst_mem_module *const inst_mem,
+    control_store_module *const control_store_m,
+    reg_file_module *const reg_file_m, reg_file_module *const hidden_reg_file_m,
+    bool *const aliveSig, ILP_MODES ilp_mode, DUPL_MODES dupl_mode)
+    : inst_mem_m(inst_mem), ctrl_st_m(control_store_m), reg_file_m(reg_file_m),
+      hidden_reg_file_m(hidden_reg_file_m), aliveSignal(aliveSig), PC(0),
+      su_number(0),
+      instructionLevelParallelism(reg_file_m, hidden_reg_file_m, ilp_mode),
+      stallingInstruction(nullptr),
+      dupl_controller_m(dupl_mode, this, &inst_buff_m)
+// debugger(DEBUGER_MODE)
+
+{}
 
 int scm::fetch_decode_module::behavior()
 {
@@ -108,8 +107,12 @@ int scm::fetch_decode_module::behavior()
           //   this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
           break;
         case instruction_state::READY:
+        case instruction_state::READY_DUP:
           ready ++;
-          current_pair->second = instruction_state::EXECUTING;
+          current_pair->second =
+              current_pair->second == instruction_state::READY_DUP
+                  ? instruction_state::EXECUTING_DUP
+                  : instruction_state::EXECUTING;
           switch (current_pair->first->getType()) {
             case COMMIT:
               SCMULATE_INFOMSG(4, "Scheduling and Exec a COMMIT");
@@ -139,6 +142,12 @@ int scm::fetch_decode_module::behavior()
               break;
             case EXECUTE_INST:
               SCMULATE_INFOMSG(4, "Scheduling an EXECUTE_INST %s", current_pair->first->getFullInstruction().c_str());
+              if (current_pair->second == instruction_state::EXECUTING) {
+                // Check if we have already duplicated it
+                if (!this->inst_buff_m.isDuplicated(current_pair)) {
+                  dupl_controller_m.duplicateCodelet(current_pair);
+                }
+              }
               if (!attemptAssignExecuteInstruction(current_pair))
                 current_pair->second = instruction_state::READY;
               break;
@@ -154,23 +163,37 @@ int scm::fetch_decode_module::behavior()
               break;
           }
           break;
-        
-        case instruction_state::EXECUTION_DONE:
-          execution_done ++;
-          TIMERS_COUNTERS_GUARD(
-            this->time_cnt_m->addEvent(this->su_timer_name, DISPATCH_INSTRUCTION, current_pair->first->getFullInstruction()););
-          // check if stalling instruction
-          if (this->stallingInstruction != nullptr && this->stallingInstruction == current_pair) {
-            SCMULATE_INFOMSG(5, "Unstalling on %s", stallingInstruction->first->getFullInstruction().c_str());
-            this->stallingInstruction = nullptr;
+
+        case instruction_state::EXECUTION_DONE_DUP:
+          current_pair = this->inst_buff_m.getOriginal(current_pair);
+        [[falltrough]] case instruction_state::EXECUTION_DONE:
+          if (dupl_controller_m.compareCodelets(current_pair)) {
+            execution_done++;
+            TIMERS_COUNTERS_GUARD(this->time_cnt_m->addEvent(
+                this->su_timer_name, DISPATCH_INSTRUCTION,
+                current_pair->first->getFullInstruction()););
+            // check if stalling instruction
+            if (this->stallingInstruction != nullptr &&
+                this->stallingInstruction == current_pair) {
+              SCMULATE_INFOMSG(
+                  5, "Unstalling on %s",
+                  stallingInstruction->first->getFullInstruction().c_str());
+              this->stallingInstruction = nullptr;
+            }
+            ITT_TASK_BEGIN(fetch_decode_module_behavior, instructionFinished);
+            instructionLevelParallelism.instructionFinished(current_pair);
+            ITT_TASK_END(instructionFinished);
+            SCMULATE_INFOMSG(5, "Marking instruction %s for decomision",
+                             current_pair->first->getFullInstruction().c_str());
+            current_pair->second = instruction_state::DECOMMISSION;
+            dupl_controller_m.cleanupDuplication(current_pair);
+            TIMERS_COUNTERS_GUARD(this->time_cnt_m->addEvent(
+                this->su_timer_name, SU_IDLE,
+                current_pair->first->getFullInstruction()););
+          } else {
+            // Create a new duplicate, set it as EXECUTE, and wait
           }
-          ITT_TASK_BEGIN(fetch_decode_module_behavior, instructionFinished);
-          instructionLevelParallelism.instructionFinished(current_pair);
-          ITT_TASK_END(instructionFinished);
-          SCMULATE_INFOMSG(5, "Marking instruction %s for decomision", current_pair->first->getFullInstruction().c_str());
-          current_pair->second = instruction_state::DECOMMISSION;
-          TIMERS_COUNTERS_GUARD(
-            this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE, current_pair->first->getFullInstruction()););
+
           break;
         case instruction_state::EXECUTING:
           executing++;
@@ -185,8 +208,10 @@ int scm::fetch_decode_module::behavior()
 
     // Check if any instructions have finished
     instructionLevelParallelism.printStats();
-    SCMULATE_INFOMSG(6, "%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", stall, waiting, ready, execution_done, executing, decomision, this->inst_buff_m.getBufferSize());
-    // Clear out instructions that are decomissioned
+    SCMULATE_INFOMSG(10, "%lu\t%lu\t%lu\t%lu\t%lu\t%lu\t%lu\n", stall, waiting,
+                     ready, execution_done, executing, decomision,
+                     this->inst_buff_m.getBufferSize());
+    //  Clear out instructions that are decomissioned
     this->inst_buff_m.clean_out_queue();
 
     // if (mark_event) {  

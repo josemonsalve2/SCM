@@ -49,6 +49,17 @@ set( control_store_inc
 
 add_library(control_store ${control_store_src} ${control_store_inc})
 
+# CONTROL_STORE
+set( codelet_duplicator_src codelet_duplicator.cpp)
+set( codelet_duplicator_inc
+    ${CMAKE_SOURCE_DIR}/include/modules/codelet_duplicator.hpp)
+    
+
+add_library(codelet_duplicator ${codelet_duplicator_src} ${codelet_duplicator_inc})
+
+target_link_libraries(codelet_duplicator fetch_decode)
+
+
 # TIMERS_COUNTERS
 set( timers_counters_src timers_counters.cpp)
 set( timers_counters_inc

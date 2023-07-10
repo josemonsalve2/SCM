@@ -21,9 +21,10 @@
  */
 
 #include "SCMUlate_tools.hpp"
-#include "instructions.hpp"
 #include "instruction_buffer.hpp"
+#include "instructions.hpp"
 #include <deque>
+#include <map>
 #include <utility>
 
 namespace scm {
@@ -31,6 +32,10 @@ namespace scm {
   class instructions_buffer_module {
     private:
       std::deque <instruction_state_pair *> instruction_buffer;
+      std::map<instruction_state_pair *, dupCodeletStates> duplicatedCodelets;
+      std::map<instruction_state_pair *, instruction_state_pair *>
+          reverseDuplicatedCodelets;
+
     public: 
       // TODO: this may not be the best way of doing this. The position will change if the 
       // elements in the front of the queue change. Therefore it cannot be used as 
@@ -48,6 +53,68 @@ namespace scm {
         SCMULATE_INFOMSG(5, "Adding Instruction %s to buffer", newPair->first->getFullInstruction().c_str());
         this->instruction_buffer.push_back(newPair); // Call constructor
         return true;
+      }
+
+      void insertDuplicatedCodelets(instruction_state_pair *original,
+                                    instruction_state_pair *duplicated) {
+        this->duplicatedCodelets[original].push_back(duplicated);
+        this->reverseDuplicatedCodelets[duplicated] = original;
+        this->instruction_buffer.push_back(duplicated);
+        SCMULATE_INFOMSG(5,
+                         "Adding Duplicated codelet Instruction %s at (0x%lX) to container of duplicates. Original is of %s at (0x%lX)",
+                         duplicated->first->getFullInstruction().c_str(), (unsigned long)duplicated, original->first->getFullInstruction().c_str(), (unsigned long)original);
+      }
+
+      bool isReplica(instruction_state_pair *instruction) {
+        return this->reverseDuplicatedCodelets.find(instruction) !=
+               this->reverseDuplicatedCodelets.end();
+      }
+
+      instruction_state_pair *getOriginal(instruction_state_pair *duplicated) {
+        SCMULATE_ERROR_IF(0, !this->isReplica(duplicated),
+                          "Trying to get original codelet %s from a"
+                          " codelet that is not a replica",
+                          duplicated->first->getFullInstruction().c_str());
+        return this->reverseDuplicatedCodelets[duplicated];
+      }
+
+
+      bool isDuplicated(instruction_state_pair *instruction) {
+        return this->duplicatedCodelets.find(instruction) !=
+               this->duplicatedCodelets.end();
+      }
+
+      dupCodeletStates *getDuplicated(instruction_state_pair *original) {
+        for (auto dup: this->duplicatedCodelets)
+          SCMULATE_INFOMSG(10, "%ld Duplicates of codelets of %s at (0x%lX)",
+                         dup.second.size(), dup.first->first->getFullInstruction().c_str(), (unsigned long)dup.first);
+        SCMULATE_ERROR_IF(0, !this->isDuplicated(original),
+                          "Trying to get duplicated codelet %s at (0x%lX) from a non "
+                          "duplicated codelet",
+                          original->first->getFullInstruction().c_str(), (unsigned long)original);
+        return &this->duplicatedCodelets[original];
+      }
+
+      /// @brief Check if all the copies are ready for comparison
+      /// @param original original codelet. Will check over all the duplicates
+      /// @return
+      bool checkIfReady(instruction_state_pair *original) {
+        for (auto copies : this->duplicatedCodelets[original])
+          if (copies->second != EXECUTION_DONE &&
+              copies->second != EXECUTION_DONE_DUP)
+            return false;
+        return true;
+      }
+
+      void removeDuplicates(instruction_state_pair *original) {
+        SCMULATE_INFOMSG(5, "Deleting Instruction %s from duplication", original->first->getFullInstruction().c_str());
+        for (auto copy : this->duplicatedCodelets[original]) {
+          SCMULATE_INFOMSG(5,
+                           "Deleting Duplicated codelet Instruction %s from",
+                           copy->first->getFullInstruction().c_str());
+          this->reverseDuplicatedCodelets.erase(copy);
+        }
+        this->duplicatedCodelets.erase(original);
       }
 
       void clean_out_queue() {

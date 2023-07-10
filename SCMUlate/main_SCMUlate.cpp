@@ -25,7 +25,9 @@ int main (int argc, char * argv[]) {
   scm::scm_machine * myMachine;
   if (program_options.fileInput) {
     SCMULATE_INFOMSG(0, "Reading program file %s", program_options.fileName);
-    myMachine = new scm::scm_machine(program_options.fileName, memory);
+    myMachine = new scm::scm_machine(program_options.fileName, memory,
+                                     scm::ILP_MODES::SEQUENTIAL,
+                                     scm::DUPL_MODES::TWO_OUT_OF_THREE);
   } else {
     SCMULATE_INFOMSG(0, "Reading from stdin");
     char emptyStr[10] = "";

@@ -31,6 +31,7 @@ namespace scm {
       
       // Modules
       reg_file_module reg_file_m;
+      reg_file_module hidden_reg_file_m;
       inst_mem_module inst_mem_m;
       control_store_module control_store_m;
       fetch_decode_module fetch_decode_m;
@@ -38,10 +39,13 @@ namespace scm {
 
     public: 
       scm_machine() = delete;
-      scm_machine(char * in_filename, unsigned char * const external_memory, ILP_MODES ilp_mode = ILP_MODES::SEQUENTIAL); 
+      scm_machine(char *in_filename, unsigned char *const external_memory,
+                  ILP_MODES ilp_mode = ILP_MODES::SEQUENTIAL,
+                  DUPL_MODES dupl_mode = DUPL_MODES::NO_DUPLICATION);
 
       // getters
       inline reg_file_module * getRegFile() {return &reg_file_m; }
+      inline reg_file_module *getHiddenRegFile() { return &hidden_reg_file_m; }
       inline inst_mem_module * getInstMemory() { return &inst_mem_m; }
       inline control_store_module * getControlStore() { return &control_store_m; }
       inline fetch_decode_module * getFetchDecode() { return &fetch_decode_m; }

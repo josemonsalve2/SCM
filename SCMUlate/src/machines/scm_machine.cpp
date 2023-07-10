@@ -1,49 +1,47 @@
 #include "scm_machine.hpp"
 #include <iostream>
 
-scm::scm_machine::scm_machine(char * in_filename, l2_memory_t const memory, ILP_MODES ilp_mode):
-  alive(false), 
-  init_correct(true), 
-  filename(in_filename),
-  reg_file_m(),
-  inst_mem_m(filename, &reg_file_m), 
-  control_store_m(NUM_CUS),
-  fetch_decode_m(&inst_mem_m, &control_store_m, &alive, ilp_mode) {
-    SCMULATE_INFOMSG(0, "Initializing SCM machine")
-    // Configuration parameters
-  
-    // We check the register configuration is valid
-    if(!reg_file_m.checkRegisterConfig()) {
-      SCMULATE_ERROR(0, "Error when checking the register");
-      init_correct = false;
-      return;
-    }
-    
-    if(!inst_mem_m.isValid()) {
-      SCMULATE_ERROR(0, "Error when loading file");
-      init_correct = false;
-      return;
-    }
+scm::scm_machine::scm_machine(char *in_filename, l2_memory_t const memory,
+                              ILP_MODES ilp_mode, DUPL_MODES dupl_mode)
+    : alive(false), init_correct(true), filename(in_filename), reg_file_m(),
+      hidden_reg_file_m(), inst_mem_m(filename, &reg_file_m),
+      control_store_m(NUM_CUS),
+      fetch_decode_m(&inst_mem_m, &control_store_m, &reg_file_m,
+                     &hidden_reg_file_m, &alive, ilp_mode, dupl_mode) {
+  SCMULATE_INFOMSG(0, "Initializing SCM machine")
+  // Configuration parameters
 
-    TIMERS_COUNTERS_GUARD(
+  // We check the register configuration is valid
+  if (!reg_file_m.checkRegisterConfig()) {
+    SCMULATE_ERROR(0, "Error when checking the register");
+    init_correct = false;
+    return;
+  }
+
+  if (!inst_mem_m.isValid()) {
+    SCMULATE_ERROR(0, "Error when loading file");
+    init_correct = false;
+    return;
+  }
+
+  TIMERS_COUNTERS_GUARD(
       this->fetch_decode_m.setTimerCounter(&this->time_cnt_m);
-      this->time_cnt_m.addTimer("SCM_MACHINE",scm::SYS_TIMER);
-    )
+      this->time_cnt_m.addTimer("SCM_MACHINE", scm::SYS_TIMER);)
 
-    // Creating execution Units
-    int exec_units_threads[] = {CUS};
-    int * cur_exec = exec_units_threads;
-    for (int i = 0; i < NUM_CUS; i++, cur_exec++) {
-      SCMULATE_INFOMSG(4, "Creating executor (CUMEM) %d out of %d for thread %d", i, NUM_CUS, *cur_exec);
-      cu_executor_module* newExec = new cu_executor_module(*cur_exec, &control_store_m, i, &alive, memory);
-      TIMERS_COUNTERS_GUARD(
-        newExec->setTimerCnt(&this->time_cnt_m);
-      )
-      executors_m.push_back(newExec);
-    }
-      
-    init_correct = true;
-    ITT_RESUME;
+  // Creating execution Units
+  int exec_units_threads[] = {CUS};
+  int *cur_exec = exec_units_threads;
+  for (int i = 0; i < NUM_CUS; i++, cur_exec++) {
+    SCMULATE_INFOMSG(4, "Creating executor (CUMEM) %d out of %d for thread %d",
+                     i, NUM_CUS, *cur_exec);
+    cu_executor_module *newExec =
+        new cu_executor_module(*cur_exec, &control_store_m, i, &alive, memory);
+    TIMERS_COUNTERS_GUARD(newExec->setTimerCnt(&this->time_cnt_m);)
+    executors_m.push_back(newExec);
+  }
+
+  init_correct = true;
+  ITT_RESUME;
 }
 
 scm::run_status

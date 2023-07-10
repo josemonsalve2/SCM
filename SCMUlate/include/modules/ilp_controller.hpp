@@ -490,7 +490,8 @@ namespace scm {
       std::unordered_set<int> already_processed_operands;
 
     public:
-      ilp_OoO() : hidden_register_file(new reg_file_module()), hazzard_inst_state(nullptr) { }
+      ilp_OoO(reg_file_module *hidden)
+          : hidden_register_file(hidden), hazzard_inst_state(nullptr) {}
       /** \brief check if instruction can be scheduled 
       * Returns true if the instruction could be scheduled according to
       * the current detected hazards. If it is possible to schedule it, then
@@ -510,9 +511,7 @@ namespace scm {
 
       bool inline stallMemoryInstruction(decoded_instruction_t * inst);
 
-      ~ilp_OoO() {
-        delete hidden_register_file;
-      }
+      ~ilp_OoO() {}
   };
 
   class ilp_sequential {
@@ -543,11 +542,14 @@ namespace scm {
       ilp_superscalar supscl_ctrl;
       ilp_OoO ooo_ctrl;
     public:
-      ilp_controller (const ILP_MODES ilp_mode) : SCMULATE_ILP_MODE(ilp_mode) {
+      ilp_controller(reg_file_module *const reg_file,
+                     reg_file_module *const hidden_reg_file,
+                     const ILP_MODES ilp_mode)
+          : SCMULATE_ILP_MODE(ilp_mode), ooo_ctrl(hidden_reg_file) {
         SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::SEQUENTIAL, "Using %d ILP_MODES::SEQUENTIAL",SCMULATE_ILP_MODE );
         SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::SUPERSCALAR, "Using %d ILP_MODES::SUPERSCALAR", SCMULATE_ILP_MODE);
         SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::OOO, "Using %d ILP_MODES::OOO", SCMULATE_ILP_MODE);
-       }
+      }
       bool inline checkMarkInstructionToSched(instruction_state_pair * inst_pair) {
         if (SCMULATE_ILP_MODE == ILP_MODES::SEQUENTIAL) {
           return seq_ctrl.checkMarkInstructionToSched(inst_pair);

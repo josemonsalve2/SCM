@@ -272,6 +272,15 @@ namespace scm {
       reg_ptr = other.reg_ptr;
     }
 
+    bool operator&(decoded_reg_t const & other) const {
+      for (uint32_t i = 0; i < reg_size_bytes; i++) {
+        if (other.reg_ptr[i] != this->reg_ptr[i]) {
+          return false;
+        }
+      }
+      return true;
+    }
+
     bool operator==(decoded_reg_t const & other) const {
       return other.reg_ptr == this->reg_ptr;
     }

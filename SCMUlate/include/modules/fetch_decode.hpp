@@ -31,14 +31,15 @@
  */
 
 #include "SCMUlate_tools.hpp"
-#include "instruction_mem.hpp"
+#include "codelet_duplicator.hpp"
 #include "control_store.hpp"
-#include "register.hpp"
-#include "instructions.hpp"
-#include "timers_counters.hpp"
 #include "ilp_controller.hpp"
 #include "instruction_buffer.hpp"
+#include "instruction_mem.hpp"
+#include "instructions.hpp"
+#include "register.hpp"
 #include "system_config.hpp"
+#include "timers_counters.hpp"
 #include <string>
 
 namespace scm {
@@ -55,12 +56,15 @@ namespace scm {
        */
       inst_mem_module * inst_mem_m; /**< From where the instructions are read*/
       control_store_module * ctrl_st_m; /**< Used to assing operations to the executors */
+      reg_file_module *reg_file_m;      /**< Register file module */
+      reg_file_module *hidden_reg_file_m; /**< Hidden register file module */
       bool * aliveSignal; /**< When the machine is done, this flag is set to true finishing all the other units */
       int PC; /**< Program counter, this corresponds to the current instruction being executed */
       uint32_t su_number; /**< This corresponds to the current SU number */
       ilp_controller instructionLevelParallelism;
       instructions_buffer_module inst_buff_m;
       instruction_state_pair * stallingInstruction;
+      dupl_controller_module dupl_controller_m;
       //const bool debugger;
 
       TIMERS_COUNTERS_GUARD(
@@ -70,7 +74,12 @@ namespace scm {
 
     public: 
       fetch_decode_module() = delete;
-      fetch_decode_module(inst_mem_module * const inst_mem, control_store_module * const, bool * const aliveSig, ILP_MODES ilp_mode);
+      fetch_decode_module(inst_mem_module *const inst_mem,
+                          control_store_module *const,
+                          reg_file_module *const reg_file,
+                          reg_file_module *const hidden_reg_file,
+                          bool *const aliveSig, ILP_MODES ilp_mode,
+                          DUPL_MODES dupl_mode);
 
       /** \brief logic to execute an instruction
        * 
@@ -90,7 +99,7 @@ namespace scm {
        *
        *  We select a CU and we assign a new codelet to it. When it is done, we delete the codelet
        */
-      inline bool attemptAssignExecuteInstruction(instruction_state_pair * inst);
+      bool attemptAssignExecuteInstruction(instruction_state_pair *inst);
 
       /** \brief get the SU number
        *

@@ -10,7 +10,9 @@ IMPLEMENT_CODELET(fwd_2048L,
   float *col = this->getParams().getParamValueAs<float*>(1);
   float *diag = this->getParams().getParamValueAs<float*>(2);
 
-  int i, j, k;
+  int i;
+  int j;
+  int k;
   for (j=0; j<bots_arg_size_1; j++)
     for (k=0; k<bots_arg_size_1; k++) 
         for (i=k+1; i<bots_arg_size_1; i++)
@@ -21,7 +23,9 @@ IMPLEMENT_CODELET(bdiv_2048L,
   float *row = this->getParams().getParamValueAs<float*>(1);
   float *diag = this->getParams().getParamValueAs<float*>(2);
 
-  int i, j, k;
+  int i; 
+  int j;
+  int k;
   for (i=0; i<bots_arg_size_1; i++)
     for (k=0; k<bots_arg_size_1; k++)
     {
@@ -36,7 +40,9 @@ IMPLEMENT_CODELET(bmod_2048L,
   float *row = this->getParams().getParamValueAs<float*>(2);
   float *col = this->getParams().getParamValueAs<float*>(3);
 
-  int i, j, k;
+  int i; 
+  int j;
+  int k;
   for (i=0; i<bots_arg_size_1; i++)
     for (j=0; j<bots_arg_size_1; j++)
       for (k=0; k<bots_arg_size_1; k++)
@@ -46,7 +52,9 @@ IMPLEMENT_CODELET(bmod_2048L,
 IMPLEMENT_CODELET(lu0_2048L,
   float *diag = this->getParams().getParamValueAs<float*>(1);
 
-  int i, j, k;
+  int i; 
+  int j;
+  int k;
   for (k=0; k<bots_arg_size_1; k++)
     for (i=k+1; i<bots_arg_size_1; i++)
     {
@@ -60,34 +68,40 @@ IMPLEMENT_CODELET(lu0_2048L,
 // should be used before the lu0 codelet to load the data it needs
 MEMRANGE_CODELET(loadSubMat_2048L,
   //float ** address_reg = this->getParams().getParamValueAs<float **>(2);
-  uint64_t row_offset = this->getParams().getParamValuesAs<uint64_t>(2); // kk in the original code
-  uint64_t col_offset = this->getParams().getParamValuesAs<uint64_t>(3);
+  uint64_t row_offset = *(this->getParams().getParamValueAs<uint64_t*>(2)); // kk in the original code
+  uint64_t col_offset = *(this->getParams().getParamValueAs<uint64_t*>(3));
   float ** bench_addr = BENCH;
   uint64_t actual_offset = (row_offset * bots_arg_size + col_offset); // original contains bots_arg_size which is 50; define at top
   // Add range that will be touched (range of sub matrix)
   // lu0 goes from the start of its row 
-  this->addReadMemRange(*(bench_addr+actual_offset), *(bench_addr+actual_offset)+(bots_arg_size_1-1)*(bots_arg_size_1)*(bots_arg_size_1-1));
+  //this->addReadMemRange(*(bench_addr+actual_offset), *(bench_addr+actual_offset)+(bots_arg_size_1-1)*(bots_arg_size_1)*(bots_arg_size_1-1));
+  printf("actual offset: %lx\n", actual_offset);
+  printf("submatrix pointer is %p\n", BENCH[actual_offset]);
+  printf("same submatrix pointer is %p\n", (bench_addr+actual_offset));
+  printf("BENCH has %p\n", BENCH);
+  this->addReadMemRange((uint64_t)*(bench_addr+actual_offset), bots_arg_size_1*(bots_arg_size_1-1));
 );
 
 IMPLEMENT_CODELET(loadSubMat_2048L,
-  float ** destReg = this->getParams().getParamValuesAs<float **>(1); 
-  float ** addressStart = reinterpret_cast<float **>(getAddress(memoryRanges->reads.begin()->memoryAddress));
+  float * destReg = this->getParams().getParamValueAs<float *>(1); 
+  float * addressStart = reinterpret_cast<float *>(getAddress(memoryRanges->reads.begin()->memoryAddress));
+  printf("destReg @ %p; submatrix in memory @ %p\n", destReg, addressStart);
   std::memcpy(destReg, addressStart, memoryRanges->reads.begin()->size);
 );
 
 MEMRANGE_CODELET(storeSubMat_2048L,
-  uint64_t row_offset = this->getParams().getParamValuesAs<uint64_t>(2); // kk in the original code
-  uint64_t col_offset = this->getParams().getParamValuesAs<uint64_t>(3);
+  uint64_t row_offset = this->getParams().getParamValueAs<uint64_t>(2); // kk in the original code
+  uint64_t col_offset = this->getParams().getParamValueAs<uint64_t>(3);
   float ** bench_addr = BENCH;
   uint64_t actual_offset = (row_offset * bots_arg_size + col_offset); // original contains bots_arg_size which is 50; define at top
   // Add range that will be touched (range of sub matrix)
   // lu0 goes from the start of its row 
-  this->addWriteMemRange(*(bench_addr+actual_offset), *(bench_addr+actual_offset)+(bots_arg_size_1-1)*(bots_arg_size_1)*(bots_arg_size_1-1);
+  this->addWriteMemRange((uint64_t)*(bench_addr+actual_offset), bots_arg_size_1*bots_arg_size_1);
 );
 
 IMPLEMENT_CODELET(storeSubMat_2048L,
-  float * destReg = this->getParams().getParamValuesAs<float *>(1); 
-  float * addressStart = reinterpret_cast<float **>(getAddress(memoryRanges->reads.begin()->memoryAddress));
+  float * destReg = this->getParams().getParamValueAs<float *>(1); 
+  float * addressStart = reinterpret_cast<float *>(getAddress(memoryRanges->reads.begin()->memoryAddress));
   std::memcpy(addressStart, destReg, memoryRanges->reads.begin()->size);
 );
 
@@ -96,12 +110,13 @@ IMPLEMENT_CODELET(storeSubMat_2048L,
 // yes, I'm sure there IS a better way to do this
 // no, I'm not the one that will be doing it right now
 MEMRANGE_CODELET(loadBenchAddr_64B,
-  this->addReadMemRange(&BENCH, &BENCH);
+  this->addReadMemRange((uint64_t)&BENCH, sizeof(float**));
 );
 
 IMPLEMENT_CODELET(loadBenchAddr_64B,
   float *** destReg = this->getParams().getParamValueAs<float ***>(1);
-  std::memcpy(destReg, &BENCH, sizeof(float *));
+  printf("bench: %p\n", BENCH);
+  std::memcpy(destReg, &BENCH, sizeof(float **));
 );
 
 /*

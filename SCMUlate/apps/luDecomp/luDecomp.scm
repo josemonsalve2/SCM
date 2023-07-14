@@ -2,7 +2,7 @@ LDIMM R64B_1, 0; // For iteration variable -- kk
 LDIMM R64B_2, 0; // For iteration variable -- jj
 LDIMM R64B_3, 0; // For iteration variable -- ii
 LDIMM R64B_4, 50;  // For number of iterations and offset calculation -- bot_arg_size
-COD loadBenchAddress_64B R64B_5; // Basically a hacky way of fetching BENCH address so we can manipulate it to check if submatrices are NULL or not
+COD loadBenchAddr_64B R64B_5; // Basically a hacky way of fetching BENCH address so we can manipulate it to check if submatrices are NULL or not
 LDIMM R64B_7, 0; // stays 0 for null checking of submatrices
 
 // ALL the offset calculation to check for NULL submatrices needs to be updated

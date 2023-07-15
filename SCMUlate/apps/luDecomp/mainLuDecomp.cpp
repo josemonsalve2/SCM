@@ -9,6 +9,11 @@
 
 float ** BENCH;
 
+// don't touch
+static uint64_t current_malloc_size;
+static unsigned char * malloc_root;
+static uint64_t max_malloc_size;
+
 static struct {
   bool fileInput = false;
   char * fileName;
@@ -21,6 +26,9 @@ void parseProgramOptions(int argc, char* argv[]);
 
 // FUNCTION DEFINITIONS
 int SCMUlate();
+// api for local malloc
+void lu_malloc_init(unsigned char * memory, uint64_t size);
+void * lu_malloc(uint64_t size);
 // functions defs from bots sparse LU decomposition benchmark
 void genmat (float *M[]);
 float * allocate_clean_block();
@@ -42,7 +50,6 @@ int main (int argc, char * argv[]) {
     std::cout << "Unsupported SCM file" << std::endl;
     return 1;
   }
-  /*
   try {
     memory = new unsigned char[SIZEOFMEM];
   }
@@ -50,11 +57,10 @@ int main (int argc, char * argv[]) {
     std::cout << "An exception occurred. Exception Nr. " << e << '\n';
     return 1;
   }
-  scm::codelet_params vars;
-  vars.getParamAs(1) = reinterpret_cast<unsigned char*>(warmA); // Getting register 1
-  vars.getParamAs(2) = reinterpret_cast<unsigned char*>(warmB); // Getting register 2
-  vars.getParamAs(3) = reinterpret_cast<unsigned char*>(warmC); // Getting register 3
-  */
+  //scm::codelet_params vars;
+  //vars.getParamAs(1) = reinterpret_cast<unsigned char*>(warmA); // Getting register 1
+  //vars.getParamAs(2) = reinterpret_cast<unsigned char*>(warmB); // Getting register 2
+  //vars.getParamAs(3) = reinterpret_cast<unsigned char*>(warmC); // Getting register 3
 
   // SCM MACHINE
   scm::scm_machine * myMachine;
@@ -101,6 +107,25 @@ int main (int argc, char * argv[]) {
   delete [] memory;
   //delete [] testC;
   return 0;
+}
+
+void lu_malloc_init(unsigned char * memory, uint64_t size) {
+  malloc_root = memory;
+  max_malloc_size = size;
+  current_malloc_size = 0;
+}
+
+void * lu_malloc(uint64_t size) {
+  // if overflow
+  if (current_malloc_size + size >= max_malloc_size) {
+    printf("Asking to allocate more memory than is available!\n");
+    return(nullptr);
+  }
+  else {
+    void * toReturn = (void *) &(malloc_root[current_malloc_size]);
+    current_malloc_size = current_malloc_size + size;
+    return(toReturn);
+  }
 }
 
 void parseProgramOptions(int argc, char* argv[]) {

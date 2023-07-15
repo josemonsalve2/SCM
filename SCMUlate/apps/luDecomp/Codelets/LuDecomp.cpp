@@ -74,17 +74,19 @@ MEMRANGE_CODELET(loadSubMat_2048L,
   uint64_t actual_offset = (row_offset * bots_arg_size + col_offset); // original contains bots_arg_size which is 50; define at top
   // Add range that will be touched (range of sub matrix)
   // lu0 goes from the start of its row 
-  //this->addReadMemRange(*(bench_addr+actual_offset), *(bench_addr+actual_offset)+(bots_arg_size_1-1)*(bots_arg_size_1)*(bots_arg_size_1-1));
-  printf("actual offset: %lx\n", actual_offset);
+  printf("BENCH is %p\n", BENCH);
+  //printf("actual offset: %lx\n", actual_offset);
+  printf("bench + offset is %p\n", (bench_addr+actual_offset));
   printf("submatrix pointer is %p\n", BENCH[actual_offset]);
-  printf("same submatrix pointer is %p\n", (bench_addr+actual_offset));
-  printf("BENCH has %p\n", BENCH);
-  this->addReadMemRange((uint64_t)*(bench_addr+actual_offset), bots_arg_size_1*(bots_arg_size_1-1));
+  //this->addReadMemRange((uint64_t)*(bench_addr+actual_offset), bots_arg_size_1*(bots_arg_size_1-1));
+  this->addReadMemRange((uint64_t)BENCH[actual_offset], bots_arg_size_1*(bots_arg_size_1-1));
+  this->getMemoryRange();
 );
 
 IMPLEMENT_CODELET(loadSubMat_2048L,
   float * destReg = this->getParams().getParamValueAs<float *>(1); 
-  float * addressStart = reinterpret_cast<float *>(getAddress(memoryRanges->reads.begin()->memoryAddress));
+  float * addressStart = (float *)memoryRanges->reads.begin()->memoryAddress;
+  //float * addressStart = reinterpret_cast<float *>(getAddress(memoryRanges->reads.begin()->memoryAddress));
   printf("destReg @ %p; submatrix in memory @ %p\n", destReg, addressStart);
   std::memcpy(destReg, addressStart, memoryRanges->reads.begin()->size);
 );

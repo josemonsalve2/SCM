@@ -537,7 +537,7 @@ namespace scm {
   };
 
   class ilp_controller {
-      const ILP_MODES SCMULATE_ILP_MODE;
+      ILP_MODES SCMULATE_ILP_MODE;
       ilp_sequential seq_ctrl;
       ilp_superscalar supscl_ctrl;
       ilp_OoO ooo_ctrl;
@@ -546,6 +546,22 @@ namespace scm {
                      reg_file_module *const hidden_reg_file,
                      const ILP_MODES ilp_mode)
           : SCMULATE_ILP_MODE(ilp_mode), ooo_ctrl(hidden_reg_file) {
+
+        // Check if env variable SCM_ILP_MODE is set
+        char *ilp_mode_env = std::getenv("SCM_ILP_MODE");
+        if (ilp_mode_env != nullptr) {
+          SCMULATE_INFOMSG(0, "SCM_ILP_MODE is set to %s", ilp_mode_env);
+          if (strcmp(ilp_mode_env, "SEQUENTIAL") == 0) {
+            SCMULATE_ILP_MODE = ILP_MODES::SEQUENTIAL;
+          } else if (strcmp(ilp_mode_env, "SUPERSCALAR") == 0) {
+            SCMULATE_ILP_MODE = ILP_MODES::SUPERSCALAR;
+          } else if (strcmp(ilp_mode_env, "OOO") == 0) {
+            SCMULATE_ILP_MODE = ILP_MODES::OOO;
+          } else {
+            SCMULATE_ERROR(0, "Invalid SCM_ILP_MODE %s", ilp_mode_env);
+          }
+        }
+
         SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::SEQUENTIAL, "Using %d ILP_MODES::SEQUENTIAL",SCMULATE_ILP_MODE );
         SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::SUPERSCALAR, "Using %d ILP_MODES::SUPERSCALAR", SCMULATE_ILP_MODE);
         SCMULATE_INFOMSG_IF(3, SCMULATE_ILP_MODE == ILP_MODES::OOO, "Using %d ILP_MODES::OOO", SCMULATE_ILP_MODE);

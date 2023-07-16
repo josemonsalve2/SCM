@@ -275,6 +275,9 @@ namespace scm {
     bool operator&(decoded_reg_t const & other) const {
       for (uint32_t i = 0; i < reg_size_bytes; i++) {
         if (other.reg_ptr[i] != this->reg_ptr[i]) {
+          SCMULATE_INFOMSG(5, "Register %s = %u != register %s = %u",
+                           this->reg_name.c_str(), this->reg_ptr[i],
+                           other.reg_name.c_str(), other.reg_ptr[i]);
           return false;
         }
       }

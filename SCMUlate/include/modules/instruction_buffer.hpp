@@ -99,9 +99,10 @@ namespace scm {
       /// @param original original codelet. Will check over all the duplicates
       /// @return
       bool checkIfReady(instruction_state_pair *original) {
+        if (original->second != EXECUTION_DONE)
+          return false;
         for (auto copies : this->duplicatedCodelets[original])
-          if (copies->second != EXECUTION_DONE &&
-              copies->second != EXECUTION_DONE_DUP)
+          if (copies->second != EXECUTION_DONE_DUP)
             return false;
         return true;
       }
@@ -120,7 +121,8 @@ namespace scm {
       void clean_out_queue() {
         for (auto it = instruction_buffer.begin(); it != instruction_buffer.end() ;) {
           if ((*it)->second == instruction_state::DECOMMISSION) {
-            SCMULATE_INFOMSG(5, "Deleting Instruction %s from buffer", (*it)->first->getFullInstruction().c_str());
+            SCMULATE_INFOMSG(5, "Deleting Instruction %s at %p from buffer",
+                             (*it)->first->getFullInstruction().c_str(), *it);
             delete (*it)->first;
             delete *it;
             it = instruction_buffer.erase(it);

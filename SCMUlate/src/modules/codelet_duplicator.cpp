@@ -78,6 +78,8 @@ decoded_instruction_t *dupl_controller_module::duplicateCodeletInstruction(
         SCMULATE_INFOMSG(5, "Renaming operand %d from %s to %s", i,
                          current_operand->value.reg.reg_name.c_str(),
                          newReg.reg_name.c_str());
+        SCMULATE_INFOMSG(5, "Renamed pointers have addresses %p and %p",
+                         current_operand->value.reg.reg_ptr, newReg.reg_ptr);
         if (it_inst_dir->second == reg_state::READWRITE) {
           // Check if it does not exist in the originals list.
           // If not, get yet another register and store the original value
@@ -116,8 +118,11 @@ decoded_instruction_t *dupl_controller_module::duplicateCodeletInstruction(
       }
     }
   }
-  if (wasRenamed)
+  if (wasRenamed) {
+    // Of inst is a Codelet, we must update the values of the registers
+    new_inst->updateCodeletParams();
     new_inst->calculateOperandsDirs();
+  }
 
   return new_inst;
 }
@@ -241,7 +246,8 @@ dupl_controller_module::dupl_controller_module(
     : dupl_controller_module(DUPL_MODES::NO_DUPLICATION, fd, instBuff) {}
 
 void dupl_controller_module::duplicateCodelet(instruction_state_pair *inst) {
-  if (inst->first->getType() != scm::instType::EXECUTE_INST)
+  if (inst->first->getType() != scm::instType::EXECUTE_INST ||
+      inst->first->getExecCodelet()->isMemoryCodelet())
     return;
   if (mode == DUPL_MODES::NO_DUPLICATION)
     return;
@@ -255,7 +261,8 @@ void dupl_controller_module::duplicateCodelet(instruction_state_pair *inst) {
 }
 
 bool dupl_controller_module::compareCodelets(instruction_state_pair *inst) {
-  if (inst->first->getType() != scm::instType::EXECUTE_INST)
+  if (inst->first->getType() != scm::instType::EXECUTE_INST ||
+      inst->first->getExecCodelet()->isMemoryCodelet())
     return true;
 
   if (mode == DUPL_MODES::NO_DUPLICATION)
@@ -377,14 +384,15 @@ bool dupl_controller_module::compareCodelets(instruction_state_pair *inst) {
       }
     }
   } else {
-    SCMULATE_INFOMSG(6, "Waiting for all the duplicates to be ready")
+    SCMULATE_INFOMSG(10, "Waiting for all the duplicates to be ready")
     // wait
     return false;
   }
 }
 
 void dupl_controller_module::cleanupDuplication(instruction_state_pair *inst) {
-  if (inst->first->getType() != scm::instType::EXECUTE_INST)
+  if (inst->first->getType() != scm::instType::EXECUTE_INST ||
+      inst->first->getExecCodelet()->isMemoryCodelet())
     return;
   if (mode == DUPL_MODES::NO_DUPLICATION)
     return;
@@ -394,9 +402,15 @@ void dupl_controller_module::cleanupDuplication(instruction_state_pair *inst) {
     for (int i = 1; i <= MAX_NUM_OPERANDS; ++i) {
       operand_t *current_operand = &copy->first->getOp(i);
       if (current_operand->type == operand_t::REGISTER) {
+        if (this->renamedInUse.find(current_operand->value.reg.reg_ptr) !=
+            this->renamedInUse.end()) {
+          SCMULATE_INFOMSG(6, "Removing renamed register %s",
+                           current_operand->value.reg.reg_name.c_str());
+          this->renamedInUse.erase(current_operand->value.reg.reg_ptr);
+        }
         if (originalVals.find(current_operand->value.reg) !=
             originalVals.end()) {
-          SCMULATE_INFOMSG(6, "Removing renamed register %s",
+          SCMULATE_INFOMSG(6, "Removing OriginalVals register %s",
                            current_operand->value.reg.reg_name.c_str());
           originalVals.erase(current_operand->value.reg);
         }

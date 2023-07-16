@@ -190,10 +190,7 @@ int scm::fetch_decode_module::behavior()
             TIMERS_COUNTERS_GUARD(this->time_cnt_m->addEvent(
                 this->su_timer_name, SU_IDLE,
                 current_pair->first->getFullInstruction()););
-          } else {
-            // Create a new duplicate, set it as EXECUTE, and wait
           }
-
           break;
         case instruction_state::EXECUTING:
           executing++;

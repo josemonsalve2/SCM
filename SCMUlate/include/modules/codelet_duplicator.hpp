@@ -22,7 +22,7 @@ class fetch_decode_module;
 
 class dupl_controller_module {
 private:
-  const DUPL_MODES mode;
+  DUPL_MODES mode;
 
   // Hidden register file for duplication
   reg_file_module hidden_reg_file_m;

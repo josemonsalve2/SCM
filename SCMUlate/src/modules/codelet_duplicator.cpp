@@ -211,7 +211,27 @@ void dupl_controller_module::overrideOriginalOperands(
 
 dupl_controller_module::dupl_controller_module(
     DUPL_MODES m, fetch_decode_module *fd, instructions_buffer_module *instBuff)
-    : fetch_decode_m(fd), inst_buff_m(instBuff), mode(m) {
+    : fetch_decode_m(fd), inst_buff_m(instBuff) {
+
+  // Check if SCM_DUPL_MODE env variable is set
+  char *dupl_mode_env = std::getenv("SCM_DUPL_MODE");
+  if (dupl_mode_env != NULL) {
+    std::string dupl_mode_str(dupl_mode_env);
+    if (dupl_mode_str == "NO_DUPLICATION") {
+      mode = DUPL_MODES::NO_DUPLICATION;
+    } else if (dupl_mode_str == "TWO_OUT_OF_THREE") {
+      mode = DUPL_MODES::TWO_OUT_OF_THREE;
+    } else if (dupl_mode_str == "THREE_OUT_OF_FIVE") {
+      mode = DUPL_MODES::THREE_OUT_OF_FIVE;
+    } else if (dupl_mode_str == "ADAPTIVE_DUPLICATION") {
+      mode = DUPL_MODES::ADAPTIVE_DUPLICATION;
+    } else {
+      SCMULATE_ERROR(0, "Invalid duplication mode: %s", dupl_mode_str.c_str());
+    }
+  } else {
+    mode = m;
+  }
+
   SCMULATE_INFOMSG(2, "Initializing codelet duplicator with mode: %s",
                    DUPL_MODES_STR[m]);
 }

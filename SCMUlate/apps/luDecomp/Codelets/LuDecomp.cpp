@@ -74,10 +74,10 @@ MEMRANGE_CODELET(loadSubMat_2048L,
   uint64_t actual_offset = (row_offset * bots_arg_size + col_offset); // original contains bots_arg_size which is 50; define at top
   // Add range that will be touched (range of sub matrix)
   // lu0 goes from the start of its row 
-  printf("BENCH is %p\n", BENCH);
-  printf("actual offset: 0x%lx\n", actual_offset);
-  printf("bench + offset is %p\n", (bench_addr+actual_offset));
-  printf("submatrix pointer is %p\n", BENCH[actual_offset]);
+  //printf("BENCH is %p\n", BENCH);
+  //printf("actual offset: 0x%lx\n", actual_offset);
+  //printf("bench + offset is %p\n", (bench_addr+actual_offset));
+  //printf("submatrix pointer is %p\n", BENCH[actual_offset]);
   uint64_t submat = (uint64_t) BENCH[actual_offset];
   // BENCH should be the first thing allocated in the SCM memory space, so the offset to the submatrix is submat pointer - BENCH
   uint64_t mem_offset = submat - (uint64_t)BENCH;
@@ -88,7 +88,7 @@ MEMRANGE_CODELET(loadSubMat_2048L,
 IMPLEMENT_CODELET(loadSubMat_2048L,
   float * destReg = this->getParams().getParamValueAs<float *>(1); 
   float * addressStart = reinterpret_cast<float *>(getAddress(memoryRanges->reads.begin()->memoryAddress));
-  printf("destReg @ %p; submatrix in memory @ %p\n", destReg, addressStart);
+  //printf("destReg @ %p; submatrix in memory @ %p\n", destReg, addressStart);
   std::memcpy(destReg, addressStart, memoryRanges->reads.begin()->size);
 );
 
@@ -101,8 +101,8 @@ MEMRANGE_CODELET(storeSubMat_2048L,
   // lu0 goes from the start of its row 
   //printf("BENCH is %p\n", BENCH);
   //printf("actual offset: %lx\n", actual_offset);
-  printf("bench + offset is %p\n", (bench_addr+actual_offset));
-  printf("submatrix pointer is %p\n", BENCH[actual_offset]);
+  //printf("bench + offset is %p\n", (bench_addr+actual_offset));
+  //printf("submatrix pointer is %p\n", BENCH[actual_offset]);
   uint64_t submat = (uint64_t) BENCH[actual_offset];
   // BENCH should be the first thing allocated in the SCM memory space, so the offset to the submatrix is submat pointer - BENCH
   uint64_t mem_offset = submat - (uint64_t)BENCH;
@@ -117,7 +117,7 @@ IMPLEMENT_CODELET(storeSubMat_2048L,
 */
   float * sourceReg = this->getParams().getParamValueAs<float *>(1); 
   float * addressStart = reinterpret_cast<float *>(getAddress(memoryRanges->writes.begin()->memoryAddress));
-  printf("sourceReg @ %p; submatrix in memory @ %p\n", sourceReg, addressStart);
+  //printf("sourceReg @ %p; submatrix in memory @ %p\n", sourceReg, addressStart);
   std::memcpy(sourceReg, addressStart, memoryRanges->writes.begin()->size);
 );
 
@@ -131,7 +131,7 @@ MEMRANGE_CODELET(loadBenchAddr_64B,
 
 IMPLEMENT_CODELET(loadBenchAddr_64B,
   float *** destReg = this->getParams().getParamValueAs<float ***>(1);
-  printf("bench: %p\n", BENCH);
+  //printf("bench: %p\n", BENCH);
   std::memcpy(destReg, &BENCH, sizeof(float **));
 );
 

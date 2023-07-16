@@ -3,8 +3,9 @@
 
 #include "SCMUlate_tools.hpp"
 #include "control_store.hpp"
-#include "timers_counters.hpp"
+#include "fault_injection.hpp"
 #include "memory_interface.hpp"
+#include "timers_counters.hpp"
 
 namespace scm {
 
@@ -23,7 +24,9 @@ namespace scm {
         std::string cu_timer_name;
         timers_counters* timer_cnt_m;
       )
-      
+
+      // Fault injection
+      FaultInjection fault_injection_m;
 
     public: 
       cu_executor_module() = delete;

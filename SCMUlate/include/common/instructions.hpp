@@ -61,22 +61,36 @@ namespace scm {
       operand_t op3;
       memranges_pair memRanges;
       std::unordered_map<decoded_reg_t, reg_state> inst_operand_dir;
+      bool itFailed;
 
-   public:
+    public:
       // Constructors
-      decoded_instruction_t (instType type, opcode_t opc) :
-        type(type), opcode(opc), instruction(""), op1_s(""), op2_s(""), op3_s(""), op_in_out(OP_IO::NO_RD_WR), cod_exec(nullptr), op1(), op2(), op3() {}
-      decoded_instruction_t (instType type, opcode_t opcode, std::string inst, std::string op1s = std::string(), std::string op2s = std::string(), std::string op3s = std::string()) :
-        type(type), opcode(opcode), instruction(inst), op1_s(op1s), op2_s(op2s), op3_s(op3s), op_in_out(OP_IO::NO_RD_WR), cod_exec(nullptr), op1(), op2(), op3()  {}
+      decoded_instruction_t(instType type, opcode_t opc)
+          : type(type), opcode(opc), instruction(""), op1_s(""), op2_s(""),
+            op3_s(""), op_in_out(OP_IO::NO_RD_WR), cod_exec(nullptr), op1(),
+            op2(), op3(), itFailed(false) {}
+      decoded_instruction_t(instType type, opcode_t opcode, std::string inst,
+                            std::string op1s = std::string(),
+                            std::string op2s = std::string(),
+                            std::string op3s = std::string())
+          : type(type), opcode(opcode), instruction(inst), op1_s(op1s),
+            op2_s(op2s), op3_s(op3s), op_in_out(OP_IO::NO_RD_WR),
+            cod_exec(nullptr), op1(), op2(), op3(), itFailed(false) {}
 
-      decoded_instruction_t (const decoded_instruction_t &other) :
-              type(other.type), opcode(other.opcode), instruction(other.instruction), op1_s(other.op1_s), op2_s(other.op2_s), op3_s(other.op3_s), op_in_out(other.op_in_out),cod_exec(nullptr), op1(other.op1), op2(other.op2), op3(other.op3), memRanges(other.memRanges), inst_operand_dir(other.inst_operand_dir) {
-                if (other.cod_exec != nullptr) {
-                  codelet_params newParams = other.cod_exec->getParams();
-                  this->cod_exec = codeletFactory::createCodelet(getInstruction(), newParams);
-                  this->cod_exec->setMemoryRange(&memRanges);
-                }
-              }
+      decoded_instruction_t(const decoded_instruction_t &other)
+          : type(other.type), opcode(other.opcode),
+            instruction(other.instruction), op1_s(other.op1_s),
+            op2_s(other.op2_s), op3_s(other.op3_s), op_in_out(other.op_in_out),
+            cod_exec(nullptr), op1(other.op1), op2(other.op2), op3(other.op3),
+            memRanges(other.memRanges),
+            inst_operand_dir(other.inst_operand_dir), itFailed(false) {
+        if (other.cod_exec != nullptr) {
+          codelet_params newParams = other.cod_exec->getParams();
+          this->cod_exec =
+              codeletFactory::createCodelet(getInstruction(), newParams);
+          this->cod_exec->setMemoryRange(&memRanges);
+        }
+      }
       // Getters and setters
       /** \brief get the instruction type
        *  \sa istType
@@ -219,6 +233,9 @@ namespace scm {
       bool isOpAnAddress(int op_num); 
 
       bool inline isMemoryInstruction() { return this->type == instType::MEMORY_INST ||  (this->type == instType::EXECUTE_INST && this->cod_exec->isMemoryCodelet()); }
+
+      void setItFailed(bool failed) { itFailed = failed; }
+      bool getItFailed() { return itFailed; }
 
       ~decoded_instruction_t() {
         if (type == EXECUTE_INST) {

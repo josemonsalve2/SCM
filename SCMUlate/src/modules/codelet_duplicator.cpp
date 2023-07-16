@@ -1,6 +1,9 @@
 #include "codelet_duplicator.hpp"
 #include "fetch_decode.hpp"
 
+#define RESILIENCY_ERROR                                                       \
+  printf("RESILIENCY_ERROR\n");                                                \
+  exit(999);
 namespace scm {
 
 class fetch_decode_module;
@@ -266,8 +269,11 @@ bool dupl_controller_module::compareCodelets(instruction_state_pair *inst) {
     return true;
 
   if (mode == DUPL_MODES::NO_DUPLICATION)
-    return true;
-
+    if (inst->first->getItFailed()) {
+      RESILIENCY_ERROR;
+    } else {
+      return true;
+    }
   // checkIfReady will check all the copies of the current instruction
   // otherwise it will wait for the other copies to finish
   if (inst_buff_m->checkIfReady(inst)) {
@@ -290,7 +296,7 @@ bool dupl_controller_module::compareCodelets(instruction_state_pair *inst) {
         overrideOriginalOperands(inst, allCopies->at(0));
         return true;
       }
-      // JOSEE Handle fatal error here
+      RESILIENCY_ERROR;
       return false;
     } else if (mode == DUPL_MODES::THREE_OUT_OF_FIVE) {
       SCMULATE_ERROR_IF(0, allCopies->size() != 4,
@@ -315,7 +321,7 @@ bool dupl_controller_module::compareCodelets(instruction_state_pair *inst) {
           }
       }
 
-      // JOSEE Handle fatal error here
+      RESILIENCY_ERROR;
       return false;
     } else if (mode == DUPL_MODES::ADAPTIVE_DUPLICATION) {
       // Make a copy of all codelets and add the original
@@ -379,7 +385,7 @@ bool dupl_controller_module::compareCodelets(instruction_state_pair *inst) {
         createDuplicatedCodelet(inst);
         return false;
       } else {
-        // JOSEE ADD FATAL ERROR HERE
+        RESILIENCY_ERROR;
         return false;
       }
     }

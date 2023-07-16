@@ -6,8 +6,10 @@
 #include <iostream>
 #include <math.h>
 //#include <libgen.h>
+#include "Codelets/sparselu.h"
 
 float ** BENCH;
+uint64_t errors = 0;
 
 // don't touch
 static uint64_t current_malloc_size;
@@ -30,11 +32,14 @@ int SCMUlate();
 void lu_malloc_init(unsigned char * memory, uint64_t size);
 void * lu_malloc(uint64_t size);
 // functions defs from bots sparse LU decomposition benchmark
+// some used for generating the data and others for error checking afterwards
+/*
 void genmat (float *M[]);
 float * allocate_clean_block();
 void pre_allocate(float **BENCH);
 void print_structure(char *name, float *M[]);
 void sparselu_init (float ***pBENCH, char *pass);
+*/
 
 int main (int argc, char * argv[]) {
   unsigned char * memory;
@@ -49,9 +54,8 @@ int main (int argc, char * argv[]) {
     memory = new unsigned char[SIZEOFMEM];
     lu_malloc_init(memory, SIZEOFMEM);
     // do some setup here
-    sparselu_init(&BENCH, "benchmark");
-    genmat(BENCH);
-    pre_allocate(BENCH);
+    lu_sparselu_init(&BENCH, "benchmark");
+    lu_pre_allocate(BENCH);
   }
   catch (int e) {
     std::cout << "An exception occurred. Exception Nr. " << e << '\n';
@@ -81,31 +85,31 @@ int main (int argc, char * argv[]) {
   TIMERS_COUNTERS_GUARD(
     myMachine->setTimersOutput("trace.json");
   );
-
   // Checking result
   bool success = true;
 
+/*
   std::chrono::time_point<std::chrono::high_resolution_clock> initTimer =  std::chrono::high_resolution_clock::now();
   // aCod.implementation();
   std::chrono::time_point<std::chrono::high_resolution_clock> endTimer = std::chrono::high_resolution_clock::now();
 	std::chrono::duration<double> diff =endTimer - initTimer;
   printf ("taking %f s\n", diff.count());
+*/
 
-  int errors = 0;
-  /*
-  for (long unsigned i = 0; i < NumElements_C; ++i) {
-    if (abs(C[i] - testC[i]) > 0.00001) {
-      success = false;
-      SCMULATE_ERROR(0, "RESULT ERROR in i = %ld, value C[i] = %f  vs testC[i] = %f", i, C[i], testC[i]);
-      if (++errors > 256) break;
-    }
-  }
+  // now start doing the process sequentially for error checking purposes
+  float **SEQ;
+  printf("Initializing SEQ\n");
+  sparselu_init(&SEQ, "sequential");
+  printf("Performing sequential LU decomposition\n");
+  sparselu_seq_call(SEQ);
+  printf("Comparing sequential and parallel results\n");
+  success = (bool) sparselu_check(SEQ, BENCH);
+
   if (success)
     printf("SUCCESS!!!\n");
-  */
   delete myMachine;
   delete [] memory;
-  //delete [] testC;
+  //delete [] SEQ;
   return 0;
 }
 
@@ -138,7 +142,8 @@ void parseProgramOptions(int argc, char* argv[]) {
   }
 }
 
-void genmat (float *M[])
+// version of genmat that allocates into SCM space; used to initialize BENCH
+void lu_genmat (float *M[])
 {
    int null_entry, init_val, i, j, ii, jj;
    float *p;
@@ -187,7 +192,7 @@ void genmat (float *M[])
    }
 }
 
-float * allocate_clean_block()
+float * lu_allocate_clean_block()
 {
   int i,j;
   float *p, *q;
@@ -213,7 +218,7 @@ float * allocate_clean_block()
 // as I know, and the memory codelet itself would not actually read or write the space that was 
 // allocated, only store the address in a register so that the memory codelet after the actual
 // computation can write back to memory where necessary. Further discussion needed
-void pre_allocate(float **BENCH)
+void lu_pre_allocate(float **BENCH)
 {
   int ii, jj, kk;
   for (kk=0; kk<bots_arg_size; kk++)
@@ -225,7 +230,7 @@ void pre_allocate(float **BENCH)
             // we don't want memory codelets to be performing memory allocation, only memory movement
             // so, in the main program outside of the SCM machine, we iterate through and allocate these 
             // blocks beforehand, so we don't have to do it during
-            if (BENCH[ii*bots_arg_size+jj]==NULL) BENCH[ii*bots_arg_size+jj] = allocate_clean_block(); //allocate_clean_block -- mem codelet
+            if (BENCH[ii*bots_arg_size+jj]==NULL) BENCH[ii*bots_arg_size+jj] = lu_allocate_clean_block(); //allocate_clean_block -- mem codelet
           }
 }
 
@@ -243,9 +248,224 @@ void print_structure(char *name, float *M[])
    printf("\n");
 }
 
-void sparselu_init (float ***pBENCH, char *pass)
+// version of init that allocates into SCM space; used for BENCH
+void lu_sparselu_init (float ***pBENCH, char *pass)
 {
    *pBENCH = (float **) lu_malloc(bots_arg_size*bots_arg_size*sizeof(float *));
+   lu_genmat(*pBENCH);
+   print_structure(pass, *pBENCH);
+}
+
+int checkmat (float *M, float *N)
+{
+   int i, j;
+   float r_err;
+   int correct = TRUE;
+
+   for (i = 0; i < bots_arg_size_1; i++)
+   {
+      for (j = 0; j < bots_arg_size_1; j++)
+      {
+         r_err = M[i*bots_arg_size_1+j] - N[i*bots_arg_size_1+j];
+         if ( r_err == 0.0 ) continue;
+
+         if (r_err < 0.0 ) r_err = -r_err;
+
+         if ( M[i*bots_arg_size_1+j] == 0 ) 
+         {
+           printf("Checking failure: A[%d][%d]=%f  B[%d][%d]=%f; \n",
+                    i,j, M[i*bots_arg_size_1+j], i,j, N[i*bots_arg_size_1+j]);
+           //return FALSE;
+           correct = FALSE;
+         }  
+         r_err = r_err / M[i*bots_arg_size_1+j];
+         if(r_err > EPSILON)
+         {
+            printf("Checking failure: A[%d][%d]=%f  B[%d][%d]=%f; Relative Error=%f\n",
+                    i,j, M[i*bots_arg_size_1+j], i,j, N[i*bots_arg_size_1+j], r_err);
+            //return FALSE;
+            correct = FALSE;
+            errors++;
+         }
+      }
+   }
+   return(correct);
+   //return TRUE;
+}
+
+int sparselu_check(float **SEQ, float **BENCH)
+{
+   int ii,jj,ok=1;
+
+   for (ii=0; ((ii<bots_arg_size) && ok); ii++)
+   {
+      for (jj=0; ((jj<bots_arg_size) && ok); jj++)
+      {
+         if ((SEQ[ii*bots_arg_size+jj] == NULL) && (BENCH[ii*bots_arg_size+jj] != NULL)) ok = FALSE;
+         if ((SEQ[ii*bots_arg_size+jj] != NULL) && (BENCH[ii*bots_arg_size+jj] == NULL)) ok = FALSE;
+         if ((SEQ[ii*bots_arg_size+jj] != NULL) && (BENCH[ii*bots_arg_size+jj] != NULL))
+            ok = checkmat(SEQ[ii*bots_arg_size+jj], BENCH[ii*bots_arg_size+jj]);
+      }
+   }
+   if (ok) return TRUE;
+   else return FALSE;
+}
+
+void sparselu_seq_call(float **BENCH)
+{
+   int ii, jj, kk;
+
+   for (kk=0; kk<bots_arg_size; kk++)
+   {
+      lu0(BENCH[kk*bots_arg_size+kk]);
+      for (jj=kk+1; jj<bots_arg_size; jj++)
+         if (BENCH[kk*bots_arg_size+jj] != NULL)
+         {
+            fwd(BENCH[kk*bots_arg_size+kk], BENCH[kk*bots_arg_size+jj]);
+         }
+      for (ii=kk+1; ii<bots_arg_size; ii++)
+         if (BENCH[ii*bots_arg_size+kk] != NULL)
+         {
+            bdiv (BENCH[kk*bots_arg_size+kk], BENCH[ii*bots_arg_size+kk]);
+         }
+      for (ii=kk+1; ii<bots_arg_size; ii++)
+         if (BENCH[ii*bots_arg_size+kk] != NULL)
+            for (jj=kk+1; jj<bots_arg_size; jj++)
+               if (BENCH[kk*bots_arg_size+jj] != NULL)
+               {
+                     if (BENCH[ii*bots_arg_size+jj]==NULL) BENCH[ii*bots_arg_size+jj] = allocate_clean_block();
+                     bmod(BENCH[ii*bots_arg_size+kk], BENCH[kk*bots_arg_size+jj], BENCH[ii*bots_arg_size+jj]);
+               }
+
+   }
+}
+
+void sparselu_init (float ***pBENCH, char *pass)
+{
+   *pBENCH = (float **) malloc(bots_arg_size*bots_arg_size*sizeof(float *));
    genmat(*pBENCH);
    print_structure(pass, *pBENCH);
+}
+
+void genmat (float *M[])
+{
+   int null_entry, init_val, i, j, ii, jj;
+   float *p;
+
+   init_val = 1325;
+
+   /* generating the structure */
+   for (ii=0; ii < bots_arg_size; ii++) // crosses full matrix size: ii/jj indicate address of submatrices?
+   {
+      for (jj=0; jj < bots_arg_size; jj++)
+      {
+         /* computing null entries */
+         null_entry=FALSE;
+         if ((ii<jj) && (ii%3 !=0)) null_entry = TRUE; // deciding with ifs whether submatrix has data or not
+         if ((ii>jj) && (jj%3 !=0)) null_entry = TRUE; 
+	 if (ii%2==1) null_entry = TRUE; 
+	 if (jj%2==1) null_entry = TRUE; 
+	 if (ii==jj) null_entry = FALSE; 
+	 if (ii==jj-1) null_entry = FALSE; 
+         if (ii-1 == jj) null_entry = FALSE;  
+         /* allocating matrix */
+         if (null_entry == FALSE){
+            M[ii*bots_arg_size+jj] = (float *) malloc(bots_arg_size_1*bots_arg_size_1*sizeof(float));
+	    if (M[ii*bots_arg_size+jj] == NULL) // error checking for malloc / mem space
+            {
+               printf("Error: Out of memory\n");
+               exit(101);
+            }
+            /* initializing matrix */
+            p = M[ii*bots_arg_size+jj];
+            for (i = 0; i < bots_arg_size_1; i++) // setting values for valid submatrices
+            {
+               for (j = 0; j < bots_arg_size_1; j++)
+               {
+	            init_val = (3125 * init_val) % 65536;
+      	            (*p) = (float)((init_val - 32768.0) / 16384.0);
+                    p++;
+               }
+            }
+         }
+         else
+         {
+            M[ii*bots_arg_size+jj] = NULL;
+         }
+      }
+   }
+}
+
+float * allocate_clean_block()
+{
+  int i,j;
+  float *p, *q;
+
+  p = (float *) malloc(bots_arg_size_1*bots_arg_size_1*sizeof(float));
+  q=p;
+  if (p!=NULL){
+     for (i = 0; i < bots_arg_size_1; i++) 
+        for (j = 0; j < bots_arg_size_1; j++){(*p)=0.0; p++;}
+	
+  }
+  else
+  {
+      printf("Error: Out of memory\n");
+      exit (101);
+  }
+  return (q);
+}
+
+// bots task functions below -- they are not linked to codelets at all other than that their code was used for them, but to the compiler there is no connection
+/***********************************************************************
+ * lu0: 
+ **********************************************************************/
+void lu0(float *diag)
+{
+   int i, j, k;
+
+   for (k=0; k<bots_arg_size_1; k++)
+      for (i=k+1; i<bots_arg_size_1; i++)
+      {
+         diag[i*bots_arg_size_1+k] = diag[i*bots_arg_size_1+k] / diag[k*bots_arg_size_1+k];
+         for (j=k+1; j<bots_arg_size_1; j++)
+            diag[i*bots_arg_size_1+j] = diag[i*bots_arg_size_1+j] - diag[i*bots_arg_size_1+k] * diag[k*bots_arg_size_1+j];
+      }
+}
+
+/***********************************************************************
+ * bdiv: 
+ **********************************************************************/
+void bdiv(float *diag, float *row)
+{
+   int i, j, k;
+   for (i=0; i<bots_arg_size_1; i++)
+      for (k=0; k<bots_arg_size_1; k++)
+      {
+         row[i*bots_arg_size_1+k] = row[i*bots_arg_size_1+k] / diag[k*bots_arg_size_1+k];
+         for (j=k+1; j<bots_arg_size_1; j++)
+            row[i*bots_arg_size_1+j] = row[i*bots_arg_size_1+j] - row[i*bots_arg_size_1+k]*diag[k*bots_arg_size_1+j];
+      }
+}
+/***********************************************************************
+ * bmod: 
+ **********************************************************************/
+void bmod(float *row, float *col, float *inner)
+{
+   int i, j, k;
+   for (i=0; i<bots_arg_size_1; i++)
+      for (j=0; j<bots_arg_size_1; j++)
+         for (k=0; k<bots_arg_size_1; k++)
+            inner[i*bots_arg_size_1+j] = inner[i*bots_arg_size_1+j] - row[i*bots_arg_size_1+k]*col[k*bots_arg_size_1+j];
+}
+/***********************************************************************
+ * fwd: 
+ **********************************************************************/
+void fwd(float *diag, float *col)
+{
+   int i, j, k;
+   for (j=0; j<bots_arg_size_1; j++)
+      for (k=0; k<bots_arg_size_1; k++) 
+         for (i=k+1; i<bots_arg_size_1; i++)
+            col[i*bots_arg_size_1+j] = col[i*bots_arg_size_1+j] - diag[i*bots_arg_size_1+k]*col[k*bots_arg_size_1+j];
 }

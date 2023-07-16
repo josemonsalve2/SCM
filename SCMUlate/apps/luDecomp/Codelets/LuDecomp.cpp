@@ -70,7 +70,7 @@ MEMRANGE_CODELET(loadSubMat_2048L,
   //float ** address_reg = this->getParams().getParamValueAs<float **>(2);
   uint64_t row_offset = *(this->getParams().getParamValueAs<uint64_t*>(2)); // kk in the original code
   uint64_t col_offset = *(this->getParams().getParamValueAs<uint64_t*>(3));
-  float ** bench_addr = BENCH;
+  //float ** bench_addr = BENCH;
   uint64_t actual_offset = (row_offset * bots_arg_size + col_offset); // original contains bots_arg_size which is 50; define at top
   // Add range that will be touched (range of sub matrix)
   // lu0 goes from the start of its row 

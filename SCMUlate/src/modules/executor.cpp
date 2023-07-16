@@ -1,7 +1,5 @@
 #include "executor.hpp"
 
-#include <chrono>
-
 scm::cu_executor_module::cu_executor_module(int CU_ID, control_store_module * const control_store_m, unsigned int execSlotNumber, bool * aliveSig, l2_memory_t upperMem):
   cu_executor_id(CU_ID),
   aliveSignal(aliveSig) {
@@ -45,16 +43,14 @@ scm::cu_executor_module::behavior() {
           #endif
           this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_EXECUTION_COD, curInstruction->getFullInstruction());
         );
+
+        fault_injection_m.injectFault(nullptr);
+
         // Start timer in ms
-        auto start = std::chrono::high_resolution_clock::now();
         codeletExecutor();
-        // End timer in ms
-        auto end = std::chrono::high_resolution_clock::now();
-        auto duration =
-            std::chrono::duration_cast<std::chrono::milliseconds>(end - start);
 
         // Fault injection
-        fault_injection_m.injectFault(myExecutor->getHead(), duration.count());
+        fault_injection_m.injectFault(myExecutor->getHead());
 
       } else {
         SCMULATE_ERROR(0, "Error. Executor received an unknown instruction type");

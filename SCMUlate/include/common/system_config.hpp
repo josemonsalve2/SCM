@@ -37,4 +37,8 @@ namespace scm {
 #define DEBUGER_MODE 0
 #endif
 
+#ifndef REGISTER_INJECTION_MODE
+#define REGISTER_INJECTION_MODE 0
+#endif
+
 #endif // __SCMULATE_SYS_CONFIG__

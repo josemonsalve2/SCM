@@ -161,7 +161,7 @@ bool dupl_controller_module::compareTwoCodelets(
 
   SCMULATE_INFOMSG(5, "Comparing instruction %s",
                    inst->getFullInstruction().c_str());
-
+#if REGISTER_INJECTION_MODE == 1
   for (int i = 1; i <= MAX_NUM_OPERANDS; ++i) {
     operand_t *current_operand = &inst->getOp(i);
     if (current_operand->type == operand_t::REGISTER) {
@@ -182,6 +182,15 @@ bool dupl_controller_module::compareTwoCodelets(
       }
     }
   }
+#else
+  if (original->first->getItFailed() || duplicate->first->getItFailed()) {
+    SCMULATE_INFOMSG(5,
+                     "Instruction %s or %s failed. Therefore comparison fails",
+                     inst->getFullInstruction().c_str(),
+                     duplicate->first->getFullInstruction().c_str());
+    return false;
+  }
+#endif
   SCMULATE_INFOMSG(5, "Instruction %s is equal to %s in all operands",
                    inst->getFullInstruction().c_str(),
                    duplicate->first->getFullInstruction().c_str());
@@ -284,6 +293,22 @@ bool dupl_controller_module::compareCodelets(instruction_state_pair *inst) {
                      (unsigned long)inst);
     // compare
     dupCodeletStates *allCopies = inst_buff_m->getDuplicated(inst);
+
+#if REGISTER_INJECTION_MODE == 0
+    // Print all the itFailed variables
+    for (auto copy : *allCopies) {
+      SCMULATE_INFOMSG(5, "Instruction %s at (0x%lX) has itFailed %s",
+                       copy->first->getFullInstruction().c_str(),
+                       (unsigned long)copy,
+                       copy->first->getItFailed() ? "true" : "false");
+    }
+    SCMULATE_INFOMSG(5, "Instruction %s at (0x%lX) has itFailed %s",
+                     inst->first->getFullInstruction().c_str(),
+                     (unsigned long)inst,
+                     inst->first->getItFailed() ? "true" : "false");
+
+#endif
+
     if (mode == DUPL_MODES::TWO_OUT_OF_THREE) {
       SCMULATE_ERROR_IF(0, allCopies->size() != 2,
                         "Error: Two out of three mode requires two copies");

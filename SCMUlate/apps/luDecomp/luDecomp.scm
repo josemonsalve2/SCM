@@ -5,7 +5,6 @@ LDIMM R64B_4, 50;  // For number of iterations and offset calculation -- bot_arg
 COD loadBenchAddr_64B R64B_5; // Basically a hacky way of fetching BENCH address so we can manipulate it to check if submatrices are NULL or not
 LDIMM R64B_7, 0; // stays 0 for null checking of submatrices
 
-// ALL the offset calculation to check for NULL submatrices needs to be updated
 // Check that they add to the BENCH address in R64B_5 AND that they multiply by 8 bytes; assembly does not know about pointer arithmetic
 
 // main outer loop -- kk 
@@ -19,8 +18,9 @@ outer:
     BREQ R64B_4, R64B_2, inner_ii_head;               // branch for this loop
     MULT R64B_6, R64B_1, R64B_4;                      // kk * bot_arg_size
     ADD R64B_6, R64B_6, R64B_2;                       // kk * bot_arg_size + jj
-    MULT R64B_6, R64B_6, 8;
-    LDOFF R64B_6, R64B_5, R64B_6;                     // BENCH[kk * bot_arg_size + jj]
+    MULT R64B_6, R64B_6, 8;                           // account for size of float *
+    // LDOFF R64B_6, R64B_5, R64B_6;                     // BENCH[kk * bot_arg_size + jj]
+    LDADR R64B_6, R64B_6;                             // BENCH[kk * bot_arg_size + jj] (now since BENCH is at the root of SCM memory, we load by the offset only)
     BREQ R64B_6, R64B_7, inner_jj_tail;               // branch if submatrix is null -- branch to tail of loop
     COD loadSubMat_2048L R2048L_2, R64B_1, R64B_2;    // R2048L_1 already holds first submat, so fetch second submat to R2048L_2
     COD fwd_2048L R2048L_2, R2048L_1;               
@@ -34,8 +34,9 @@ outer:
     BREQ R64B_4, R64B_3, inner_ii2_head;              // branch for this loop
     MULT R64B_6, R64B_3, R64B_4;                      // ii * bot_arg_size
     ADD R64B_6, R64B_6, R64B_1;                       // ii * bot_arg_size + kk
-    MULT R64B_6, R64B_6, 8;
-    LDOFF R64B_6, R64B_5, R64B_6;                     // BENCH[ii * bot_arg_size + kk]
+    MULT R64B_6, R64B_6, 8;                           // account for size of float *
+    // LDOFF R64B_6, R64B_5, R64B_6;                     // BENCH[ii * bot_arg_size + kk]
+    LDADR R64B_6, R64B_6;
     BREQ R64B_6, R64B_7, inner_ii_tail;               // branch if submatrix is null -- branch to tail of loop
     COD loadSubMat_2048L R2048L_2, R64B_3, R64B_1;    // load submat at ii*bot_arg_size+kk, so pass ii and kk
     COD bdiv_2048L R2048L_2, R2048L_1;
@@ -50,8 +51,9 @@ outer:
     BREQ R64B_4, R64B_3, outer_tail;                  // branch for this loop
     MULT R64B_6, R64B_3, R64B_4;                      // ii * bot_arg_size
     ADD R64B_6, R64B_6, R64B_1;                       // ii * bot_arg_size + kk
-    MULT R64B_6, R64B_6, 8;
-    LDOFF R64B_6, R64B_5, R64B_6;                     // BENCH[ii * bot_arg_size + kk]
+    MULT R64B_6, R64B_6, 8;                           // account for size of float *
+    //  LDOFF R64B_6, R64B_5, R64B_6;                 // BENCH[ii * bot_arg_size + kk]
+    LDADR R64B_6, R64B_6;
     BREQ R64B_6, R64B_7, inner_ii2_tail;              // branch if submatrix is null -- branch to tail of loop
     ADD R64B_2, R64B_1, 1;                            // jj = kk + 1
     inner2_jj:
@@ -60,7 +62,8 @@ outer:
       MULT R64B_6, R64B_1, R64B_4;                    // kk * bot_arg_size
       ADD R64B_6, R64B_6, R64B_2;                     // kk * bot_arg_size + jj
       MULT R64B_6, R64B_6, 8;
-      LDOFF R64B_6, R64B_5, R64B_6;                   // BENCH[kk * bot_arg_size + jj]
+      //  LDOFF R64B_6, R64B_5, R64B_6;                   // BENCH[kk * bot_arg_size + jj]
+      LDADR R64B_6, R64B_6;
       BREQ R64B_6, R64B_7, inner2_jj_tail;            // branch if submatrix is null -- branch to tail of loop
       // removed checking for last submatrix because it should've been preallocated
       // need to load ii/kk, kk/jj, then do bmod, then store all 3 (including ii/jj)
@@ -69,7 +72,7 @@ outer:
       COD bmod_2048L R2048L_3, R2048L_1, R2048L_2;    // execute bmod codelet
       COD storeSubMat_2048L R2048L_1, R64B_3, R64B_1; // storing submat at BENCH[ii*bot_arg_size+kk]
       COD storeSubMat_2048L R2048L_2, R64B_1, R64B_2; // storing submat at BENCH[kk*bot_arg_size+jj]
-      COD storeSubMat_2048L R2048L_3, R64B_3, R64B_2;
+      COD storeSubMat_2048L R2048L_3, R64B_3, R64B_2; // storing submat at BENCH[ii*bot_arg_size+jj]
     inner2_jj_tail:
       ADD R64B_2, R64B_2, 1;                          // increment jj
       JMPLBL inner2_jj;

@@ -44,6 +44,9 @@ scm::mem_interface_module::executeMemoryInstructions() {
     uint64_t immediate_value = myInstructionSlot->getOp2().value.immediate;
     
     // Perform actual memory assignment
+#ifdef ARITH64
+    *((uint64_t *) reg1_ptr) = immediate_value;
+#else
     for (i = size_reg1_bytes-1, j = 0; i >= 0; --i, ++j) {
       if (j < 8) {
         unsigned char temp = immediate_value & 255;
@@ -54,6 +57,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
         reg1_ptr[i] = 0;
       }
     }
+#endif
     return;
   }
   /////////////////////////////////////////////////////
@@ -78,16 +82,21 @@ scm::mem_interface_module::executeMemoryInstructions() {
       // Load address register value
       decoded_reg_t reg2 = myInstructionSlot->getOp2().value.reg;
       unsigned char * reg2_ptr = reg2.reg_ptr;
+#ifdef ARITH64
+      base_addr = *((uint64_t *) reg2_ptr);
+#else
       int32_t size_reg2_bytes = reg2.reg_size_bytes;
       for (i = size_reg2_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg2_ptr[i];
         temp <<= j*8;
         base_addr += temp;
       } 
+#endif
     } else {
       SCMULATE_ERROR(0, "Incorrect operand type");
     }
     // Perform actual memory copy
+    printf("Loading 0x%lx from addr 0x%lx (based on root of memory)\n", *((uint64_t *) this->getAddress(base_addr)),base_addr);
     std::memcpy(reg1_ptr, this->getAddress(base_addr), size_reg1_bytes);
     return;
   }
@@ -115,12 +124,16 @@ scm::mem_interface_module::executeMemoryInstructions() {
       // Load address register value
       decoded_reg_t reg2 = myInstructionSlot->getOp2().value.reg;
       unsigned char * reg2_ptr = reg2.reg_ptr;
+#ifdef ARITH64
+      base_addr = *((uint64_t *) reg2_ptr);
+#else
       int32_t size_reg2_bytes = reg2.reg_size_bytes;
       for (i = size_reg2_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg2_ptr[i];
         temp <<= j*8;
         base_addr += temp;
       }
+#endif
     } else {
       SCMULATE_ERROR(0, "Incorrect operand type");
     }
@@ -133,16 +146,20 @@ scm::mem_interface_module::executeMemoryInstructions() {
       // Load address register value
       decoded_reg_t reg3 = myInstructionSlot->getOp3().value.reg;
       unsigned char * reg3_ptr = reg3.reg_ptr;
+#ifdef ARITH64
+      base_addr += *((uint64_t *) reg3_ptr);
+#else
       int32_t size_reg3_bytes = reg3.reg_size_bytes;
       for (i = size_reg3_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {
         unsigned long temp = reg3_ptr[i];
         temp <<= j*8;
         base_addr += temp;
       }
+#endif
     } else {
       SCMULATE_ERROR(0, "Incorrect operand type");
     }
-
+    printf("LDOFF loading from %p\n", this->getAddress(base_addr+offset));
     std::memcpy(reg1_ptr, this->getAddress(base_addr+offset), size_reg1_bytes);
     return;
   }

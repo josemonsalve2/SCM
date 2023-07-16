@@ -408,6 +408,10 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
       int32_t size_reg_bytes = reg1.reg_size_bytes;
 
       // Addition
+#ifdef ARITH64
+      *((uint64_t *) reg1_ptr) = *((uint64_t *) reg2_ptr) + immediate_val;
+      printf("ARITH64 mode immediate addition result: 0x%lx\n", *((uint64_t *) reg1_ptr));
+#else
       uint32_t temp = 0;
       for (int32_t i = size_reg_bytes - 1; i >= 0; --i)
       {
@@ -417,6 +421,7 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
         // Carry on
         temp = temp > 255 ? 1 : 0;
       }
+#endif
     }
     else
     {
@@ -430,6 +435,10 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
       int32_t size_reg_bytes = reg1.reg_size_bytes;
 
       // Addition
+#ifdef ARITH64
+      *((uint64_t *) reg1_ptr) = *((uint64_t *) reg2_ptr) + *((uint64_t *) reg3_ptr);
+      printf("ARITH64 mode register addition result: 0x%lx\n", *((uint64_t *) reg1_ptr));
+#else
       int temp = 0;
       for (int32_t i = size_reg_bytes - 1; i >= 0; --i)
       {
@@ -438,6 +447,7 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
         // Carry on
         temp = temp > 255 ? 1 : 0;
       }
+#endif
     }
     return;
   }
@@ -545,10 +555,15 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
     // Get value for reg2
     unsigned char *reg2_ptr = reg2.reg_ptr;
     int32_t size_reg2_bytes = reg2.reg_size_bytes;
+#ifdef ARITH64
+    op2_val = *((uint64_t *)reg2_ptr);
+    printf("MULT: op2 is 0x%lx\n", op2_val);
+#else
     for (int32_t i = 0; i < size_reg2_bytes; ++i) {
       op2_val <<= 8;
       op2_val += static_cast<uint8_t>(reg2_ptr[i]);
     }
+#endif
     // Third operand may be register or immediate. We assumme immediate are no longer than a long long
     if (inst->getOp(3).type == scm::operand_t::IMMEDIATE_VAL) {
       // IMMEDIATE MULT CASE
@@ -558,21 +573,31 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
       // REGISTER REGISTER ADD CASE
       decoded_reg_t reg3 = inst->getOp3().value.reg;
       unsigned char *reg3_ptr = reg3.reg_ptr;
+#ifdef ARITH64
+      op3_val = *((uint64_t *) reg3_ptr);
+#else
       int32_t size_reg3_bytes = reg3.reg_size_bytes;
       for (int32_t i = 0; i < size_reg3_bytes; ++i) {
         op3_val <<= 8;
         op3_val += static_cast<uint8_t>(reg3_ptr[i]);
       }
+#endif
     }
+    printf("MULT: op3 is 0x%lx\n", op3_val);
 
     uint64_t mult_res = op2_val * op3_val;
     // Where to store the result
     unsigned char *reg1_ptr = reg1.reg_ptr;
+#ifdef ARITH64
+    *((uint64_t *)reg1_ptr) = mult_res;
+#else
     int32_t size_reg1_bytes = reg1.reg_size_bytes;
     for (int32_t i = size_reg1_bytes - 1; i >= 0; --i) {
       reg1_ptr[i] = mult_res & 255;
       mult_res >>= 8;
     }
+#endif
+    printf("MULT: dest is 0x%lx\n", *((uint64_t *)reg1_ptr));
     return;
   }
 }

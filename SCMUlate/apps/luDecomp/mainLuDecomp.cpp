@@ -40,18 +40,18 @@ int main (int argc, char * argv[]) {
   unsigned char * memory;
   
   parseProgramOptions(argc, argv);
-  // TODO: Harcoding these for now, until we have a general 
-  if (strcmp(program_options.fileName, "luDecomp.scm") == 0){
-    // do some setup here
-    sparselu_init(&BENCH, "benchmark");
-    genmat(BENCH);
-    pre_allocate(BENCH);
-  } else {
+  // For now we only support the one file
+  if (strcmp(program_options.fileName, "luDecomp.scm") != 0){
     std::cout << "Unsupported SCM file" << std::endl;
     return 1;
   }
   try {
     memory = new unsigned char[SIZEOFMEM];
+    lu_malloc_init(memory, SIZEOFMEM);
+    // do some setup here
+    sparselu_init(&BENCH, "benchmark");
+    genmat(BENCH);
+    pre_allocate(BENCH);
   }
   catch (int e) {
     std::cout << "An exception occurred. Exception Nr. " << e << '\n';
@@ -161,7 +161,7 @@ void genmat (float *M[])
          if (ii-1 == jj) null_entry = FALSE;  
          /* allocating matrix */
          if (null_entry == FALSE){
-            M[ii*bots_arg_size+jj] = (float *) malloc(bots_arg_size_1*bots_arg_size_1*sizeof(float));
+            M[ii*bots_arg_size+jj] = (float *) lu_malloc(bots_arg_size_1*bots_arg_size_1*sizeof(float));
 	    if (M[ii*bots_arg_size+jj] == NULL) // error checking for malloc / mem space
             {
                printf("Error: Out of memory\n");
@@ -192,7 +192,7 @@ float * allocate_clean_block()
   int i,j;
   float *p, *q;
 
-  p = (float *) malloc(bots_arg_size_1*bots_arg_size_1*sizeof(float));
+  p = (float *) lu_malloc(bots_arg_size_1*bots_arg_size_1*sizeof(float));
   q=p;
   if (p!=NULL){
      for (i = 0; i < bots_arg_size_1; i++) 
@@ -245,7 +245,7 @@ void print_structure(char *name, float *M[])
 
 void sparselu_init (float ***pBENCH, char *pass)
 {
-   *pBENCH = (float **) malloc(bots_arg_size*bots_arg_size*sizeof(float *));
+   *pBENCH = (float **) lu_malloc(bots_arg_size*bots_arg_size*sizeof(float *));
    genmat(*pBENCH);
    print_structure(pass, *pBENCH);
 }

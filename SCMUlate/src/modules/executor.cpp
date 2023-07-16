@@ -22,6 +22,7 @@ scm::cu_executor_module::behavior() {
     if (!myExecutor->is_empty()) {
       SCMULATE_INFOMSG(4, "  CUMEM[%d]: Executing instruction ", cu_executor_id);
       scm::decoded_instruction_t * curInstruction = myExecutor->getHead()->first;
+      printf("  CUMEM[%d]: Executing instruction %s\n", cu_executor_id, curInstruction->getFullInstruction().data());
       if (curInstruction->getType() == scm::instType::MEMORY_INST || curInstruction->getExecCodelet()->isMemoryCodelet()) {
         TIMERS_COUNTERS_GUARD(
           #ifdef PAPI_COUNT

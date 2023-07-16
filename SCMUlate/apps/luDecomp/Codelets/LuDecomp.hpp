@@ -9,6 +9,7 @@
 #define FALSE 0
 
 extern float ** BENCH;
+//extern unsigned char * memory;
 
 DEFINE_CODELET(fwd_2048L, 2, scm::OP_IO::OP1_RD | scm::OP_IO::OP1_WR | scm::OP_IO::OP2_RD);
 

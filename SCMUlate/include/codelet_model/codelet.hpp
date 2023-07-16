@@ -105,7 +105,9 @@ namespace scm {
       cu_executor_module * myExecutor;
     public:
       codelet () {};
-      codelet (uint32_t nparms, codelet_params params, std::uint_fast16_t opIO) : numParams(nparms), memoryRanges(nullptr), params(params), op_in_out(opIO) {};
+      codelet(uint32_t nparms, codelet_params &params, std::uint_fast16_t opIO)
+          : numParams(nparms), memoryRanges(nullptr), params(params),
+            op_in_out(opIO){};
       codelet (const codelet &other) : numParams(other.numParams), memoryRanges(nullptr), params(other.params), op_in_out(other.op_in_out), myExecutor(other.myExecutor) {}
       virtual void implementation() = 0;
       virtual bool isMemoryCodelet() { return false; }
@@ -114,6 +116,9 @@ namespace scm {
       memranges_pair * getMemoryRange() { return memoryRanges; };
       bool isOpAnAddress(int op_num) { return params.isParamAnAddress(op_num); };
       inline codelet_params& getParams() { return this->params; };
+      inline void duplicateParams() {
+        this->params = codelet_params(this->params);
+      }
       inline std::uint_fast16_t& getOpIO() { return op_in_out; };
       inline void setExecutor (cu_executor_module * exec) {this->myExecutor = exec;}
       inline cu_executor_module * getExecutor() {return this->myExecutor;}
@@ -122,13 +127,14 @@ namespace scm {
       virtual ~codelet() { }
   };
 
-  typedef codelet* (*creatorFnc)(codelet_params);
+  typedef codelet *(*creatorFnc)(codelet_params &);
 
   class codeletFactory {
     public:
       static std::map <std::string, creatorFnc> *registeredCodelets;
       static void registerCreator(std::string name, creatorFnc fnc);
-      static codelet* createCodelet(std::string name, codelet_params usedParams);
+      static codelet *createCodelet(std::string name,
+                                    codelet_params &usedParams);
   };
 }
 
@@ -137,89 +143,90 @@ namespace scm {
 #define COD_CLASS_NAME(name) _cod_ ## name
 #define COD_INSTANCE_NAME(name, post) _cod_ ## name ## post
 
-#define DEFINE_CODELET(name, nparms, opIO) \
-  namespace scm { \
-   class COD_CLASS_NAME(name) : public codelet { \
-    public: \
-      static bool hasBeenRegistered; \
-      /* Constructors */ \
-      static void codeletRegistrer() __attribute__((constructor)); \
-      COD_CLASS_NAME(name) (codelet_params parms) : codelet(nparms, parms, opIO) {} \
-      COD_CLASS_NAME(name) (const COD_CLASS_NAME(name) &other) : codelet(other) {} \
-      \
-      /* Helper functions */ \
-      static codelet* codeletCreator(codelet_params usedParams) ; \
-      static void registerCodelet() { \
-        creatorFnc thisFunc = codeletCreator; \
-        codeletFactory::registerCreator( #name, thisFunc); \
-      }\
-      \
-      /* Implementation function */ \
-      virtual void implementation(); \
-      \
-      /* destructor */ \
-      ~COD_CLASS_NAME(name)() {} \
-    }; \
-    \
-  }
+#define DEFINE_CODELET(name, nparms, opIO)                                     \
+      namespace scm {                                                          \
+      class COD_CLASS_NAME(name) : public codelet {                            \
+      public:                                                                  \
+        static bool hasBeenRegistered;                                         \
+        /* Constructors */                                                     \
+        static void codeletRegistrer() __attribute__((constructor));           \
+        COD_CLASS_NAME(name)                                                   \
+        (codelet_params & parms) : codelet(nparms, parms, opIO) {}             \
+        COD_CLASS_NAME(name)                                                   \
+        (const COD_CLASS_NAME(name) & other) : codelet(other) {}               \
+                                                                               \
+        /* Helper functions */                                                 \
+        static codelet *codeletCreator(codelet_params &usedParams);            \
+        static void registerCodelet() {                                        \
+          creatorFnc thisFunc = codeletCreator;                                \
+          codeletFactory::registerCreator(#name, thisFunc);                    \
+        }                                                                      \
+                                                                               \
+        /* Implementation function */                                          \
+        virtual void implementation();                                         \
+                                                                               \
+        /* destructor */                                                       \
+        ~COD_CLASS_NAME(name)() {}                                             \
+      };                                                                       \
+      }
 
-#define DEFINE_MEMORY_CODELET(name, nparms, opIO, opAddr) \
-  namespace scm { \
-   class COD_CLASS_NAME(name) : public codelet { \
-    public: \
-      static bool hasBeenRegistered; \
-      /* Constructors */ \
-      static void codeletRegistrer() __attribute__((constructor)); \
-      COD_CLASS_NAME(name) (codelet_params parms) : codelet(nparms, parms, opIO) { \
-        params.setParamAsAddress(opAddr); \
-      } \
-      COD_CLASS_NAME(name) (const COD_CLASS_NAME(name) &other) : codelet(other) {} \
-      \
-      /* Helper functions */ \
-      static codelet* codeletCreator(codelet_params usedParams) ; \
-      static void registerCodelet() { \
-        creatorFnc thisFunc = codeletCreator; \
-        codeletFactory::registerCreator( #name, thisFunc); \
-      }\
-      void inline addReadMemRange(uint64_t start, uint32_t size) { \
-        memoryRanges->reads.emplace(reinterpret_cast<l2_memory_t>(start), size); \
-      } \
-      void inline addWriteMemRange(uint64_t start, uint32_t size) { \
-        memoryRanges->writes.emplace(reinterpret_cast<l2_memory_t>(start), size); \
-      } \
-      \
-      /* Implementation function */ \
-      virtual void implementation(); \
-      virtual bool isMemoryCodelet() { return true; } \
-      virtual void calculateMemRanges(); \
-      \
-      /* destructor */ \
-      ~COD_CLASS_NAME(name)() {} \
-    }; \
-    \
-  }
+#define DEFINE_MEMORY_CODELET(name, nparms, opIO, opAddr)                      \
+      namespace scm {                                                          \
+      class COD_CLASS_NAME(name) : public codelet {                            \
+      public:                                                                  \
+        static bool hasBeenRegistered;                                         \
+        /* Constructors */                                                     \
+        static void codeletRegistrer() __attribute__((constructor));           \
+        COD_CLASS_NAME(name)                                                   \
+        (codelet_params & parms) : codelet(nparms, parms, opIO) {              \
+          params.setParamAsAddress(opAddr);                                    \
+        }                                                                      \
+        COD_CLASS_NAME(name)                                                   \
+        (const COD_CLASS_NAME(name) & other) : codelet(other) {}               \
+                                                                               \
+        /* Helper functions */                                                 \
+        static codelet *codeletCreator(codelet_params &usedParams);            \
+        static void registerCodelet() {                                        \
+          creatorFnc thisFunc = codeletCreator;                                \
+          codeletFactory::registerCreator(#name, thisFunc);                    \
+        }                                                                      \
+        void inline addReadMemRange(uint64_t start, uint32_t size) {           \
+          memoryRanges->reads.emplace(reinterpret_cast<l2_memory_t>(start),    \
+                                      size);                                   \
+        }                                                                      \
+        void inline addWriteMemRange(uint64_t start, uint32_t size) {          \
+          memoryRanges->writes.emplace(reinterpret_cast<l2_memory_t>(start),   \
+                                       size);                                  \
+        }                                                                      \
+                                                                               \
+        /* Implementation function */                                          \
+        virtual void implementation();                                         \
+        virtual bool isMemoryCodelet() { return true; }                        \
+        virtual void calculateMemRanges();                                     \
+                                                                               \
+        /* destructor */                                                       \
+        ~COD_CLASS_NAME(name)() {}                                             \
+      };                                                                       \
+      }
 
 // Here the programmer should specify if one of the parameters is used as an address.
-#define MEMRANGE_CODELET(name, code) \
-    void \
-    scm::COD_CLASS_NAME(name)::calculateMemRanges() {  \
-      code; \
-      } 
+#define MEMRANGE_CODELET(name, code)                                           \
+      void scm::COD_CLASS_NAME(name)::calculateMemRanges() { code; }
 
-
-#define IMPLEMENT_CODELET(name,code) \
-  namespace scm {\
-    bool COD_CLASS_NAME(name)::hasBeenRegistered = false; \
-    void COD_CLASS_NAME(name)::codeletRegistrer() { \
-        if(!hasBeenRegistered) { \
-          registerCodelet(); \
-          hasBeenRegistered = true; \
-        } \
-      } \
-    codelet* COD_CLASS_NAME(name)::codeletCreator(codelet_params usedParams) { \
-      codelet* res = new COD_CLASS_NAME(name)(usedParams); \
-      return res; \
-    } \
-    void COD_CLASS_NAME(name)::implementation() { code; } \
-  }
+#define IMPLEMENT_CODELET(name, code)                                          \
+      namespace scm {                                                          \
+      bool COD_CLASS_NAME(name)::hasBeenRegistered = false;                    \
+      void COD_CLASS_NAME(name)::codeletRegistrer() {                          \
+        if (!hasBeenRegistered) {                                              \
+          registerCodelet();                                                   \
+          hasBeenRegistered = true;                                            \
+        }                                                                      \
+      }                                                                        \
+      codelet *                                                                \
+      COD_CLASS_NAME(name)::codeletCreator(codelet_params &usedParams) {       \
+        codelet *res = new COD_CLASS_NAME(name)(usedParams);                   \
+        return res;                                                            \
+      }                                                                        \
+      void COD_CLASS_NAME(name)::implementation() { code; }                    \
+      }
 #endif

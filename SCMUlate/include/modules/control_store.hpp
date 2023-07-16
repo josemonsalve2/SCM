@@ -55,12 +55,13 @@ namespace scm {
       }
 
       void inline getNext(instructions_queue_t &current) {
-#pragma omp atomic
-        current++;
-        if (current == executionQueue + EXECUTION_QUEUE_SIZE) {
+        auto next = current;
+        next++;
+
+        if (next == executionQueue + EXECUTION_QUEUE_SIZE)
+          next = executionQueue;
 #pragma omp atomic write
-          current = executionQueue;
-        }
+        current = next;
         SCMULATE_INFOMSG(5, "Getting next address %p", current);
       }
 

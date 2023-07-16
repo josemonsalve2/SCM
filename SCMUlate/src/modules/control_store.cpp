@@ -1,28 +1,36 @@
 #include "control_store.hpp"
 
-bool 
-scm::execution_slot::try_insert(scm::instruction_state_pair *newInstruction) {
-  #pragma omp flush
+bool scm::execution_slot::try_insert(
+    scm::instruction_state_pair *newInstruction) {
+
   if ((*tail) == nullptr) {
-    *this->tail = newInstruction;
+    auto t = this->tail;
+#pragma omp atomic write
+    *t = newInstruction;
     getNext(tail);
+#pragma omp flush
     return true;
   } else {
     return false;
   }
-
 }
 
 void 
 scm::execution_slot::consume() {
-  if ((*head)->second == instruction_state::EXECUTING_DUP)
-    (*head)->second = instruction_state::EXECUTION_DONE_DUP;  
-  else
-    (*head)->second = instruction_state::EXECUTION_DONE;
+  auto &to_end = (*head)->second;
 
-  *this->head = nullptr;
-  #pragma omp flush release 
+  instructions_queue_t h;
+#pragma omp atomic read
+  h = this->head;
+#pragma omp atomic write
+  *h = nullptr;
   getNext(head);
+#pragma omp flush
+
+  if (to_end == instruction_state::EXECUTING_DUP)
+    to_end = instruction_state::EXECUTION_DONE_DUP;
+  else
+    to_end = instruction_state::EXECUTION_DONE;
 }
 
 scm::control_store_module::control_store_module(const int numExecUnits) {
@@ -34,7 +42,7 @@ scm::control_store_module::control_store_module(const int numExecUnits) {
 
 scm::control_store_module::~control_store_module() {
   // Deleting the execution slots
-  for (auto it = this->execution_slots.rbegin(); it < this->execution_slots.rend(); ++it)
+  for (auto it = this->execution_slots.rbegin();
+       it != this->execution_slots.rend(); ++it)
     delete (*it);
-
 }

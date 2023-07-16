@@ -16,12 +16,17 @@ scm::cu_executor_module::behavior() {
     this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_START);
   );
   SCMULATE_INFOMSG(1, "Starting CUMEM %d behavior", cu_executor_id);
-  // Initialization barrier
-  #pragma omp barrier
-  while (*(this->aliveSignal)) {
+// Initialization barrier
+#pragma omp barrier
+  bool alive;
+#pragma omp atomic read
+  alive = *(this->aliveSignal);
+  while (alive) {
     if (!myExecutor->is_empty()) {
-      SCMULATE_INFOMSG(4, "  CUMEM[%d]: Executing instruction ", cu_executor_id);
       scm::decoded_instruction_t * curInstruction = myExecutor->getHead()->first;
+      SCMULATE_INFOMSG(4, "  CUMEM[%d]: Executing instruction 0x%lX in %p",
+                       cu_executor_id, (unsigned long)curInstruction,
+                       myExecutor->getHead());
       if (curInstruction->getType() == scm::instType::MEMORY_INST || curInstruction->getExecCodelet()->isMemoryCodelet()) {
         TIMERS_COUNTERS_GUARD(
           #ifdef PAPI_COUNT
@@ -53,11 +58,14 @@ scm::cu_executor_module::behavior() {
       );
       myExecutor->consume();
     }
+#pragma omp atomic read
+    alive = *(this->aliveSignal);
   }
   SCMULATE_INFOMSG(1, "Shutting down executor CUMEM %d", cu_executor_id);
   TIMERS_COUNTERS_GUARD(
     this->timer_cnt_m->addEvent(this->cu_timer_name, CUMEM_END);
   );
+#pragma omp barrier
   return 0;
 }
  

@@ -29,7 +29,10 @@ int scm::fetch_decode_module::behavior()
   SCMULATE_INFOMSG(1, "Initializing the SU");
 // Initialization barrier
 #pragma omp barrier
-  while (*(this->aliveSignal)) {
+  bool alive;
+#pragma omp atomic read
+  alive = *(this->aliveSignal);
+  while (alive) {
     // FETCHING PC
     int fetch_reps = 0;
     scm::decoded_instruction_t *new_inst = nullptr;
@@ -39,6 +42,7 @@ int scm::fetch_decode_module::behavior()
           SCMULATE_INFOMSG(5, "FETCHING PC = %d", this->PC);
           new_inst = this->inst_mem_m->fetch(this->PC);
           if (!new_inst) {
+#pragma omp atomic write
             *(this->aliveSignal) = false;
             SCMULATE_ERROR(0, "Returned instruction is NULL for PC = %d. This should not happen", PC);
             continue;
@@ -215,10 +219,13 @@ int scm::fetch_decode_module::behavior()
     //   TIMERS_COUNTERS_GUARD(
     //     this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE, std::string("PC = ") + std::to_string(PC)););
     // }
+#pragma omp atomic read
+    alive = *(this->aliveSignal);
   }
   SCMULATE_INFOMSG(1, "Shutting down fetch decode unit");
   TIMERS_COUNTERS_GUARD(
       this->time_cnt_m->addEvent(this->su_timer_name, SU_END););
+#pragma omp barrier
   return 0;
 }
 
@@ -614,7 +621,7 @@ bool scm::fetch_decode_module::attemptAssignExecuteInstruction(scm::instruction_
       curSched %= this->ctrl_st_m->numExecutors();
     }
   }
-  SCMULATE_INFOMSG_IF(5, sched, "Scheduling to CUMEM %d", curSched);
+  SCMULATE_INFOMSG_IF(5, sched, "Scheduling %p to CUMEM %d", inst, curSched);
   SCMULATE_INFOMSG_IF(5, !sched, "Could not find a free unit");
 
   return sched;

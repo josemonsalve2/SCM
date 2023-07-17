@@ -22,7 +22,7 @@ scm::cu_executor_module::behavior() {
     if (!myExecutor->is_empty()) {
       SCMULATE_INFOMSG(4, "  CUMEM[%d]: Executing instruction ", cu_executor_id);
       SCMULATE_ERROR_IF(0,myExecutor->getHead() == nullptr,"Executor head is NULL even though it was marked as not empty!");
-      //  printf("  CUMEM[%d]: Executing instruction %s\n", cu_executor_id, myExecutor->getHead()->first->getFullInstruction().data());
+      SCMULATE_INFOMSG(5, "  CUMEM[%d]: Executing instruction %s", cu_executor_id, myExecutor->getHead()->first->getFullInstruction().data());
       scm::decoded_instruction_t * curInstruction = myExecutor->getHead()->first;
       if (curInstruction->getType() == scm::instType::MEMORY_INST || curInstruction->getExecCodelet()->isMemoryCodelet()) {
         TIMERS_COUNTERS_GUARD(

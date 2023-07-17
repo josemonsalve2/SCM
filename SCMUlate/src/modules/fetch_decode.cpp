@@ -410,7 +410,7 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
       // Addition
 #ifdef ARITH64
       *((uint64_t *) reg1_ptr) = *((uint64_t *) reg2_ptr) + immediate_val;
-      SCMULATE_INFOMSG(4, "ARITH64 mode immediate addition result: 0x%lx\n", *((uint64_t *) reg1_ptr));
+      SCMULATE_INFOMSG(4, "ARITH64 mode immediate addition result: 0x%lx", *((uint64_t *) reg1_ptr));
 #else
       uint32_t temp = 0;
       for (int32_t i = size_reg_bytes - 1; i >= 0; --i)
@@ -437,7 +437,7 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
       // Addition
 #ifdef ARITH64
       *((uint64_t *) reg1_ptr) = *((uint64_t *) reg2_ptr) + *((uint64_t *) reg3_ptr);
-      SCMULATE_INFOMSG(4, "ARITH64 mode register addition result: 0x%lx\n", *((uint64_t *) reg1_ptr));
+      SCMULATE_INFOMSG(4, "ARITH64 mode register addition result: 0x%lx", *((uint64_t *) reg1_ptr));
 #else
       int temp = 0;
       for (int32_t i = size_reg_bytes - 1; i >= 0; --i)
@@ -557,7 +557,7 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
     int32_t size_reg2_bytes = reg2.reg_size_bytes;
 #ifdef ARITH64
     op2_val = *((uint64_t *)reg2_ptr);
-    SCMULATE_INFOMSG(4, "MULT: op2 is 0x%lx\n", op2_val);
+    SCMULATE_INFOMSG(4, "MULT: op2 is 0x%lx", op2_val);
 #else
     for (int32_t i = 0; i < size_reg2_bytes; ++i) {
       op2_val <<= 8;
@@ -583,7 +583,7 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
       }
 #endif
     }
-    SCMULATE_INFOMSG(4, "MULT: op3 is 0x%lx\n", op3_val);
+    SCMULATE_INFOMSG(4, "MULT: op3 is 0x%lx", op3_val);
 
     uint64_t mult_res = op2_val * op3_val;
     // Where to store the result
@@ -597,7 +597,7 @@ void scm::fetch_decode_module::executeArithmeticInstructions(scm::decoded_instru
       mult_res >>= 8;
     }
 #endif
-    SCMULATE_INFOMSG(4, "MULT: dest is 0x%lx\n", *((uint64_t *)reg1_ptr));
+    SCMULATE_INFOMSG(4, "MULT: dest is 0x%lx", *((uint64_t *)reg1_ptr));
     return;
   }
 }

@@ -46,7 +46,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
     // Perform actual memory assignment
 #ifdef ARITH64
     *((uint64_t *) reg1_ptr) = immediate_value;
-    SCMULATE_INFOMSG(4, "immediate value %d loaded\n", immediate_value);
+    SCMULATE_INFOMSG(4, "immediate value %d loaded", immediate_value);
 #else
     for (i = size_reg1_bytes-1, j = 0; i >= 0; --i, ++j) {
       if (j < 8) {
@@ -97,7 +97,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
       SCMULATE_ERROR(0, "Incorrect operand type");
     }
     // Perform actual memory copy
-    SCMULATE_INFOMSG(4, "Loading 0x%lx from addr 0x%lx (based on root of memory)\n", *((uint64_t *) this->getAddress(base_addr)),base_addr);
+    SCMULATE_INFOMSG(4, "Loading 0x%lx from addr 0x%lx (based on root of memory)", *((uint64_t *) this->getAddress(base_addr)),base_addr);
     std::memcpy(reg1_ptr, this->getAddress(base_addr), size_reg1_bytes);
     return;
   }
@@ -160,7 +160,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
     } else {
       SCMULATE_ERROR(0, "Incorrect operand type");
     }
-    SCMULATE_INFOMSG(4, "LDOFF loading from %p\n", this->getAddress(base_addr+offset));
+    SCMULATE_INFOMSG(4, "LDOFF loading from %p", this->getAddress(base_addr+offset));
     std::memcpy(reg1_ptr, this->getAddress(base_addr+offset), size_reg1_bytes);
     return;
   }
@@ -186,7 +186,7 @@ scm::mem_interface_module::executeMemoryInstructions() {
       unsigned char * reg2_ptr = reg2.reg_ptr;
 #ifdef ARITH64
       base_addr = *((uint64_t *) reg2_ptr);
-      SCMULATE_INFOMSG(4, "ARITH64 storing value 0x%lx to addr 0x%lx (based on root of memory) \n", *((uint64_t *)reg1_ptr), base_addr);
+      SCMULATE_INFOMSG(4, "ARITH64 storing value 0x%lx to addr 0x%lx (based on root of memory)", *((uint64_t *)reg1_ptr), base_addr);
 #else
       int32_t size_reg2_bytes = reg2.reg_size_bytes;
       for (i = size_reg2_bytes-1, j = 0; j < 8 || i >= 0; --i, ++j ) {

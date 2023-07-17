@@ -19,6 +19,8 @@ DEFINE_CODELET(bmod_2048L, 3, scm::OP_IO::OP1_RD | scm::OP_IO::OP1_WR | scm::OP_
 
 DEFINE_CODELET(lu0_2048L, 1, scm::OP_IO::OP1_RD | scm::OP_IO::OP1_WR)
 
+DEFINE_CODELET(zero_2048L, 1, scm::OP_IO::OP1_WR);
+
 // loads a submat into register -- takes base address of BENCH (OP2) and an offset (OP3)
 //DEFINE_MEMORY_CODELET(loadSubMat_2048L, 3, scm::OP_IO::OP1_WR | scm::OP_IO::OP2_RD | scm::OP_IO::OP3_RD, scm::OP_ADDRESS::OP2_IS_ADDRESS);
 // now bench is externed and we will not take the address as a register

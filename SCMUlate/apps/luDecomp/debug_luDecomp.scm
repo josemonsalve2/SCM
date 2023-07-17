@@ -4,8 +4,9 @@ LDIMM R64B_3, 0; // For iteration variable -- ii
 LDIMM R64B_4, 50;  // For number of iterations and offset calculation -- bot_arg_size
 COD loadBenchAddr_64B R64B_5; // Basically a hacky way of fetching BENCH address so we can use it for allocation of new blocks
 LDIMM R64B_7, 0; // stays 0 for null checking of submatrices
-LDIMM R64B_8, 20000; // heap pointer: initialized to bot_arg_size*bot_arg_size*8 to account for BENCH already being allocated
+LDIMM R64B_8, 14580000; // heap pointer: initialized to the size genmat uses to account for BENCH already being allocated
 LDIMM R64B_9, 40000; // should leave untouched. Used to increment heap pointer; equals size of submat bots_arg_size_1*bots_arg_size_1*4 (4 for size of float)
+// LDIMM R64B_15, 2;
 
 // main outer loop -- kk 
 outer:
@@ -13,6 +14,7 @@ outer:
   COD loadSubMat_2048L R2048L_1, R64B_1, R64B_1;      //Load submat for lu0 with both offsets kk
   COD lu0_2048L R2048L_1;                             //perform lu0 codelet -- r/w on R1
                                                       // first inner loop with iteration variable jj starting at kk+1
+  COD storeSubMat_2048L R2048L_1, R64B_1, R64B_1;   // store the loaded submatrix back
   ADD R64B_2, R64B_1, 1; 
   inner_jj:
     BREQ R64B_4, R64B_2, inner_ii_head;               // branch for this loop
@@ -66,6 +68,7 @@ outer:
       MULT R64B_6, R64B_6, 8;                           // account for size of float *
       LDADR R64B_11, R64B_6;                            // load the submat pointer; we need to not overwrite R6 since we'll need it in allocate_clean_block
       BREQ R64B_11, R64B_7, allocate_clean_block;       // if submat pointer is null, jump to allocation function
+      COD loadSubMat_2048L R2048L_3, R64B_3, R64B_2;    // loading submat at BENCH[ii*bot_arg_size+jj]; submat wasn't null so we have to load it
       submat_allocated:                                 // this is where allocation function will return to, or where code will continue if not null
       // need to load ii/kk, kk/jj, then do bmod, then store all 3 (including ii/jj)
       COD loadSubMat_2048L R2048L_1, R64B_3, R64B_1;  // loading submat at BENCH[ii*bot_arg_size+kk]
@@ -79,6 +82,7 @@ outer:
       JMPLBL inner2_jj;
   inner_ii2_tail:
     ADD R64B_3, R64B_3, 1;                            // increment ii
+    //  BREQ R64B_3, R64B_15, exit;                     // early exit for stop condition INNER2JJTAIL
     JMPLBL inner_ii2;
 outer_tail:
   ADD R64B_1, R64B_1, 1;                              // increment kk
@@ -88,6 +92,7 @@ allocate_clean_block:
 ADD R64B_10, R64B_5, R64B_8;                          // add heap pointer (represented as offset) to BENCH base address to get valid pointer
 STADR R64B_10, R64B_6;                                // store that valid pointer at the element of BENCH that needed allocation
 ADD R64B_8, R64B_8, R64B_9;                           // increment heap pointer by size of one submatrix so it is valid for next time
+COD zero_2048L R2048L_3;                              // we don't need to load this submat since it's fresh but it's expected to be full of 0.0 floats
 JMPLBL submat_allocated;                              // jump back to where we were. This is fine since allocate_clean_block is only called in one location
 
 exit:

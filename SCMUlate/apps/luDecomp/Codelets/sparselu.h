@@ -25,4 +25,15 @@ void sparselu_par_call(float **BENCH);
 
 int sparselu_check(float **SEQ, float **BENCH);
 
+typedef enum {
+    FULL = 0,           // run the whole program
+    LU0 = 1,            // stop after first lu0 call/codelet
+    FWD = 2,            // stop after first fwd call/codelet
+    BDIV = 3,           // stop after first bdiv call/codelet
+    ALLOC = 4,          // stop after performing first alloc_clean_block
+    BMOD = 5,           // stop after first bmod call/codelet
+    INNER2JJTAIL = 6,   // stop after first completion of inner JJ loop
+    OUTERTAIL = 7       // stop after first iteration of outer is completed
+} stop_point;
+
 #endif

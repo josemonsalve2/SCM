@@ -51,7 +51,9 @@ IMPLEMENT_CODELET(bmod_2048L,
 
 IMPLEMENT_CODELET(lu0_2048L,
   float *diag = this->getParams().getParamValueAs<float*>(1);
-
+  //printf("diag is %p\n", diag);
+  //printf("printing first 4: %lx %lx %lx %lx\n", diag[0], diag[1], diag[2], diag[3]);
+  //printf("printing last 4: %lx %lx %lx %lx\n", diag[bots_arg_size_1*bots_arg_size_1-4], diag[bots_arg_size_1*bots_arg_size_1-3], diag[bots_arg_size_1*bots_arg_size_1-2], diag[bots_arg_size_1*bots_arg_size_1-1]);
   int i; 
   int j;
   int k;
@@ -62,6 +64,17 @@ IMPLEMENT_CODELET(lu0_2048L,
       for (j=k+1; j<bots_arg_size_1; j++)
       diag[i*bots_arg_size_1+j] = diag[i*bots_arg_size_1+j] - diag[i*bots_arg_size_1+k] * diag[k*bots_arg_size_1+j];
     }
+  
+  //printf("printing first 4: %lx %lx %lx %lx\n", diag[0], diag[1], diag[2], diag[3]);
+);
+
+IMPLEMENT_CODELET(zero_2048L,
+  float *toZero = this->getParams().getParamValueAs<float*>(1);
+  for (int i=0; i<bots_arg_size_1; i++) {
+    for (int j=0; j<bots_arg_size_1; j++) {
+      toZero[i*bots_arg_size_1+j] = 0.0;
+    }
+  }
 );
 
 // takes an offset kk which is used to locate the submatrix
@@ -81,7 +94,7 @@ MEMRANGE_CODELET(loadSubMat_2048L,
   uint64_t submat = (uint64_t) BENCH[actual_offset];
   // BENCH should be the first thing allocated in the SCM memory space, so the offset to the submatrix is submat pointer - BENCH
   uint64_t mem_offset = submat - (uint64_t)BENCH;
-  this->addReadMemRange(mem_offset, bots_arg_size_1*bots_arg_size_1);
+  this->addReadMemRange(mem_offset, bots_arg_size_1*bots_arg_size_1*sizeof(float));
   //this->addReadMemRange((uint64_t)BENCH[actual_offset], bots_arg_size_1*(bots_arg_size_1-1));
 );
 
@@ -89,6 +102,8 @@ IMPLEMENT_CODELET(loadSubMat_2048L,
   float * destReg = this->getParams().getParamValueAs<float *>(1); 
   float * addressStart = reinterpret_cast<float *>(getAddress(memoryRanges->reads.begin()->memoryAddress));
   //printf("destReg @ %p; submatrix in memory @ %p\n", destReg, addressStart);
+  //printf("printing first 4: %lx %lx %lx %lx\n", addressStart[0], addressStart[1], addressStart[2], addressStart[3]);
+  //printf("printing last 4: %lx %lx %lx %lx\n", addressStart[bots_arg_size_1*bots_arg_size_1-4], addressStart[bots_arg_size_1*bots_arg_size_1-3], addressStart[bots_arg_size_1*bots_arg_size_1-2], addressStart[bots_arg_size_1*bots_arg_size_1-1]);
   std::memcpy(destReg, addressStart, memoryRanges->reads.begin()->size);
 );
 
@@ -106,7 +121,7 @@ MEMRANGE_CODELET(storeSubMat_2048L,
   uint64_t submat = (uint64_t) BENCH[actual_offset];
   // BENCH should be the first thing allocated in the SCM memory space, so the offset to the submatrix is submat pointer - BENCH
   uint64_t mem_offset = submat - (uint64_t)BENCH;
-  this->addWriteMemRange(mem_offset, bots_arg_size_1*bots_arg_size_1);
+  this->addWriteMemRange(mem_offset, bots_arg_size_1*bots_arg_size_1*sizeof(float));
 );
 
 IMPLEMENT_CODELET(storeSubMat_2048L,
@@ -117,8 +132,9 @@ IMPLEMENT_CODELET(storeSubMat_2048L,
 */
   float * sourceReg = this->getParams().getParamValueAs<float *>(1); 
   float * addressStart = reinterpret_cast<float *>(getAddress(memoryRanges->writes.begin()->memoryAddress));
-  //printf("sourceReg @ %p; submatrix in memory @ %p\n", sourceReg, addressStart);
-  std::memcpy(sourceReg, addressStart, memoryRanges->writes.begin()->size);
+  printf("sourceReg @ %p; submatrix in memory @ %p\n", sourceReg, addressStart);
+  std::memcpy(addressStart, sourceReg, memoryRanges->writes.begin()->size);
+  //printf("printing first 4: %lx %lx %lx %lx\n", addressStart[0], addressStart[1], addressStart[2], addressStart[3]);
 );
 
 // yes, this is a memory codelet that only exists to load the address of BENCH into a register

@@ -1,4 +1,5 @@
 configure_file(luDecomp.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
+configure_file(debug_luDecomp.scm ${CMAKE_CURRENT_BINARY_DIR} COPYONLY)
 
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CLANG_CXX_FAMILY}" STREQUAL "icpx")

@@ -10,6 +10,8 @@
 
 float ** BENCH;
 uint64_t errors = 0;
+uint64_t err_submats = 0;
+stop_point dbg_stop_point = FULL; // default to running whole program
 
 // don't touch
 static uint64_t current_malloc_size;
@@ -43,19 +45,32 @@ void sparselu_init (float ***pBENCH, char *pass);
 
 int main (int argc, char * argv[]) {
   unsigned char * memory;
+  float **SEQ;
   
   parseProgramOptions(argc, argv);
   // For now we only support the one file
-  if (strcmp(program_options.fileName, "luDecomp.scm") != 0){
+  if (strcmp(program_options.fileName, "luDecomp.scm") != 0 && strcmp(program_options.fileName, "debug_luDecomp.scm") != 0){
     std::cout << "Unsupported SCM file" << std::endl;
     return 1;
+  } else if (strcmp(program_options.fileName, "debug_luDecomp.scm") == 0) {
+    dbg_stop_point = FULL;
   }
   try {
     memory = new unsigned char[SIZEOFMEM];
+    printf("SCM memory exists between 0x%lx and 0x%lx\n", (long unsigned)memory, ((long unsigned)memory) + (unsigned long)4e9);
     lu_malloc_init(memory, SIZEOFMEM);
     // do some setup here
+    printf("Initializing BENCH\n");
     lu_sparselu_init(&BENCH, "benchmark");
-    lu_pre_allocate(BENCH);
+    printf("BENCH located at %p\n", BENCH);
+    printf("Initializing SEQ\n");
+    sparselu_init(&SEQ, "sequential");
+    printf("Performing pre-check...\n");
+    sparselu_check(SEQ, BENCH);
+    printf("%d total errors detected in %d submatrices\n", errors, err_submats);
+    errors = 0;
+    err_submats = 0;
+    //lu_pre_allocate(BENCH); /preallocation probably causes incorrect results
   }
   catch (int e) {
     std::cout << "An exception occurred. Exception Nr. " << e << '\n';
@@ -97,15 +112,13 @@ int main (int argc, char * argv[]) {
 */
 
   // now start doing the process sequentially for error checking purposes
-  float **SEQ;
-  printf("Initializing SEQ\n");
-  sparselu_init(&SEQ, "sequential");
   printf("Performing sequential LU decomposition\n");
   sparselu_seq_call(SEQ);
   printf("Comparing sequential and parallel results\n");
   success = (bool) sparselu_check(SEQ, BENCH);
+  printf("%d total errors detected in %d submatrices\n", errors, err_submats);
 
-  if (success)
+  if (errors == 0)
     printf("SUCCESS!!!\n");
   delete myMachine;
   delete [] memory;
@@ -190,6 +203,7 @@ void lu_genmat (float *M[])
          }
       }
    }
+   printf("genmat leaves current lu malloc size at %lx\n", current_malloc_size);
 }
 
 float * lu_allocate_clean_block()
@@ -273,16 +287,16 @@ int checkmat (float *M, float *N)
 
          if ( M[i*bots_arg_size_1+j] == 0 ) 
          {
-           printf("Checking failure: A[%d][%d]=%f  B[%d][%d]=%f; \n",
-                    i,j, M[i*bots_arg_size_1+j], i,j, N[i*bots_arg_size_1+j]);
+           //printf("Checking failure: A[%d][%d]=%f  B[%d][%d]=%f; \n",
+           //         i,j, M[i*bots_arg_size_1+j], i,j, N[i*bots_arg_size_1+j]);
            //return FALSE;
            correct = FALSE;
          }  
          r_err = r_err / M[i*bots_arg_size_1+j];
          if(r_err > EPSILON)
          {
-            printf("Checking failure: A[%d][%d]=%f  B[%d][%d]=%f; Relative Error=%f\n",
-                    i,j, M[i*bots_arg_size_1+j], i,j, N[i*bots_arg_size_1+j], r_err);
+            //printf("Checking failure: A[%d][%d]=%f  B[%d][%d]=%f; Relative Error=%f\n",
+            //        i,j, M[i*bots_arg_size_1+j], i,j, N[i*bots_arg_size_1+j], r_err);
             //return FALSE;
             correct = FALSE;
             errors++;
@@ -297,14 +311,19 @@ int sparselu_check(float **SEQ, float **BENCH)
 {
    int ii,jj,ok=1;
 
-   for (ii=0; ((ii<bots_arg_size) && ok); ii++)
+   //for (ii=0; ((ii<bots_arg_size) && ok); ii++)
+   for (ii=0; ii<bots_arg_size; ii++)
    {
-      for (jj=0; ((jj<bots_arg_size) && ok); jj++)
+      //for (jj=0; ((jj<bots_arg_size) && ok); jj++)
+      for (jj=0; jj<bots_arg_size; jj++)
       {
          if ((SEQ[ii*bots_arg_size+jj] == NULL) && (BENCH[ii*bots_arg_size+jj] != NULL)) ok = FALSE;
          if ((SEQ[ii*bots_arg_size+jj] != NULL) && (BENCH[ii*bots_arg_size+jj] == NULL)) ok = FALSE;
          if ((SEQ[ii*bots_arg_size+jj] != NULL) && (BENCH[ii*bots_arg_size+jj] != NULL))
             ok = checkmat(SEQ[ii*bots_arg_size+jj], BENCH[ii*bots_arg_size+jj]);
+            if (!ok) {
+              err_submats += 1;
+            }
       }
    }
    if (ok) return TRUE;
@@ -318,25 +337,47 @@ void sparselu_seq_call(float **BENCH)
    for (kk=0; kk<bots_arg_size; kk++)
    {
       lu0(BENCH[kk*bots_arg_size+kk]);
+      if (dbg_stop_point == LU0) {
+        printf("stopping after lu0\n");
+        return;
+      }
       for (jj=kk+1; jj<bots_arg_size; jj++)
          if (BENCH[kk*bots_arg_size+jj] != NULL)
          {
             fwd(BENCH[kk*bots_arg_size+kk], BENCH[kk*bots_arg_size+jj]);
+            if (dbg_stop_point == FWD) return;
          }
       for (ii=kk+1; ii<bots_arg_size; ii++)
          if (BENCH[ii*bots_arg_size+kk] != NULL)
          {
             bdiv (BENCH[kk*bots_arg_size+kk], BENCH[ii*bots_arg_size+kk]);
+            if (dbg_stop_point == BDIV) {
+              printf("stopping after bdiv\n");
+              return;
+            } 
          }
-      for (ii=kk+1; ii<bots_arg_size; ii++)
+      for (ii=kk+1; ii<bots_arg_size; ii++) {
+         if (ii == 2 && dbg_stop_point == INNER2JJTAIL) { printf("stopping after first full inner2jj loop\n"); return;}
          if (BENCH[ii*bots_arg_size+kk] != NULL)
             for (jj=kk+1; jj<bots_arg_size; jj++)
                if (BENCH[kk*bots_arg_size+jj] != NULL)
                {
                      if (BENCH[ii*bots_arg_size+jj]==NULL) BENCH[ii*bots_arg_size+jj] = allocate_clean_block();
+                     if (dbg_stop_point == ALLOC) {
+                      printf("stopping after alloc\n");
+                      return;
+                     }
                      bmod(BENCH[ii*bots_arg_size+kk], BENCH[kk*bots_arg_size+jj], BENCH[ii*bots_arg_size+jj]);
+                     if (dbg_stop_point == BMOD) {
+                      printf("stopping after bmod \n");
+                      return;
+                     }
                }
-
+      }
+    if (dbg_stop_point == OUTERTAIL) {
+      printf("stopping after one iter. of outer loop\n");
+      return;
+    }
    }
 }
 

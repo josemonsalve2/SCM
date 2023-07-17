@@ -94,14 +94,18 @@ MEMRANGE_CODELET(loadSubMat_2048L,
   uint64_t submat = (uint64_t) BENCH[actual_offset];
   // BENCH should be the first thing allocated in the SCM memory space, so the offset to the submatrix is submat pointer - BENCH
   uint64_t mem_offset = submat - (uint64_t)BENCH;
-  this->addReadMemRange(mem_offset, bots_arg_size_1*bots_arg_size_1*sizeof(float));
+  this->addReadMemRange(mem_offset, bots_arg_size_1*bots_arg_size_1*sizeof(float)); // accounts for range in submatrix
+  //this->addReadMemRange(actual_offset, sizeof(uint64_t)); // accounts for pointer being read in overall matrix
   //this->addReadMemRange((uint64_t)BENCH[actual_offset], bots_arg_size_1*(bots_arg_size_1-1));
 );
 
 IMPLEMENT_CODELET(loadSubMat_2048L,
   float * destReg = this->getParams().getParamValueAs<float *>(1); 
   float * addressStart = reinterpret_cast<float *>(getAddress(memoryRanges->reads.begin()->memoryAddress));
-  //printf("destReg @ %p; submatrix in memory @ %p\n", destReg, addressStart);
+  // if this memory address is 0, that means the pointer we read from BENCH was NULL and this is a critical error
+  //uint64_t bench_idx = (uint64_t) memoryRanges->reads.rbegin()->memoryAddress; // get index of bench we're reading submat pointer from for error checking
+  //SCMULATE_ERROR_IF(0, BENCH[bench_idx] == nullptr, "Error: loading submatrix from invalid pointer");
+  //printf("destReg @ %p; submatrix in memory @ %p; bench offset is 0x%lx\n", destReg, addressStart, bench_idx);
   //printf("printing first 4: %lx %lx %lx %lx\n", addressStart[0], addressStart[1], addressStart[2], addressStart[3]);
   //printf("printing last 4: %lx %lx %lx %lx\n", addressStart[bots_arg_size_1*bots_arg_size_1-4], addressStart[bots_arg_size_1*bots_arg_size_1-3], addressStart[bots_arg_size_1*bots_arg_size_1-2], addressStart[bots_arg_size_1*bots_arg_size_1-1]);
   std::memcpy(destReg, addressStart, memoryRanges->reads.begin()->size);
@@ -121,7 +125,8 @@ MEMRANGE_CODELET(storeSubMat_2048L,
   uint64_t submat = (uint64_t) BENCH[actual_offset];
   // BENCH should be the first thing allocated in the SCM memory space, so the offset to the submatrix is submat pointer - BENCH
   uint64_t mem_offset = submat - (uint64_t)BENCH;
-  this->addWriteMemRange(mem_offset, bots_arg_size_1*bots_arg_size_1*sizeof(float));
+  this->addWriteMemRange(mem_offset, bots_arg_size_1*bots_arg_size_1*sizeof(float)); // account for writing range in the submatrix
+  //this->addReadMemRange(actual_offset, sizeof(uint64_t)); // account for reading the pointer in the overarching matrix
 );
 
 IMPLEMENT_CODELET(storeSubMat_2048L,
@@ -132,7 +137,9 @@ IMPLEMENT_CODELET(storeSubMat_2048L,
 */
   float * sourceReg = this->getParams().getParamValueAs<float *>(1); 
   float * addressStart = reinterpret_cast<float *>(getAddress(memoryRanges->writes.begin()->memoryAddress));
-  printf("sourceReg @ %p; submatrix in memory @ %p\n", sourceReg, addressStart);
+  //uint64_t bench_idx = (uint64_t) memoryRanges->reads.begin()->memoryAddress; // get index of bench we're reading submat pointer from for error checking
+  //SCMULATE_ERROR_IF(0, BENCH[bench_idx] == nullptr, "Error: loading submatrix from invalid pointer");
+  //printf("sourceReg @ %p; submatrix in memory @ %p; bench offset is 0x%lx\n", sourceReg, addressStart, bench_idx);
   std::memcpy(addressStart, sourceReg, memoryRanges->writes.begin()->size);
   //printf("printing first 4: %lx %lx %lx %lx\n", addressStart[0], addressStart[1], addressStart[2], addressStart[3]);
 );
@@ -142,7 +149,9 @@ IMPLEMENT_CODELET(storeSubMat_2048L,
 // yes, I'm sure there IS a better way to do this
 // no, I'm not the one that will be doing it right now
 MEMRANGE_CODELET(loadBenchAddr_64B,
-  this->addReadMemRange((uint64_t)&BENCH, sizeof(float**));
+  //this->addReadMemRange((uint64_t)&BENCH, sizeof(float**));
+  // BENCH is located at the beginning of SCM memory, hence an offset of 0
+  this->addReadMemRange((uint64_t)0, sizeof(float**));
 );
 
 IMPLEMENT_CODELET(loadBenchAddr_64B,

@@ -89,7 +89,7 @@ outer_tail:
   JMPLBL outer;
 
 allocate_clean_block:
-ADD R64B_10, R64B_5, R64B_8;                          // add heap pointer (represented as offset) to BENCH base address to get valid pointer
+ADD R64B_10, R64B_5, R64B_8;                          // add SCM heap pointer (represented as offset) to BENCH base address to get valid external heap pointer
 STADR R64B_10, R64B_6;                                // store that valid pointer at the element of BENCH that needed allocation
 ADD R64B_8, R64B_8, R64B_9;                           // increment heap pointer by size of one submatrix so it is valid for next time
 COD zero_2048L R2048L_3;                              // we don't need to load this submat since it's fresh but it's expected to be full of 0.0 floats

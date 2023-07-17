@@ -61,12 +61,12 @@ int main (int argc, char * argv[]) {
     lu_malloc_init(memory, SIZEOFMEM);
     // do some setup here
     printf("Initializing BENCH\n");
-    lu_sparselu_init(&BENCH, "benchmark");
+    lu_sparselu_init(&BENCH, "benchmark"); // allocate BENCH into SCM memory space
     printf("BENCH located at %p\n", BENCH);
     printf("Initializing SEQ\n");
-    sparselu_init(&SEQ, "sequential");
+    sparselu_init(&SEQ, "sequential"); // allocate SEQ into normal heap
     printf("Performing pre-check...\n");
-    sparselu_check(SEQ, BENCH);
+    sparselu_check(SEQ, BENCH); // check to make sure the starting matrices are the same
     printf("%d total errors detected in %d submatrices\n", errors, err_submats);
     errors = 0;
     err_submats = 0;
@@ -86,6 +86,7 @@ int main (int argc, char * argv[]) {
   if (program_options.fileInput) {
     SCMULATE_INFOMSG(0, "Reading program file %s", program_options.fileName);
     //myMachine = new scm::scm_machine(program_options.fileName, memory, scm::OOO);
+    //myMachine = new scm::scm_machine(program_options.fileName, memory, scm::SUPERSCALAR);
     myMachine = new scm::scm_machine(program_options.fileName, memory, scm::SEQUENTIAL);
   } else {
     std::cout << "Need to give a file to read. use -i <filename>" << std::endl;

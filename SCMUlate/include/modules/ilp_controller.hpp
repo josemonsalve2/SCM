@@ -226,19 +226,19 @@ namespace scm {
         // Mark the registers
         if (inst->getOp1().type == operand_t::REGISTER) {
           uint_fast16_t io = inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR);
-          SCMULATE_INFOMSG(5, "Mariking register %s as busy with IO %lX", inst->getOp1().value.reg.reg_name.c_str(), io);
+          SCMULATE_INFOMSG(5, "Marking register %s as busy with IO %lX", inst->getOp1().value.reg.reg_name.c_str(), io);
           register_reservation reserv(inst->getOp1().value.reg.reg_ptr, io);
           busyRegisters.insert(reserv);
         }
         if (inst->getOp2().type == operand_t::REGISTER) {
           uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR)) >> 2;
-          SCMULATE_INFOMSG(5, "Mariking register %s as busy with IO %lX", inst->getOp2().value.reg.reg_name.c_str(), io);
+          SCMULATE_INFOMSG(5, "Marking register %s as busy with IO %lX", inst->getOp2().value.reg.reg_name.c_str(), io);
           register_reservation reserv(inst->getOp2().value.reg.reg_ptr, io);
           busyRegisters.insert(reserv);          
           }
         if (inst->getOp3().type == operand_t::REGISTER) {
           uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR)) >> 4;
-          SCMULATE_INFOMSG(5, "Mariking register %s as busy with IO %lX", inst->getOp3().value.reg.reg_name.c_str(), io);
+          SCMULATE_INFOMSG(5, "Marking register %s as busy with IO %lX", inst->getOp3().value.reg.reg_name.c_str(), io);
           register_reservation reserv(inst->getOp3().value.reg.reg_ptr, io);
           busyRegisters.insert(reserv);          
           }

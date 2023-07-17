@@ -74,8 +74,8 @@ outer:
       COD loadSubMat_2048L R2048L_1, R64B_3, R64B_1;  // loading submat at BENCH[ii*bot_arg_size+kk]
       COD loadSubMat_2048L R2048L_2, R64B_1, R64B_2;  // loading submat at BENCH[kk*bot_arg_size+jj]
       COD bmod_2048L R2048L_3, R2048L_1, R2048L_2;    // execute bmod codelet
-      COD storeSubMat_2048L R2048L_1, R64B_3, R64B_1; // storing submat at BENCH[ii*bot_arg_size+kk]
-      COD storeSubMat_2048L R2048L_2, R64B_1, R64B_2; // storing submat at BENCH[kk*bot_arg_size+jj]
+      // COD storeSubMat_2048L R2048L_1, R64B_3, R64B_1; // storing submat at BENCH[ii*bot_arg_size+kk]
+      // COD storeSubMat_2048L R2048L_2, R64B_1, R64B_2; // storing submat at BENCH[kk*bot_arg_size+jj]
       COD storeSubMat_2048L R2048L_3, R64B_3, R64B_2; // storing submat at BENCH[ii*bot_arg_size+jj]
     inner2_jj_tail:
       ADD R64B_2, R64B_2, 1;                          // increment jj
@@ -93,6 +93,7 @@ ADD R64B_10, R64B_5, R64B_8;                          // add SCM heap pointer (r
 STADR R64B_10, R64B_6;                                // store that valid pointer at the element of BENCH that needed allocation
 ADD R64B_8, R64B_8, R64B_9;                           // increment heap pointer by size of one submatrix so it is valid for next time
 COD zero_2048L R2048L_3;                              // we don't need to load this submat since it's fresh but it's expected to be full of 0.0 floats
+LDADR R64B_10, R64B_6;                                // homemade fence?
 JMPLBL submat_allocated;                              // jump back to where we were. This is fine since allocate_clean_block is only called in one location
 
 exit:

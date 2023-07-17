@@ -167,7 +167,7 @@ int scm::fetch_decode_module::behavior()
           ITT_TASK_BEGIN(fetch_decode_module_behavior, instructionFinished);
           instructionLevelParallelism.instructionFinished(current_pair);
           ITT_TASK_END(instructionFinished);
-          SCMULATE_INFOMSG(5, "Marking instruction %s for decomision", current_pair->first->getFullInstruction().c_str());
+          SCMULATE_INFOMSG(5, "Marking instruction %s for decomission", current_pair->first->getFullInstruction().c_str());
           current_pair->second = instruction_state::DECOMMISSION;
           TIMERS_COUNTERS_GUARD(
             this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE, current_pair->first->getFullInstruction()););

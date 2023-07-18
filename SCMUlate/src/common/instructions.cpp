@@ -84,6 +84,9 @@ namespace scm {
           // Load address register value
           decoded_reg_t reg = this->getOp2().value.reg;
           unsigned char *reg_ptr = reg.reg_ptr;
+#ifdef ARITH64
+          base_addr = *((uint64_t *) reg_ptr);
+#else
           int32_t size_reg_bytes = reg.reg_size_bytes;
           int32_t i, j;
           for (i = size_reg_bytes - 1, j = 0; j < 8 || i >= 0; --i, ++j)
@@ -92,6 +95,7 @@ namespace scm {
             temp <<= j * 8;
             base_addr += temp;
           }
+#endif
         } else {
           SCMULATE_ERROR(0, "Incorrect operand type");
         }
@@ -104,6 +108,10 @@ namespace scm {
             // Load address register value
             decoded_reg_t reg = this->getOp3().value.reg;
             unsigned char *reg_ptr = reg.reg_ptr;
+#ifdef ARITH64
+            offset = *((uint64_t *) reg_ptr);
+            SCMULATE_INFOMSG(4, "ARITH64: offset set to 0x%lx", offset);
+#else
             int32_t size_reg_bytes = reg.reg_size_bytes;
             int32_t i, j;
             for (i = size_reg_bytes - 1, j = 0; j < 8 || i >= 0; --i, ++j)
@@ -112,6 +120,7 @@ namespace scm {
               temp <<= j * 8;
               offset += temp;
             }
+#endif
           } else {
             SCMULATE_ERROR(0, "Incorrect operand type");
           }

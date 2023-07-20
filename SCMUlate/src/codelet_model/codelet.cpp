@@ -23,8 +23,9 @@ codelet *codeletFactory::createCodelet(std::string name,
    auto found = registeredCodelets->find(name);
    if (found == registeredCodelets->end()) {
      // If not found, we display error, and then return null.
-     SCMULATE_ERROR(0,
-                    "Trying to create a codelet that has not been implemented");
+     SCMULATE_ERROR(
+         0, "Trying to create a codelet (%s) that has not been implemented",
+         name.c_str());
      return nullptr;
    } else {
      // If found we call the creator function and then

@@ -24,10 +24,18 @@ private:
   // time t
   double getCummulativePoisson(double x) { return 1 - exp(-lambda * x); }
 
+  // Find the next time where the probability is x in a poisson distribution
+  double getPoissonNextErrorTime(double x) { return -log(1 - x) / lambda; }
+
   // Represents F(t) the probability that the component will fail at or before
   // time t
   double getCummulativeWeibull(double x) {
     return 1 - exp(-lambda * pow(x, betta));
+  }
+
+  // Find the next time where the probability is x in a weibull distribution
+  double getWeibullNextErrorTime(double x) {
+    return pow(-log(1 - x) / lambda, 1 / betta);
   }
 
 public:

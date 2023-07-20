@@ -68,39 +68,63 @@ namespace scm {
       // Function used for renaming provides the next register but from the end of the register file
       // This is to avoid coliding with nearby registers hopefully saving time in renaming process
       // It modifies the num by reference. Resulting in the new register number
-      inline unsigned char * getNextRegister(uint32_t size, uint32_t & num) {
-        unsigned char * result = NULL;
+      inline uint32_t getNextRegister(uint32_t size, uint32_t &num) {
         if (size == 8) {
           // size == "64B"
           num = (num + 1) % NUM_REG_64BITS;
-          result = REG_64B(num).data;
         } else if (size == CACHE_LINE_SIZE) {
           // size == "1L"
           num = (num + 1) % NUM_REG_1LINE;
-          result = REG_1L(num).data;
         } else if (size == CACHE_LINE_SIZE*8) {
           // size == "8L"
           num = (num + 1) % NUM_REG_8LINE;
-          result = REG_8L(num).data;
         } else if (size == CACHE_LINE_SIZE*16) {
           // size == "16L"
           num = (num + 1) % NUM_REG_16LINE;
-          result = REG_16L(num).data;
         } else if (size == CACHE_LINE_SIZE*256) {
           // size == "256L"
           num = (num + 1) % NUM_REG_256LINE;
-          result = REG_256L(num).data;
         } else if (size == CACHE_LINE_SIZE*512) {
           // size == "512L"
           num = (num + 1) % NUM_REG_512LINE;
-          result = REG_512L(num).data;
         } else if (size == CACHE_LINE_SIZE*1024) {
           // size == "1024L"
           num = (num + 1) % NUM_REG_1024LINE;
-          result = REG_1024L(num).data;
         } else if (size == CACHE_LINE_SIZE*2048) {
           // size == "2048L"
           num = (num + 1) % NUM_REG_2048LINE;
+        } else
+          SCMULATE_ERROR(0, "DECODED REGISTER DOES NOT EXIST!!!")
+        return num;
+      }
+
+      // Get register pointer by size and number
+      inline unsigned char *getRegisterPointer(uint32_t size,
+                                               uint32_t num) const {
+        unsigned char *result = NULL;
+        if (size == 8) {
+          // size == "64B"
+          result = REG_64B(num).data;
+        } else if (size == CACHE_LINE_SIZE) {
+          // size == "1L"
+          result = REG_1L(num).data;
+        } else if (size == CACHE_LINE_SIZE * 8) {
+          // size == "8L"
+          result = REG_8L(num).data;
+        } else if (size == CACHE_LINE_SIZE * 16) {
+          // size == "16L"
+          result = REG_16L(num).data;
+        } else if (size == CACHE_LINE_SIZE * 256) {
+          // size == "256L"
+          result = REG_256L(num).data;
+        } else if (size == CACHE_LINE_SIZE * 512) {
+          // size == "512L"
+          result = REG_512L(num).data;
+        } else if (size == CACHE_LINE_SIZE * 1024) {
+          // size == "1024L"
+          result = REG_1024L(num).data;
+        } else if (size == CACHE_LINE_SIZE * 2048) {
+          // size == "2048L"
           result = REG_2048L(num).data;
         } else
           SCMULATE_ERROR(0, "DECODED REGISTER DOES NOT EXIST!!!")

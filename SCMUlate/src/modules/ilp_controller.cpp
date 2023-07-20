@@ -343,7 +343,10 @@ namespace scm {
 
         // Iterate over the hidden register is found that is not being used
         do {
-          newReg.reg_ptr = hidden_register_file->getNextRegister(newReg.reg_size_bytes, newReg.reg_number);
+          newReg.reg_number = hidden_register_file->getNextRegister(
+              newReg.reg_size_bytes, newReg.reg_number);
+          newReg.reg_ptr = hidden_register_file->getRegisterPointer(
+              newReg.reg_size_bytes, newReg.reg_number);
           attempts++;
         } while ((this->used.find(newReg.reg_ptr) != this->used.end() || this->renamedInUse.find(newReg.reg_ptr) != this->renamedInUse.end()) && attempts != numReg4size);
         if (attempts == numReg4size) {

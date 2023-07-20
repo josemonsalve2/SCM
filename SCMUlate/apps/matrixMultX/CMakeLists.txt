@@ -32,7 +32,9 @@ target_include_directories(MatMulX PRIVATE Codelets)
 
 if (DECLARE_VARIANT_ENABLED)
   target_link_libraries (MatMulX scm_machine mat_mul_ofl_codX mat_mul_codX scm_system_codelets ${BLAS_LIBRARIES} ${MKL_SYCL_LIB})
-else ()
+elseif(NOT DEFINED NOBLAS)
   target_link_libraries (MatMulX scm_machine mat_mul_codX scm_system_codelets ${BLAS_LIBRARIES})
+else()
+  target_link_libraries (MatMulX scm_machine mat_mul_codX scm_system_codelets)
 endif()
     

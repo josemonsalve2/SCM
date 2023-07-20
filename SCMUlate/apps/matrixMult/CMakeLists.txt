@@ -37,8 +37,10 @@ target_include_directories(MatMul PRIVATE Codelets)
 
 if (DECLARE_VARIANT_ENABLED)
   target_link_libraries (MatMul scm_machine mat_mul_ofl_cod mat_mul_cod scm_system_codelets ${BLAS_LIBRARIES} ${MKL_SYCL_LIB})
-else ()
+  elseif(NOT DEFINED NOBLAS)
   target_link_libraries (MatMul scm_machine mat_mul_cod scm_system_codelets ${BLAS_LIBRARIES})
+  else()
+  target_link_libraries (MatMul scm_machine mat_mul_cod scm_system_codelets)
 endif()
 
 if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang" AND "${CLANG_CXX_FAMILY}" STREQUAL "icpx")

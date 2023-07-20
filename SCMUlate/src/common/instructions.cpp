@@ -86,6 +86,7 @@ namespace scm {
           unsigned char *reg_ptr = reg.reg_ptr;
 #ifdef ARITH64
           base_addr = *((uint64_t *) reg_ptr);
+            SCMULATE_INFOMSG(4, "ARITH64: base addr set to 0x%lx", base_addr);
 #else
           int32_t size_reg_bytes = reg.reg_size_bytes;
           int32_t i, j;

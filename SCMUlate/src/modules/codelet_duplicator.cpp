@@ -10,18 +10,20 @@ class fetch_decode_module;
 
 decoded_reg_t
 dupl_controller_module::getRenamedRegister(decoded_reg_t &otherReg) {
-  static uint32_t curRegNum = 0;
+  // static uint32_t curRegNum = 0;
   decoded_reg_t newReg = otherReg;
   uint32_t numReg4size =
       hidden_reg_file_m.getNumRegForSize(newReg.reg_size_bytes);
-  curRegNum = (curRegNum + 1) % numReg4size;
-  newReg.reg_number = curRegNum;
+  // curRegNum = (curRegNum + 1) % numReg4size;
+  // newReg.reg_number = curRegNum;
   uint32_t attempts = 0;
 
   // Iterate over the hidden register is found that is not being used
   do {
     newReg.reg_ptr = hidden_reg_file_m.getNextRegister(newReg.reg_size_bytes,
                                                        newReg.reg_number);
+    SCMULATE_INFOMSG(6, "Trying to rename register %d to %d",
+                     otherReg.reg_number, newReg.reg_number);
     attempts++;
   } while (
       (this->renamedInUse.find(newReg.reg_ptr) != this->renamedInUse.end()) &&
@@ -68,6 +70,11 @@ decoded_instruction_t *dupl_controller_module::duplicateCodeletInstruction(
 
       if (it_inst_dir->second == reg_state::WRITE ||
           it_inst_dir->second == reg_state::READWRITE) {
+        SCMULATE_INFOMSG(5,
+                         "Found operand %d in instruction %s with WRITE or "
+                         "READWRITE with register %s",
+                         i, original->first->getFullInstruction().c_str(),
+                         current_operand->value.reg.reg_name.c_str());
         decoded_reg_t newReg = getRenamedRegister(current_operand->value.reg);
         // Check if renaming was successful.
         SCMULATE_ERROR_IF(
@@ -76,6 +83,9 @@ decoded_instruction_t *dupl_controller_module::duplicateCodeletInstruction(
             "new register was found "
             "for renaming. Leaving other operands for later SU iteration.",
             i);
+        SCMULATE_INFOMSG(5, "Inserting %s (0x%lX) into renamedInUse",
+                         newReg.reg_name.c_str(),
+                         (unsigned long)newReg.reg_ptr);
         renamedInUse.insert(newReg.reg_ptr);
         new_operands->value.reg = newReg;
         SCMULATE_INFOMSG(5, "Renaming operand %d from %s to %s", i,
@@ -84,6 +94,10 @@ decoded_instruction_t *dupl_controller_module::duplicateCodeletInstruction(
         SCMULATE_INFOMSG(5, "Renamed pointers have addresses %p and %p",
                          current_operand->value.reg.reg_ptr, newReg.reg_ptr);
         if (it_inst_dir->second == reg_state::READWRITE) {
+          SCMULATE_INFOMSG(
+              5, "Operand %d in instruction %s is READWRITE with register %s",
+              i, original->first->getFullInstruction().c_str(),
+              current_operand->value.reg.reg_name.c_str());
           // Check if it does not exist in the originals list.
           // If not, get yet another register and store the original value
           // there.
@@ -101,10 +115,16 @@ decoded_instruction_t *dupl_controller_module::duplicateCodeletInstruction(
             SCMULATE_INFOMSG(5, "Renaming operand %d from %s to %s", i,
                              current_operand->value.reg.reg_name.c_str(),
                              origReg.reg_name.c_str());
+            SCMULATE_INFOMSG(5, "Inserting %s (0x%lX) into originalVals",
+                             current_operand->value.reg.reg_name.c_str(),
+                             (unsigned long)current_operand->value.reg.reg_ptr);
             originalVals[current_operand->value.reg] = origReg;
             // Copy the value from the original register to the new one
             std::memcpy(origReg.reg_ptr, current_operand->value.reg.reg_ptr,
                         origReg.reg_size_bytes);
+            SCMULATE_INFOMSG(5, "Inserting %s (0x%lX) into renamedInUse",
+                             origReg.reg_name.c_str(),
+                             (unsigned long)origReg.reg_ptr);
             renamedInUse.insert(origReg.reg_ptr);
           } else {
             SCMULATE_INFOMSG(
@@ -428,6 +448,7 @@ void dupl_controller_module::cleanupDuplication(instruction_state_pair *inst) {
   if (mode == DUPL_MODES::NO_DUPLICATION)
     return;
   dupCodeletStates *allCopies = inst_buff_m->getDuplicated(inst);
+  allCopies->push_back(inst);
   // Iterate and if operand found, remove it
   for (auto copy : *allCopies) {
     for (int i = 1; i <= MAX_NUM_OPERANDS; ++i) {
@@ -435,21 +456,30 @@ void dupl_controller_module::cleanupDuplication(instruction_state_pair *inst) {
       if (current_operand->type == operand_t::REGISTER) {
         if (this->renamedInUse.find(current_operand->value.reg.reg_ptr) !=
             this->renamedInUse.end()) {
-          SCMULATE_INFOMSG(6, "Removing renamed register %s",
-                           current_operand->value.reg.reg_name.c_str());
+          SCMULATE_INFOMSG(6,
+                           "Removing renamed register %s with address (0x%lX)",
+                           current_operand->value.reg.reg_name.c_str(),
+                           (unsigned long)current_operand->value.reg.reg_ptr);
           this->renamedInUse.erase(current_operand->value.reg.reg_ptr);
         }
-        if (originalVals.find(current_operand->value.reg) !=
-            originalVals.end()) {
+        auto it = originalVals.find(current_operand->value.reg);
+        if (it != originalVals.end()) {
+          SCMULATE_INFOMSG(
+              6, "Removing renamed register %s with address (0x%lX)",
+              it->second.reg_name.c_str(), (unsigned long)it->second.reg_ptr);
+          this->renamedInUse.erase(it->second.reg_ptr);
           SCMULATE_INFOMSG(6, "Removing OriginalVals register %s",
                            current_operand->value.reg.reg_name.c_str());
+
           originalVals.erase(current_operand->value.reg);
         }
       }
     }
-    SCMULATE_INFOMSG(6, "Marking duplicated codelet %s as decommissioned",
-                     copy->first->getInstruction().c_str());
-    copy->second = scm::instruction_state::DECOMMISSION;
+    if (copy != inst) {
+      SCMULATE_INFOMSG(6, "Marking duplicated codelet %s as decommissioned",
+                       copy->first->getInstruction().c_str());
+      copy->second = scm::instruction_state::DECOMMISSION;
+    }
   }
   // Remove the duplicates from the buffer
   inst_buff_m->removeDuplicates(inst);

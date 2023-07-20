@@ -151,9 +151,9 @@ int scm::fetch_decode_module::behavior()
                 if (!this->inst_buff_m.isDuplicated(current_pair)) {
                   dupl_controller_m.duplicateCodelet(current_pair);
                 }
+                if (!attemptAssignExecuteInstruction(current_pair))
+                  current_pair->second = instruction_state::READY;
               }
-              if (!attemptAssignExecuteInstruction(current_pair))
-                current_pair->second = instruction_state::READY;
               break;
             case MEMORY_INST:
               SCMULATE_INFOMSG(4, "Scheduling a MEMORY_INST %s", current_pair->first->getFullInstruction().c_str());

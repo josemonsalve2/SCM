@@ -614,12 +614,10 @@ bool scm::fetch_decode_module::attemptAssignExecuteInstruction(scm::instruction_
   uint32_t attempts = 0;
   // We try scheduling on all the sched units
   while (!sched && attempts++ < this->ctrl_st_m->numExecutors()) {
-    if (this->ctrl_st_m->get_executor(curSched)->try_insert(inst)) {
+    if (this->ctrl_st_m->get_executor(curSched)->try_insert(inst))
       sched = true;
-    } else {
-      curSched++;
-      curSched %= this->ctrl_st_m->numExecutors();
-    }
+    curSched++;
+    curSched %= this->ctrl_st_m->numExecutors();
   }
   SCMULATE_INFOMSG_IF(5, sched, "Scheduling %p to CUMEM %d", inst, curSched);
   SCMULATE_INFOMSG_IF(5, !sched, "Could not find a free unit");

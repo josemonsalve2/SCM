@@ -85,7 +85,8 @@ int scm::fetch_decode_module::behavior()
     stall = 0; waiting = 0; ready = 0; execution_done = 0; executing = 0; decomision = 0;
     // Iterate over the instruction buffer (window) looking for instructions to execute
     for (auto it = this->inst_buff_m.get_buffer()->begin(); it != this->inst_buff_m.get_buffer()->end(); ++it) {
-      #pragma omp flush acquire
+      // SCMULATE_INFOMSG(5, "Getting pointer %p", *it);
+#pragma omp flush acquire
       instruction_state_pair * current_pair = *it;
       switch (current_pair->second) {
         case instruction_state::STALL:
@@ -111,12 +112,8 @@ int scm::fetch_decode_module::behavior()
           //   this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
           break;
         case instruction_state::READY:
-        case instruction_state::READY_DUP:
           ready ++;
-          current_pair->second =
-              current_pair->second == instruction_state::READY_DUP
-                  ? instruction_state::EXECUTING_DUP
-                  : instruction_state::EXECUTING;
+          current_pair->second = instruction_state::EXECUTING;
           switch (current_pair->first->getType()) {
             case COMMIT:
               SCMULATE_INFOMSG(4, "Scheduling and Exec a COMMIT");
@@ -145,15 +142,15 @@ int scm::fetch_decode_module::behavior()
               //   this->time_cnt_m->addEvent(this->su_timer_name, SU_IDLE););
               break;
             case EXECUTE_INST:
-              SCMULATE_INFOMSG(4, "Scheduling an EXECUTE_INST %s", current_pair->first->getFullInstruction().c_str());
-              if (current_pair->second == instruction_state::EXECUTING) {
-                // Check if we have already duplicated it
-                if (!this->inst_buff_m.isDuplicated(current_pair)) {
-                  dupl_controller_m.duplicateCodelet(current_pair);
-                }
-                if (!attemptAssignExecuteInstruction(current_pair))
-                  current_pair->second = instruction_state::READY;
-              }
+              SCMULATE_INFOMSG(
+                  4, "Scheduling an EXECUTE_INST %s",
+                  current_pair->first->getFullInstruction().c_str());
+              // Check if we have already duplicated it
+              if (!this->inst_buff_m.isDuplicated(current_pair))
+            dupl_controller_m.duplicateCodelet(current_pair);
+
+              if (!attemptAssignExecuteInstruction(current_pair))
+            current_pair->second = instruction_state::READY;
               break;
             case MEMORY_INST:
               SCMULATE_INFOMSG(4, "Scheduling a MEMORY_INST %s", current_pair->first->getFullInstruction().c_str());
@@ -168,9 +165,7 @@ int scm::fetch_decode_module::behavior()
           }
           break;
 
-        case instruction_state::EXECUTION_DONE_DUP:
-          current_pair = this->inst_buff_m.getOriginal(current_pair);
-        [[falltrough]] case instruction_state::EXECUTION_DONE:
+        case instruction_state::EXECUTION_DONE:
           if (dupl_controller_m.compareCodelets(current_pair)) {
             execution_done++;
             TIMERS_COUNTERS_GUARD(this->time_cnt_m->addEvent(

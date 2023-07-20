@@ -38,6 +38,8 @@ private:
   decoded_instruction_t *
   duplicateCodeletInstruction(instruction_state_pair *original);
 
+  void doReschedulingOfReadyCodelets(instruction_state_pair *original);
+
   void createDuplicatedCodelet(instruction_state_pair *inst, int copies = 1);
 
   bool compareTwoCodelets(instruction_state_pair *original,

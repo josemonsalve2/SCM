@@ -27,10 +27,7 @@ scm::execution_slot::consume() {
   getNext(head);
 #pragma omp flush
 
-  if (to_end == instruction_state::EXECUTING_DUP)
-    to_end = instruction_state::EXECUTION_DONE_DUP;
-  else
-    to_end = instruction_state::EXECUTION_DONE;
+  to_end = instruction_state::EXECUTION_DONE;
 }
 
 scm::control_store_module::control_store_module(const int numExecUnits) {

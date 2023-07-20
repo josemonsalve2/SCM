@@ -50,7 +50,8 @@ namespace scm {
           return false;
         instruction_state_pair * newPair = new instruction_state_pair(new decoded_instruction_t(new_instruction), WAITING);
         // Avoid calling copy constructor twice
-        SCMULATE_INFOMSG(5, "Adding Instruction %s to buffer", newPair->first->getFullInstruction().c_str());
+        SCMULATE_INFOMSG(5, "Adding Instruction %s (%p) to buffer",
+                         newPair->first->getFullInstruction().c_str(), newPair);
         this->instruction_buffer.push_back(newPair); // Call constructor
         return true;
       }
@@ -59,7 +60,6 @@ namespace scm {
                                     instruction_state_pair *duplicated) {
         this->duplicatedCodelets[original].push_back(duplicated);
         this->reverseDuplicatedCodelets[duplicated] = original;
-        this->instruction_buffer.push_back(duplicated);
         SCMULATE_INFOMSG(5,
                          "Adding Duplicated codelet Instruction %s at (0x%lX) to container of duplicates. Original is of %s at (0x%lX)",
                          duplicated->first->getFullInstruction().c_str(), (unsigned long)duplicated, original->first->getFullInstruction().c_str(), (unsigned long)original);
@@ -102,19 +102,22 @@ namespace scm {
         if (original->second != EXECUTION_DONE)
           return false;
         for (auto copies : this->duplicatedCodelets[original])
-          if (copies->second != EXECUTION_DONE_DUP)
+          if (copies->second != EXECUTION_DONE)
             return false;
         return true;
       }
 
       void removeDuplicates(instruction_state_pair *original) {
-        SCMULATE_INFOMSG(5, "Deleting Instruction %s from duplication", original->first->getFullInstruction().c_str());
-        for (auto copy : this->duplicatedCodelets[original]) {
-          SCMULATE_INFOMSG(5,
-                           "Deleting Duplicated codelet Instruction %s from",
+        SCMULATE_INFOMSG(5, "Deleting Duplicates of%s",
+                         original->first->getFullInstruction().c_str());
+        for (auto &copy : this->duplicatedCodelets[original]) {
+          SCMULATE_INFOMSG(5, "Deleting Duplicated codelet Instruction %s from",
                            copy->first->getFullInstruction().c_str());
-          this->reverseDuplicatedCodelets.erase(copy);
+          delete copy->first;
+          delete copy;
         }
+        // empty list
+        this->duplicatedCodelets[original].clear();
         this->duplicatedCodelets.erase(original);
       }
 

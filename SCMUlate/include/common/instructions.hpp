@@ -250,11 +250,8 @@ namespace scm {
   enum instruction_state {
     WAITING,
     READY,
-    READY_DUP,
     EXECUTING,
-    EXECUTING_DUP,
     EXECUTION_DONE,
-    EXECUTION_DONE_DUP,
     DECOMMISSION,
     STALL
   };

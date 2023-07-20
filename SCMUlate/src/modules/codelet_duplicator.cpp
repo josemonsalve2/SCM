@@ -2,8 +2,10 @@
 #include "fetch_decode.hpp"
 
 #define RESILIENCY_ERROR                                                       \
-  printf("RESILIENCY_ERROR\n");                                                \
-  exit(999);
+  {                                                                            \
+    printf("RESILIENCY_ERROR\n");                                              \
+    exit(999);                                                                 \
+  }
 namespace scm {
 
 class fetch_decode_module;
@@ -150,16 +152,36 @@ decoded_instruction_t *dupl_controller_module::duplicateCodeletInstruction(
   return new_inst;
 }
 
+void dupl_controller_module::doReschedulingOfReadyCodelets(
+    instruction_state_pair *original) {
+  dupCodeletStates *allCopies = inst_buff_m->getDuplicated(original);
+
+  for (auto copy : *allCopies) {
+    if (copy->second == instruction_state::READY) {
+      SCMULATE_INFOMSG(5, "Trying to schedule new copy of %s",
+                       copy->first->getFullInstruction().c_str());
+      copy->second = instruction_state::EXECUTING;
+      if (!fetch_decode_m->attemptAssignExecuteInstruction(copy)) {
+        SCMULATE_INFOMSG(5,
+                         "Could not schedule new copy of %s. Waiting for "
+                         "later.",
+                         copy->first->getFullInstruction().c_str());
+        copy->second = instruction_state::READY;
+      }
+    }
+  }
+}
+
 void dupl_controller_module::createDuplicatedCodelet(
     instruction_state_pair *inst, int copies) {
   // Duplicate codelet: We create a new instruction pair that
   // contains a new duplicated decoded instruction, where write and
   // readwrite operands are renamed to a hidden operand. We assign
-  // instruction_state::EXECUTING_DUP.
+  // instruction_state::EXECUTING
   for (int i = 0; i < copies; i++) {
     auto duplicatedCodelet = duplicateCodeletInstruction(inst);
     instruction_state_pair *newPair = new instruction_state_pair(
-        duplicatedCodelet, instruction_state::EXECUTING_DUP);
+        duplicatedCodelet, instruction_state::EXECUTING);
     inst_buff_m->insertDuplicatedCodelets(inst, newPair);
     SCMULATE_INFOMSG(5, "Trying to schedule new copy of %s",
                      duplicatedCodelet->getFullInstruction().c_str());
@@ -167,7 +189,7 @@ void dupl_controller_module::createDuplicatedCodelet(
       SCMULATE_INFOMSG(5,
                        "Could not schedule new copy of %s. Waiting for later.",
                        duplicatedCodelet->getFullInstruction().c_str());
-      newPair->second = instruction_state::READY_DUP;
+      newPair->second = instruction_state::READY;
     }
   }
 }
@@ -248,7 +270,7 @@ void dupl_controller_module::overrideOriginalOperands(
 
 dupl_controller_module::dupl_controller_module(
     DUPL_MODES m, fetch_decode_module *fd, instructions_buffer_module *instBuff)
-    : fetch_decode_m(fd), inst_buff_m(instBuff) {
+    : inst_buff_m(instBuff), fetch_decode_m(fd) {
 
   // Check if SCM_DUPL_MODE env variable is set
   char *dupl_mode_env = std::getenv("SCM_DUPL_MODE");
@@ -297,12 +319,16 @@ bool dupl_controller_module::compareCodelets(instruction_state_pair *inst) {
       inst->first->getExecCodelet()->isMemoryCodelet())
     return true;
 
-  if (mode == DUPL_MODES::NO_DUPLICATION)
+  if (mode == DUPL_MODES::NO_DUPLICATION) {
     if (inst->first->getItFailed()) {
       RESILIENCY_ERROR;
     } else {
       return true;
     }
+  }
+  // Attempt to schedule those codelets that have not been scheduled
+  doReschedulingOfReadyCodelets(inst);
+
   // checkIfReady will check all the copies of the current instruction
   // otherwise it will wait for the other copies to finish
   if (inst_buff_m->checkIfReady(inst)) {
@@ -434,11 +460,10 @@ bool dupl_controller_module::compareCodelets(instruction_state_pair *inst) {
         return false;
       }
     }
-  } else {
-    SCMULATE_INFOMSG(10, "Waiting for all the duplicates to be ready")
-    // wait
-    return false;
   }
+  SCMULATE_INFOMSG(10, "Waiting for all the duplicates to be ready")
+  // wait
+  return false;
 }
 
 void dupl_controller_module::cleanupDuplication(instruction_state_pair *inst) {
@@ -448,9 +473,12 @@ void dupl_controller_module::cleanupDuplication(instruction_state_pair *inst) {
   if (mode == DUPL_MODES::NO_DUPLICATION)
     return;
   dupCodeletStates *allCopies = inst_buff_m->getDuplicated(inst);
-  allCopies->push_back(inst);
+  dupCodeletStates allCopiesAndOriginal;
+  allCopiesAndOriginal.push_back(inst);
+  allCopiesAndOriginal.insert(allCopiesAndOriginal.end(), allCopies->begin(),
+                              allCopies->end());
   // Iterate and if operand found, remove it
-  for (auto copy : *allCopies) {
+  for (auto copy : allCopiesAndOriginal) {
     for (int i = 1; i <= MAX_NUM_OPERANDS; ++i) {
       operand_t *current_operand = &copy->first->getOp(i);
       if (current_operand->type == operand_t::REGISTER) {
@@ -474,11 +502,6 @@ void dupl_controller_module::cleanupDuplication(instruction_state_pair *inst) {
           originalVals.erase(current_operand->value.reg);
         }
       }
-    }
-    if (copy != inst) {
-      SCMULATE_INFOMSG(6, "Marking duplicated codelet %s as decommissioned",
-                       copy->first->getInstruction().c_str());
-      copy->second = scm::instruction_state::DECOMMISSION;
     }
   }
   // Remove the duplicates from the buffer

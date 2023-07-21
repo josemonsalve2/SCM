@@ -21,38 +21,59 @@ namespace scm {
    * scheduling policy. 
    */
   typedef enum {EMPTY, BUSY, DONE} executorState;
-  typedef std::vector< instruction_state_pair* > instructions_queue_t;
+  typedef instruction_state_pair **instructions_queue_t;
   class execution_slot {
     private:
       instructions_queue_t executionQueue;
-      instructions_queue_t::iterator head;
-      instructions_queue_t::iterator tail;
+      instructions_queue_t head;
+      instructions_queue_t tail;
 
     public:
       // Constructor 
       execution_slot() {
+        executionQueue = new instruction_state_pair *[EXECUTION_QUEUE_SIZE];
         for (int i = 0; i < EXECUTION_QUEUE_SIZE; i++) {
-          executionQueue.emplace_back(nullptr);
+          executionQueue[i] = nullptr;
         }
-        head = tail = executionQueue.begin();
+        head = tail = executionQueue;
       };
 
       bool try_insert(instruction_state_pair *);
       void consume();
 
       inline bool is_empty() {
-        #pragma omp flush acquire
-        return *head == nullptr && head == tail;
+        instructions_queue_t h, t;
+        instruction_state_pair *tmp;
+#pragma omp flush
+#pragma omp atomic read
+        h = head;
+#pragma omp atomic read
+        t = tail;
+#pragma omp atomic read
+        tmp = *h;
+        return h == t && tmp == nullptr;
       }
 
-      void inline getNext (instructions_queue_t::iterator& current) {
-        current++; 
-        if (current == executionQueue.end())
-          current = executionQueue.begin();
+      void inline getNext(instructions_queue_t &current) {
+        auto next = current;
+        next ++;
+        if (next == executionQueue + EXECUTION_QUEUE_SIZE) {
+          next = executionQueue;
+        }
+        #pragma omp atomic write
+        current = next;
+        SCMULATE_INFOMSG(5, "Getting next address %p", current);
       }
-      
 
-      inline instruction_state_pair * getHead() const { return *this->head; }
+      inline instruction_state_pair *getHead() const {
+        instructions_queue_t h;
+#pragma omp atomic read
+        h = head;
+        SCMULATE_INFOMSG(5, "Getting head %p", h);
+        return *h;
+      }
+
+      ~execution_slot() { delete[] executionQueue; }
   };
 
 

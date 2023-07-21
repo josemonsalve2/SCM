@@ -27,6 +27,7 @@
 #include "instructions_def.hpp"
 #include <unordered_map>
 
+
 namespace scm {
   // circular reference
   class inst_mem_module;

@@ -57,39 +57,58 @@ typedef unsigned char * l2_memory_t;
 
 // Macro for output of information, warning and error messages
 #if VERBOSE_MODE >= 0
-  #define SCMULATE_WARNING(level, message, ...) { \
-    if(VERBOSE_MODE >= level) {\
-      printf("[SCMULATE_WARNING: %s:%i] " message "\n", __FILENAME__, __LINE__, ##__VA_ARGS__); \
-    } \
+#define SCMULATE_WARNING(level, message, ...)                                  \
+  {                                                                            \
+    if (VERBOSE_MODE >= level) {                                               \
+      printf("[SCMULATE_WARNING: %s:%i] " message "\n", __FILENAME__,          \
+             __LINE__, ##__VA_ARGS__);                                         \
+      fflush(stdout);                                                          \
+    }                                                                          \
   }
-  #define SCMULATE_WARNING_IF(level, condition, message, ...) { \
-    if(VERBOSE_MODE >= level && condition) { \
-      printf("[SCMULATE_WARNING: %s:%i] " message "\n", __FILENAME__, __LINE__, ##__VA_ARGS__); \
-    } \
+#define SCMULATE_WARNING_IF(level, condition, message, ...)                    \
+  {                                                                            \
+    if (VERBOSE_MODE >= level && condition) {                                  \
+      printf("[SCMULATE_WARNING: %s:%i] " message "\n", __FILENAME__,          \
+             __LINE__, ##__VA_ARGS__);                                         \
+      fflush(stdout);                                                          \
+    }                                                                          \
   }
-  
-  #define SCMULATE_ERROR(level, message, ...) { \
-    if(VERBOSE_MODE >= level) {\
-      fprintf(stderr, "[SCMULATE_ERROR: %s:%i] " message "\n", __FILENAME__, __LINE__, ##__VA_ARGS__); \
-      assert(0 && message); \
-    } \
+
+#define SCMULATE_ERROR(level, message, ...)                                    \
+  {                                                                            \
+    if (VERBOSE_MODE >= level) {                                               \
+      fprintf(stderr, "[SCMULATE_ERROR: %s:%i] " message "\n", __FILENAME__,   \
+              __LINE__, ##__VA_ARGS__);                                        \
+      fflush(stderr);                                                          \
+      assert(0 && message);                                                    \
+    }                                                                          \
   }
-  #define SCMULATE_ERROR_IF(level, condition, message, ...) { \
-    if(VERBOSE_MODE >= level && condition) { \
-      fprintf(stderr, "[SCMULATE_ERROR: %s:%i] " message "\n", __FILENAME__, __LINE__, ##__VA_ARGS__); \
-      assert(0 && message); \
-    } \
+#define SCMULATE_ERROR_IF(level, condition, message, ...)                      \
+  {                                                                            \
+    if (VERBOSE_MODE >= level && condition) {                                  \
+      fprintf(stderr, "[SCMULATE_ERROR: %s:%i] " message "\n", __FILENAME__,   \
+              __LINE__, ##__VA_ARGS__);                                        \
+      fflush(stderr);                                                          \
+      assert(0 && message);                                                    \
+    }                                                                          \
   }
-  
-  #define SCMULATE_INFOMSG(level, message, ...) { \
-    if(VERBOSE_MODE >= level) {\
-      printf("[SCMULATE_INFO: %s:%i] " message "\n", __FILENAME__, __LINE__, ##__VA_ARGS__); \
-    } \
+
+#define SCMULATE_INFOMSG(level, message, ...)                                  \
+  {                                                                            \
+    if (VERBOSE_MODE >= level) {                                               \
+      printf("[SCMULATE_INFO: %s:%i] " message "\n", __FILENAME__, __LINE__,   \
+             ##__VA_ARGS__);                                                   \
+      fflush(stdout);                                                          \
+      fflush(stdout);                                                          \
+    }                                                                          \
   }
-  #define SCMULATE_INFOMSG_IF(level, condition, message, ...) { \
-    if(VERBOSE_MODE >= level && condition) { \
-      printf("[SCMULATE_INFO: %s:%i] " message "\n", __FILENAME__, __LINE__, ##__VA_ARGS__); \
-    } \
+#define SCMULATE_INFOMSG_IF(level, condition, message, ...)                    \
+  {                                                                            \
+    if (VERBOSE_MODE >= level && condition) {                                  \
+      printf("[SCMULATE_INFO: %s:%i] " message "\n", __FILENAME__, __LINE__,   \
+             ##__VA_ARGS__);                                                   \
+      fflush(stdout);                                                          \
+    }                                                                          \
   }
 #else
   #define SCMULATE_WARNING(level, message, ...) {}

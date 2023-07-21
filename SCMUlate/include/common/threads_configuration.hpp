@@ -44,11 +44,3 @@
 #define COUNT_CUS(...) COUNT_ARGUMENTS(__VA_ARGS__)
 #define NUM_CUS COUNT_CUS(CUS)
 #define CU_THREADS CU_THREADS_VAR(CUS)
-
-
-
-
-
-
-
-#define CUS 1, 2, 3, 4, 5, 6, 7

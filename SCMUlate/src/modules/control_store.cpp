@@ -15,8 +15,7 @@ bool scm::execution_slot::try_insert(
   }
 }
 
-void 
-scm::execution_slot::consume() {
+void scm::execution_slot::consume() {
   auto &to_end = (*head)->second;
 
   instructions_queue_t h;
@@ -26,13 +25,12 @@ scm::execution_slot::consume() {
   *h = nullptr;
   getNext(head);
 #pragma omp flush
-
   to_end = instruction_state::EXECUTION_DONE;
 }
 
 scm::control_store_module::control_store_module(const int numExecUnits) {
   // Creating all the execution slots
-  for (int i = 0; i < numExecUnits; i ++) {
+  for (int i = 0; i < numExecUnits; i++) {
     this->execution_slots.push_back(new execution_slot());
   }
 }

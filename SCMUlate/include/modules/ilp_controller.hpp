@@ -91,25 +91,71 @@ namespace scm {
       uint32_t inline numberOfRanges () { return ranges_read.size() + ranges_write.size(); }
       void inline addRange( memranges_pair * in_ranges) {
         SCMULATE_INFOMSG(4, "Adding ranges");
-        this->ranges_read.insert(in_ranges->reads.begin(), in_ranges->reads.end());
+        for (auto it = in_ranges->reads.begin(); it != in_ranges->reads.end(); it++) {
+          SCMULATE_INFOMSG(4, "Read range 0x%lx with size 0x%lx", it->memoryAddress, it->size);
+          auto it_dup = this->ranges_read.find(*it); // check for duplicate read range
+          if (it_dup != ranges_read.end()) {
+            // if duplicate found, make a copy
+            memory_location tmp = *(it_dup);
+            this->ranges_read.erase(it_dup); // erase the old element
+            tmp.reference_count++;           // increment reference count of the copied element
+            SCMULATE_INFOMSG(4, "Duplicate read range 0x%lx found; reference count is now %d", tmp.memoryAddress, tmp.reference_count);
+            this->ranges_read.insert(tmp);   // insert the new one
+            //this->ranges_read.emplace(tmp.memoryAddress, tmp.size, tmp.reference_count);
+          } else {
+            SCMULATE_INFOMSG(4, "Not a duplicate; adding normally");
+            //this->ranges_read.insert(in_ranges->reads.begin(), in_ranges->reads.end()); // if no duplicate, insert normally
+            size_t tmp_size = this->ranges_read.size();
+            this->ranges_read.insert(*it);
+            if (tmp_size != this->ranges_read.size()-1) {
+              SCMULATE_ERROR(0, "Adding failed somehow...");
+            }
+          }
+        }
+        /*
+        for (auto it = in_ranges->writes.begin(); it != in_ranges->writes.end(); it++) {
+          SCMULATE_INFOMSG(4, "Write range 0x%lx with size 0x%lx", it->memoryAddress, it->size);
+        }
+        */
+        //this->ranges_read.insert(in_ranges->reads.begin(), in_ranges->reads.end());
+        SCMULATE_INFOMSG(4, "Inserting write ranges");
         this->ranges_write.insert(in_ranges->writes.begin(), in_ranges->writes.end());
       }
       void inline removeRanges(memranges_pair * out_ranges) {
         SCMULATE_INFOMSG(4, "Removing ranges");
         auto it_out = out_ranges->reads.begin();
         auto it = std::lower_bound(this->ranges_read.begin(), this->ranges_read.end(), *it_out);
+        // does removing and inserting after getting it based on lower bound potentially break the flow?
+        // try making a set of any elements that need to be updated then inserting at the end instead of erase+insert
         uint64_t firstsize = this->ranges_read.size();
+        if (it_out != out_ranges->reads.end())
+          SCMULATE_INFOMSG(4, "Attempting to remove Read range 0x%lx with size 0x%lx", it_out->memoryAddress, it_out->size);
+        size_t ranges_updated = 0;
         while (it != this->ranges_read.end() && it_out != out_ranges->reads.end()) {
             if (*it == *it_out) {
-              it = this->ranges_read.erase(it);
+              SCMULATE_INFOMSG(4, "Removing Read range 0x%lx with size 0x%lx and reference count %d", it->memoryAddress, it->size, it->reference_count);
+              if ((*it).reference_count == 1) {
+                // if reference count is 1, we remove it normally
+                it = this->ranges_read.erase(it);
+              } else {
+                // if not, copy, erase, decrement reference count, and insert back
+                memory_location tmp = *(it);
+                it = this->ranges_read.erase(it); // erase the old element
+                tmp.reference_count--;           // decrement reference count of the copied element
+                SCMULATE_INFOMSG(4, "Duplicate Read range found; reference count is now %d", tmp.reference_count);
+                this->ranges_read.insert(tmp);   // insert the new one
+                ranges_updated++;
+              }
               it_out++;
+              if (it_out != out_ranges->reads.end())
+                SCMULATE_INFOMSG(4, "Attempting to remove Read range 0x%lx with size 0x%lx", it_out->memoryAddress, it_out->size);
             } else{
                 it++;
             }
         }
         uint64_t finalsize = this->ranges_read.size(); 
-
-        SCMULATE_ERROR_IF(0, finalsize != firstsize - out_ranges->reads.size(), "Error deleting read ranges");
+        SCMULATE_INFOMSG(4, "Deleting read ranges: final size %d, first size %d, out_ranges size %d, updated %d ranges", finalsize, firstsize, out_ranges->reads.size(), ranges_updated);
+        SCMULATE_ERROR_IF(0, finalsize != firstsize - out_ranges->reads.size() + ranges_updated, "Error deleting read ranges");
 
         firstsize = this->ranges_write.size();
         it_out = out_ranges->writes.begin();
@@ -226,19 +272,19 @@ namespace scm {
         // Mark the registers
         if (inst->getOp1().type == operand_t::REGISTER) {
           uint_fast16_t io = inst->getOpIO() & (OP_IO::OP1_RD | OP_IO::OP1_WR);
-          SCMULATE_INFOMSG(5, "Mariking register %s as busy with IO %lX", inst->getOp1().value.reg.reg_name.c_str(), io);
+          SCMULATE_INFOMSG(5, "Marking register %s as busy with IO %lX", inst->getOp1().value.reg.reg_name.c_str(), io);
           register_reservation reserv(inst->getOp1().value.reg.reg_ptr, io);
           busyRegisters.insert(reserv);
         }
         if (inst->getOp2().type == operand_t::REGISTER) {
           uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP2_RD | OP_IO::OP2_WR)) >> 2;
-          SCMULATE_INFOMSG(5, "Mariking register %s as busy with IO %lX", inst->getOp2().value.reg.reg_name.c_str(), io);
+          SCMULATE_INFOMSG(5, "Marking register %s as busy with IO %lX", inst->getOp2().value.reg.reg_name.c_str(), io);
           register_reservation reserv(inst->getOp2().value.reg.reg_ptr, io);
           busyRegisters.insert(reserv);          
           }
         if (inst->getOp3().type == operand_t::REGISTER) {
           uint_fast16_t io = (inst->getOpIO() & (OP_IO::OP3_RD | OP_IO::OP3_WR)) >> 4;
-          SCMULATE_INFOMSG(5, "Mariking register %s as busy with IO %lX", inst->getOp3().value.reg.reg_name.c_str(), io);
+          SCMULATE_INFOMSG(5, "Marking register %s as busy with IO %lX", inst->getOp3().value.reg.reg_name.c_str(), io);
           register_reservation reserv(inst->getOp3().value.reg.reg_ptr, io);
           busyRegisters.insert(reserv);          
           }

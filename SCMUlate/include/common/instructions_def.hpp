@@ -130,10 +130,12 @@ namespace scm {
   {
     l2_memory_t memoryAddress;
     uint32_t size;
+    uint32_t reference_count = 1;
 
     memory_location() : memoryAddress(0), size(0) {}
     memory_location(l2_memory_t memAddr, uint32_t nsize) : memoryAddress(memAddr), size(nsize) {}
-    memory_location(const memory_location &other) : memoryAddress(other.memoryAddress), size(other.size) {}
+    memory_location(l2_memory_t memAddr, uint32_t nsize, uint32_t ref_count) : memoryAddress(memAddr), size(nsize), reference_count(ref_count) {}
+    memory_location(const memory_location &other) : memoryAddress(other.memoryAddress), size(other.size), reference_count(other.reference_count) {}
     l2_memory_t upperLimit() const { return memoryAddress + size; }
     inline bool operator<(const memory_location &other) const
     {

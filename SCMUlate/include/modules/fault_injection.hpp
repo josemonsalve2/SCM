@@ -15,7 +15,8 @@ namespace scm {
 class FaultInjection {
 private:
   FAULT_INJECTION_MODES mode;
-  std::chrono::_V2::system_clock::time_point last_error_time;
+  std::chrono::time_point<std::chrono::high_resolution_clock> originOfTime;
+  std::chrono::time_point<std::chrono::high_resolution_clock> lastFailureTime;
 
   double beta = DEFAULT_BETA;
   double lambda = DEFAULT_LAMBDA;
@@ -38,9 +39,35 @@ private:
     return pow(-log(1 - x) / lambda, 1 / beta);
   }
 
+  void progressNextErrorTime() {
+    switch (mode) {
+    case POISSON_FAULT_INJECTION:
+      lastFailureTime =
+          lastFailureTime +
+          std::chrono::microseconds(static_cast<int>(
+              getPoissonNextErrorTime((double)rand() / RAND_MAX) * 1000));
+      break;
+    case WEIBULL_FAULT_INJECTION:
+      lastFailureTime =
+          lastFailureTime +
+          std::chrono::microseconds(static_cast<int>(
+              getWeibullNextErrorTime((double)rand() / RAND_MAX) * 1000));
+      break;
+    default:
+      SCMULATE_ERROR(0, "Invalid Fault Injection Mode: %s",
+                     FAULT_INJECTION_MODES_STR[mode]);
+    }
+    auto duration_sinceBeginning =
+        std::chrono::duration_cast<std::chrono::microseconds>(lastFailureTime -
+                                                              originOfTime);
+    printf("Next error time %f\n", duration_sinceBeginning.count() / 1000.0);
+  }
+
 public:
-  FaultInjection() : mode(FAULT_INJECTION_MODES::NO_FAULT_INJECTION),
-    last_error_time(std::chrono::high_resolution_clock::now()) {
+  FaultInjection()
+      : mode(FAULT_INJECTION_MODES::NO_FAULT_INJECTION),
+        originOfTime(std::chrono::high_resolution_clock::now()),
+        lastFailureTime(originOfTime) {
     // Check if SCM_FAULT_INJECTION_MODE is set in the environment
     // If so, override the mode
     char *env = getenv("SCM_FAULT_INJECTION_MODE");
@@ -67,6 +94,8 @@ public:
     env = getenv("SCM_LAMBDA");
     if (env != NULL)
       lambda = std::stod(env);
+
+    progressNextErrorTime();
   }
 
   bool shouldInjectFault(double t_ms) {
@@ -92,16 +121,20 @@ public:
 
   void injectFault(instruction_state_pair* inst) {
     auto current_time = std::chrono::high_resolution_clock::now();
-    // End timer in ms
-    auto duration =
-      std::chrono::duration_cast<std::chrono::milliseconds>(current_time - last_error_time);
 
-    auto t_ms = duration.count();
+    auto duration_sinceBeginning =
+        std::chrono::duration_cast<std::chrono::microseconds>(current_time -
+                                                              originOfTime);
+    double t_ms = duration_sinceBeginning.count() / 1000.0;
 
-    if (shouldInjectFault(t_ms)) {
-      last_error_time = current_time;
-      if (inst == nullptr)
-        return;
+    if (inst == nullptr) {
+      // progress error until grater than current time
+      while (lastFailureTime < current_time)
+        progressNextErrorTime();
+      return;
+    }
+
+    if (lastFailureTime < current_time) {
       inst->first->setItFailed(true);
 #if REGISTER_INJECTION_MODE == 1
       // Iterate over the operands, search for write and readwrite

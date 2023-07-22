@@ -7,7 +7,7 @@
 #include <string>
 #include <chrono>
 
-#define DEFAULT_BETTA 0.5
+#define DEFAULT_BETA 0.5
 #define DEFAULT_LAMBDA 0.005
 
 namespace scm {
@@ -17,7 +17,7 @@ private:
   FAULT_INJECTION_MODES mode;
   std::chrono::_V2::system_clock::time_point last_error_time;
 
-  double betta = DEFAULT_BETTA;
+  double beta = DEFAULT_BETA;
   double lambda = DEFAULT_LAMBDA;
 
   // Represents F(t) the probability that the component will fail at or before
@@ -30,12 +30,12 @@ private:
   // Represents F(t) the probability that the component will fail at or before
   // time t
   double getCummulativeWeibull(double x) {
-    return 1 - exp(-lambda * pow(x, betta));
+    return 1 - exp(-lambda * pow(x, beta));
   }
 
   // Find the next time where the probability is x in a weibull distribution
   double getWeibullNextErrorTime(double x) {
-    return pow(-log(1 - x) / lambda, 1 / betta);
+    return pow(-log(1 - x) / lambda, 1 / beta);
   }
 
 public:
@@ -59,11 +59,11 @@ public:
                        env_str.c_str(), options.c_str());
       }
     }
-    // Check for SCM_WEIBULL_BETTA and SCM_LAMBDA
+    // Check for SCM_WEIBULL_BETA and SCM_LAMBDA
     // If so, override the values
-    env = getenv("SCM_WEIBULL_BETTA");
+    env = getenv("SCM_WEIBULL_BETA");
     if (env != NULL)
-      betta = std::stod(env);
+      beta = std::stod(env);
     env = getenv("SCM_LAMBDA");
     if (env != NULL)
       lambda = std::stod(env);

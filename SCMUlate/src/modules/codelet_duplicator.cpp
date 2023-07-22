@@ -4,7 +4,8 @@
 #define RESILIENCY_ERROR                                                       \
   {                                                                            \
     printf("RESILIENCY_ERROR\n");                                              \
-    exit(999);                                                                 \
+    fflush(stdout);                                                            \
+    _Pragma("omp atomic write") *isAlive = false;                              \
   }
 namespace scm {
 
@@ -269,8 +270,9 @@ void dupl_controller_module::overrideOriginalOperands(
 }
 
 dupl_controller_module::dupl_controller_module(
-    DUPL_MODES m, fetch_decode_module *fd, instructions_buffer_module *instBuff)
-    : inst_buff_m(instBuff), fetch_decode_m(fd) {
+    DUPL_MODES m, fetch_decode_module *fd, instructions_buffer_module *instBuff,
+    bool *isAlive)
+    : isAlive(isAlive), inst_buff_m(instBuff), fetch_decode_m(fd) {
 
   // Check if SCM_DUPL_MODE env variable is set
   char *dupl_mode_env = std::getenv("SCM_DUPL_MODE");
@@ -296,8 +298,10 @@ dupl_controller_module::dupl_controller_module(
 }
 
 dupl_controller_module::dupl_controller_module(
-    fetch_decode_module *fd, instructions_buffer_module *instBuff)
-    : dupl_controller_module(DUPL_MODES::NO_DUPLICATION, fd, instBuff) {}
+    fetch_decode_module *fd, instructions_buffer_module *instBuff,
+    bool *isAlive)
+    : dupl_controller_module(DUPL_MODES::NO_DUPLICATION, fd, instBuff,
+                             isAlive) {}
 
 void dupl_controller_module::duplicateCodelet(instruction_state_pair *inst) {
   if (inst->first->getType() != scm::instType::EXECUTE_INST ||

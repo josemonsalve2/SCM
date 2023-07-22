@@ -46,7 +46,7 @@ int main(int argc, char *argv[]) {
   }
 
   if (myMachine->run() != scm::SCM_RUN_SUCCESS) {
-    SCMULATE_ERROR(0, "THERE WAS AN ERROR WHEN RUNNING THE SCM MACHINE");
+    printf("THERE WAS AN ERROR WHEN RUNNING THE SCM MACHINE\n");
     return 1;
   }
 

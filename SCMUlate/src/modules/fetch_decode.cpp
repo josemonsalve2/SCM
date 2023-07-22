@@ -12,7 +12,7 @@ scm::fetch_decode_module::fetch_decode_module(
       su_number(0),
       instructionLevelParallelism(reg_file_m, hidden_reg_file_m, ilp_mode),
       stallingInstruction(nullptr),
-      dupl_controller_m(dupl_mode, this, &inst_buff_m)
+      dupl_controller_m(dupl_mode, this, &inst_buff_m, aliveSig)
 // debugger(DEBUGER_MODE)
 
 {}

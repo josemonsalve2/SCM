@@ -23,6 +23,7 @@ class fetch_decode_module;
 class dupl_controller_module {
 private:
   DUPL_MODES mode;
+  bool *isAlive;
 
   // Hidden register file for duplication
   reg_file_module hidden_reg_file_m;
@@ -51,9 +52,9 @@ private:
 public:
   dupl_controller_module() = delete;
   dupl_controller_module(DUPL_MODES m, fetch_decode_module *fd,
-                         instructions_buffer_module *instBuff);
+                         instructions_buffer_module *instBuff, bool *isAlive);
   dupl_controller_module(fetch_decode_module *fd,
-                         instructions_buffer_module *instBuff);
+                         instructions_buffer_module *instBuff, bool *isAlive);
 
   void duplicateCodelet(instruction_state_pair *inst);
 
